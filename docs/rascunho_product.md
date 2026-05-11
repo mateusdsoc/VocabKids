@@ -265,14 +265,14 @@ O MVP deve focar no núcleo do produto:
 
 Depois do núcleo validado:
 
-- análise de redações digitadas;
+- análise de redações;
 - identificação de palavras repetidas;
 - sugestões de sinônimos;
 - geração de questões personalizadas a partir da redação.
+- Redação de x em x tempos feitas com algumas palavras selecionadas que o aluno dominou.
 
 ### Fases futuras ou em avaliação
 
-- OCR para redações manuscritas;
 - análise mais profunda de sintaxe e estrutura da redação;
 - questões de língua portuguesa além de vocabulário;
 - módulo de livros com perguntas geradas por IA;
