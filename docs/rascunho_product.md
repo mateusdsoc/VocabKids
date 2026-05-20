@@ -1,6 +1,8 @@
 # VocabBR Kids - Documento de Produto
 
-> Fonte da verdade atual do projeto. Este documento substitui os documentos antigos e registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
+> Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
+>
+> Última atualização: 19 de maio de 2026.
 
 ---
 
@@ -15,7 +17,7 @@ A ideia central é ajudar o aluno a ampliar vocabulário em português por meio 
 O produto deve conectar três frentes:
 
 - prática regular de vocabulário por questões;
-- análise de redações para identificar necessidades reais de vocabulário;
+- análise de redações para identificar necessidades reais de vocabulário e outros problemas de escrita;
 - personalização do conteúdo para ensinar palavras e sinônimos que resolvam dificuldades observadas na escrita.
 
 ---
@@ -35,7 +37,7 @@ Alunos do Fundamental I a partir do 3º ou 4º ano, dependendo de validação pe
 | Perfil | Interesse principal |
 |---|---|
 | Aluno | Praticar vocabulário de forma gamificada e objetiva. |
-| Professor de português | Identificar dificuldades de vocabulário e acompanhar evolução da turma. |
+| Professor de português | Identificar dificuldades de vocabulário e escrita, acompanhar evolução da turma. |
 | Coordenação pedagógica | Ter dados sobre evolução dos alunos e apoiar decisões pedagógicas. |
 | Escola | Oferecer uma ferramenta mensurável de desenvolvimento linguístico. |
 
@@ -49,29 +51,165 @@ O núcleo do produto é um aplicativo com questões de vocabulário. A hipótese
 
 Tipos inicialmente previstos:
 
-- escolher o significado correto de uma palavra;
-- escolher o melhor sinônimo em determinado contexto;
-- completar uma frase com a palavra ou sinônimo adequado;
-- identificar se uma palavra foi usada corretamente em uma frase.
+1. Escolher o significado correto de uma palavra (reconhecimento);
+2. Escolher o melhor sinônimo em determinado contexto (associação);
+3. Completar uma frase com a palavra ou sinônimo adequado (aplicação);
+4. Identificar se uma palavra foi usada corretamente em uma frase (avaliação).
+
+A sequência dos tipos segue uma progressão pedagógica: do reconhecimento básico até a avaliação crítica. Cada tipo testa uma habilidade diferente do aluno em relação à palavra.
 
 O conjunto exato de tipos pode mudar, mas o produto não deve virar uma plataforma genérica de português. O centro continua sendo vocabulário.
 
-### 3.2 Possível expansão para língua portuguesa e sintaxe
+### 3.2 Card de descoberta
 
-Existe interesse em avaliar questões além de vocabulário puro, como:
+Quando uma palavra nova aparece pela primeira vez para o aluno, ele não vai direto para uma questão. Antes, vê um card de descoberta: uma tela rápida e visual que apresenta a palavra, sua definição curta e um exemplo de uso em contexto.
 
-- acentuação;
-- identificação de sujeito;
-- identificação de verbo;
-- sintaxe básica;
-- estrutura da frase;
-- outros pontos de língua portuguesa que ajudem diretamente a escrita.
+O card aparece uma única vez, na primeira interação com a palavra. Se o aluno regredir em níveis, não vê o card novamente.
 
-Isso ainda não está decidido. Deve ser tratado como uma hipótese pedagógica, não como obrigação do MVP.
+O objetivo é ensinar antes de testar. O aluno precisa ter contato com o significado da palavra antes de ser cobrado. O card não é um flashcard tradicional (não tem lado A/B, não exige memorização). É uma apresentação integrada na trilha, rápida e divertida.
 
-Critério para entrar no produto: a funcionalidade precisa melhorar a escrita e o vocabulário do aluno, e não apenas transformar o app em um banco amplo de gramática.
+A sequência completa de uma palavra fica:
 
-### 3.3 XP, níveis e trilha temática
+```
+Descoberta → Nível 1 (reconhecimento) → Nível 2 (sinônimo) → Nível 3 (aplicação) → Nível 4 (avaliação) → Dominada ✅
+```
+
+### 3.3 Montagem de questões e distratores
+
+Nem todas as questões precisam ser armazenadas por completo no banco. Algumas podem ser montadas dinamicamente em tempo real.
+
+#### Níveis 1 e 2 (montagem dinâmica)
+
+- Nível 1: a definição correta vem do metadado da palavra. As alternativas erradas (distratores) são definições de outras palavras.
+- Nível 2: o sinônimo correto vem do metadado da palavra. Os distratores são sinônimos de outras palavras.
+
+#### Níveis 3 e 4 (conteúdo pré-gerado)
+
+- Nível 3: exige frases com lacunas, pré-escritas ou geradas por IA.
+- Nível 4: exige frases de julgamento (certa ou errada), pré-escritas ou geradas por IA.
+
+#### Dados armazenados por palavra
+
+| Dado | Tipo | Quantidade |
+|---|---|---|
+| Definição | Metadado da palavra | 1 |
+| Sinônimos | Metadado da palavra | 2–3 |
+| Categoria semântica | Metadado da palavra | 1 |
+| Nível de dificuldade | Metadado da palavra | 1 (escala numérica) |
+| Frases com lacuna (nível 3) | Conteúdo gerado | mínimo 2 variações |
+| Frases de julgamento (nível 4) | Conteúdo gerado | mínimo 2 variações |
+
+#### Categorias semânticas e segurança dos distratores
+
+Cada palavra pertence a uma categoria semântica (ex: tamanho, importância, velocidade, beleza, qualidade). A regra principal é: distratores nunca vêm da mesma categoria semântica da palavra-alvo. Isso impede que duas respostas estejam corretas ao mesmo tempo.
+
+Exemplo para a palavra "relevante" (categoria: importância):
+
+- Resposta correta: "Que tem importância para algo"
+- Distratores: definições de palavras das categorias tamanho, velocidade, beleza — nunca importância
+
+Se não houver palavras suficientes de outras categorias no mesmo nível de dificuldade, o sistema relaxa o nível de dificuldade dos distratores. O importante é que a resposta correta esteja no nível adequado.
+
+Além da categoria semântica, o sistema mantém uma lista de sinônimos por palavra e verifica que nenhum distrator está nessa lista.
+
+### 3.4 Domínio de palavras
+
+Cada palavra tem um estado de aprendizado por aluno. A mecânica de domínio segue uma sequência fixa com regressão controlada.
+
+#### Sequência de domínio
+
+A palavra passa por 4 níveis de questão, na ordem:
+
+1. Significado (reconhecimento)
+2. Sinônimo (associação)
+3. Completar frase (aplicação)
+4. Julgar uso (avaliação)
+
+Cada nível tem no mínimo 2 variações de questão.
+
+#### Regras de progressão e regressão
+
+- Acertou a questão → avança para o próximo nível.
+- Errou a questão → tenta a segunda variação do mesmo nível.
+- Errou as duas variações do mesmo nível → regride um nível, para uma variação que ainda não realizou. Se já realizou todas do nível anterior, repete uma que já errou.
+- Acertou a última questão do nível 4 → palavra dominada.
+
+#### Palavra dominada
+
+Palavra dominada sai da rotina normal de revisão. Não volta a aparecer nas questões regulares.
+
+Exceção prevista: palavras dominadas podem aparecer em eventos ou missões especiais de reforço, mas isso não está no MVP.
+
+#### Exemplos de fluxo
+
+```
+Acerta 1 → Acerta 2 → Erra 3a → Acerta 3b → Acerta 4 → Dominada ✅
+
+Acerta 1 → Acerta 2 → Erra 3a → Erra 3b → Volta pra 2 (variação não feita) → Acerta 2 → Tenta 3 (uma das que errou) → Acerta 3 → Acerta 4 → Dominada ✅
+```
+
+### 3.5 Vocabulário adaptativo
+
+O nível de vocabulário do aluno não é definido pelo ano escolar. Alunos da mesma turma podem ter níveis muito diferentes.
+
+#### Palavras por nível de dificuldade
+
+O banco de palavras é organizado por nível de dificuldade em uma escala numérica (ex: 1 a 10), não por série.
+
+| Nível | Exemplo de palavras |
+|---|---|
+| 1–2 | importante, bonito, grande, rápido |
+| 3–4 | relevante, admirável, vasto, ágil |
+| 5–6 | preponderante, esplêndido, amplo, célere |
+| 7–8 | imprescindível, majestoso, abrangente, vertiginoso |
+
+#### Diagnóstico inicial
+
+Quando o aluno entra no app, faz uma avaliação diagnóstica curta (10 a 15 questões de diferentes níveis). O sistema identifica onde ele está e posiciona na trilha de acordo.
+
+- Aluno forte do 7º ano → começa no nível 4–5
+- Aluno com dificuldade do 7º ano → começa no nível 2
+- Ambos estão na mesma turma, mas cada um na sua trilha
+
+#### Adaptação contínua
+
+O sistema ajusta com base no desempenho:
+
+- Acertando muito (90%+) → acelera, oferece palavras mais difíceis
+- Errando muito (abaixo de 50%) → freia, consolida o nível atual
+
+#### Base inicial de palavras
+
+O MVP deve começar com 500 a 800 palavras, suficientes para vários meses de uso. O banco será expandido progressivamente.
+
+### 3.6 Geração dinâmica de questões a partir de redações
+
+Quando a redação do aluno identifica palavras fracas ou repetidas, essas palavras precisam virar questões na trilha do aluno.
+
+#### Banco de questões por palavra, não por aluno
+
+As questões são recursos do banco da palavra, não do aluno. O aluno recebe uma atribuição.
+
+Fluxo:
+
+1. A redação identifica que o aluno usa "importante" demais.
+2. O sistema busca no banco: já existem questões para "importante"?
+3. Se sim: atribui essas questões à trilha do aluno.
+4. Se não: gera por IA, valida e salva no banco, depois atribui.
+
+Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas questões do banco. Não há duplicação.
+
+#### Validação híbrida
+
+Questões geradas por IA são liberadas diretamente para o aluno, mas marcadas como "geradas automaticamente". O professor tem visibilidade e pode revisar, corrigir ou reportar problemas a qualquer momento.
+
+#### Validação de palavras inexistentes
+
+Toda palavra extraída da redação é validada contra um dicionário antes de gerar questões. Se a palavra não existe no dicionário, é tratada como erro ortográfico (gera anotação na redação), não como vocabulário fraco (não gera questão).
+
+A ferramenta recomendada para essa validação é o Hunspell, que é open source, gratuito e tem dicionário PT-BR.
+
+### 3.7 XP, níveis e trilha temática
 
 As questões dão pontos de experiência (XP). O XP serve para o aluno subir de nível e avançar na trilha.
 
@@ -85,20 +223,15 @@ A progressão deve ser representada por uma trilha temática visual, com inspira
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
-### 3.4 Domínio de palavras
+### 3.8 Expansão para questões de sintaxe
 
-Cada palavra deve ter um estado de aprendizado por aluno.
+Existe interesse em avaliar questões além de vocabulário puro, como acentuação, sintaxe básica, estrutura da frase e outros pontos de língua portuguesa.
 
-Quando o aluno completar todos os exercícios necessários de uma palavra, essa palavra será considerada dominada. Depois de dominada, ela não precisa continuar aparecendo como revisão regular.
+Isso ainda não está decidido como escopo do MVP. Entretanto, a arquitetura do sistema deve ser extensível: da mesma forma como vocabulário da redação alimenta questões de vocabulário, no futuro erros de sintaxe identificados na redação devem poder alimentar questões de sintaxe, sem reconstruir o sistema.
 
-Regra de produto atual:
+A decisão de incluir ou não questões de sintaxe depende de orçamento e prazo. Se o custo permitir, é um diferencial competitivo forte para atrair mais escolas.
 
-- palavra nova entra na trilha ou em exercícios personalizados;
-- aluno pratica a palavra em diferentes formatos;
-- ao cumprir os critérios definidos, a palavra vira dominada;
-- palavra dominada sai da rotina normal de revisão.
-
-Ainda falta definir tecnicamente quantos acertos, em quais formatos e com qual tolerância de erro fazem uma palavra virar dominada.
+Critério para entrar no produto: a funcionalidade precisa melhorar a escrita do aluno, não apenas transformar o app em um banco amplo de gramática.
 
 ---
 
@@ -106,51 +239,61 @@ Ainda falta definir tecnicamente quantos acertos, em quais formatos e com qual t
 
 ### 4.1 Objetivo
 
-O produto deve ter uma funcionalidade de análise de redações para identificar problemas de vocabulário na escrita real do aluno.
+O produto deve ter uma funcionalidade de análise de redações para identificar problemas na escrita real do aluno. A análise é multidimensional, não limitada a vocabulário.
 
 A análise deve aceitar:
 
-- redações escritas à mão, enviadas por foto ou imagem;
-- redações já digitalizadas ou digitadas.
+- redações escritas à mão, enviadas por foto ou imagem (com OCR);
+- redações digitadas.
 
-Para redações manuscritas, será necessário extrair o texto por OCR antes da análise.
+Ambos os formatos estão no MVP.
 
-### 4.2 Análise inicial decidida
+### 4.2 Dimensões de análise
 
-A análise mínima deve identificar palavras repetidas em excesso no texto em língua portuguesa.
+A análise da redação cobre múltiplas dimensões:
 
-Exemplo: se o aluno usa "bom", "coisa", "muito" ou "bonito" várias vezes, o sistema deve apontar a repetição e sugerir alternativas melhores de vocabulário.
+- repetição e pobreza de vocabulário;
+- acentuação;
+- uso de vírgulas e pontuação;
+- uso adequado de palavras no contexto;
+- possivelmente: coesão, estrutura do texto (início, meio e fim) e clareza.
 
-### 4.3 Ferramenta de análise
+Todas as dimensões são analisadas e retornadas como feedback. Entretanto, apenas vocabulário gera questões na trilha do aluno no MVP. As demais dimensões são informativas.
 
-A solução deve priorizar custo baixo.
+A arquitetura é extensível: quando questões de sintaxe existirem no futuro, os erros de acentuação, vírgula e outros aspectos identificados na redação poderão gerar questões automaticamente, da mesma forma como vocabulário já faz.
 
-Caminhos possíveis:
+### 4.3 Rigor por ano e configuração pelo professor
 
-- ferramenta simples de processamento de texto para contar repetições e filtrar palavras irrelevantes;
-- API de IA barata para análise mais contextual;
-- combinação dos dois, usando regra simples quando bastar e IA quando for necessário entender contexto.
+O rigor da análise é graduado. Alunos mais novos recebem análise mais simples; os mais velhos, mais exigente.
 
-A decisão técnica ainda está em aberto. O critério principal é custo-benefício.
+O modelo é de preset inteligente com liberdade de ajuste:
 
-### 4.4 Análises futuras a validar
+- O sistema vem com um preset por ano escolar (ex: 6º ano = vocabulário + acentuação; 9º ano = todas as dimensões).
+- O professor pode ativar ou desativar dimensões de análise conforme a realidade da turma.
+- Se o professor não mexer, o padrão funciona razoavelmente bem.
 
-Ainda está em avaliação se a análise de redação deve olhar apenas palavras repetidas ou também outros aspectos, como:
+Isso existe porque a realidade pedagógica brasileira é muito desigual. Uma escola particular pode trabalhar coesão textual no 6º ano, enquanto outra ainda está consolidando acentuação básica. O professor deve ter as rédeas, mas com orientação quando possível.
 
-- riqueza vocabular;
-- sugestões de sinônimos por contexto;
-- sintaxe;
-- estrutura da redação;
-- clareza de frases;
-- coesão e repetição de ideias.
+Para o vocabulário adaptativo do aluno: o preset do professor define o piso (o que é esperado para a série). O nível individual do aluno pode refinar para cima (sugestões de alternativas mais sofisticadas como bônus), mas nunca cobra além do preset da turma.
 
-Esses pontos não devem ser assumidos como escopo fechado até validação pedagógica e técnica.
+### 4.4 Apresentação para o aluno
+
+A redação corrigida volta para o aluno como um texto anotado com marcações visuais por dimensão. A apresentação deve ser personalizada, divertida e adequada para crianças.
+
+Cada tipo de erro recebe uma cor ou indicador visual diferente:
+
+- Vocabulário repetido/fraco
+- Acentuação
+- Vírgula e pontuação
+- Estrutura e coesão
+
+O aluno lê a redação anotada, entende onde errou e o que pode melhorar. Não é uma tela nova para cada dimensão; é o próprio texto do aluno com camadas de feedback.
 
 ### 4.5 Ligação entre redação e questões
 
 Essa é uma parte essencial do produto.
 
-As palavras repetidas ou fracas identificadas na redação devem alimentar o vocabulário praticado pelo aluno. O sistema deve gerar ou selecionar questões com sinônimos e aplicações dessas palavras.
+As palavras fracas ou repetidas identificadas na redação alimentam diretamente a trilha de questões de vocabulário do aluno. O sistema busca ou gera questões com sinônimos e aplicações dessas palavras (ver seção 3.6).
 
 Exemplo:
 
@@ -161,6 +304,34 @@ Exemplo:
 5. Em redações futuras, espera-se que ele varie melhor o vocabulário.
 
 O objetivo não é apenas mostrar uma métrica, mas fechar o ciclo: detectar dificuldade, ensinar alternativas e melhorar a escrita.
+
+### 4.6 Redações manuscritas e OCR
+
+Redações escritas à mão são enviadas por foto. O texto é extraído por OCR antes da análise.
+
+Riscos conhecidos do OCR:
+
+- Palavras mal lidas ou inexistentes: validadas contra dicionário (Hunspell) antes de qualquer ação.
+- Ruído do OCR: pré-processamento limpa o texto antes de enviar para análise.
+
+Serviços de OCR pesquisados: Google Cloud Vision ($1.50 por 1.000 páginas, primeiras 1.000/mês grátis) e Azure AI Vision. Ver `pesquisa_ferramentas.md` para detalhes.
+
+### 4.7 Ferramenta de análise
+
+A decisão técnica sobre qual modelo de IA usar para a análise da redação está em aberto.
+
+O que está decidido:
+
+- A análise contextual (uso adequado de palavras, sinônimos, coesão, estrutura) precisa de IA.
+- A validação de palavras inexistentes usa Hunspell (open source, gratuito).
+
+O que está em avaliação:
+
+- Qual modelo de IA usar (GPT-4o mini, Gemini Flash-Lite, Claude Haiku ou outro).
+- Se vale adicionar uma camada de pré-processamento com ferramentas como LanguageTool antes da IA.
+- A decisão depende de testes de qualidade com redações reais de alunos.
+
+A pesquisa de preços e ferramentas está documentada em `pesquisa_ferramentas.md`.
 
 ---
 
@@ -201,7 +372,7 @@ Essa funcionalidade deve continuar em avaliação até ficar claro se vale o cus
 
 ## 06 - Competições e eventos
 
-O software deve ter competições e eventos.
+O software deve ter competições e eventos. Essa funcionalidade está prevista no produto, mas sem prioridade definida nem critério de MVP.
 
 Tipos possíveis:
 
@@ -241,7 +412,8 @@ O painel ainda não está especificado em detalhe, mas deve permitir que profess
 - palavras com maior dificuldade;
 - evolução por turma;
 - desempenho em eventos;
-- dados vindos de redações, principalmente palavras repetidas e sugestões trabalhadas.
+- dados vindos de redações (erros por dimensão, palavras repetidas, sugestões trabalhadas);
+- configuração das dimensões de análise de redação por turma.
 
 O painel não deve ser desenhado antes da definição clara do MVP, mas a necessidade dele deve permanecer registrada.
 
@@ -249,52 +421,55 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 
 ## 08 - Escopo por fase
 
-### MVP provável
+### MVP
 
-O MVP deve focar no núcleo do produto:
-
-- app de questões de vocabulário;
-- 3 a 4 tipos de questões;
-- XP e níveis;
-- trilha temática visual;
-- estado de palavra dominada;
-- painel básico para escola/professor acompanhar progresso;
-- base inicial de palavras adequada ao Fundamental II.
+- App de questões de vocabulário (3 a 4 tipos);
+- Card de descoberta na primeira interação com cada palavra;
+- Questões montadas dinamicamente (níveis 1–2) e pré-geradas (níveis 3–4);
+- Categorias semânticas para distratores seguros;
+- Domínio de palavras com sequência fixa e regressão controlada;
+- XP, níveis e trilha temática visual;
+- Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
+- Base inicial de 500 a 800 palavras;
+- Análise de redação multidimensional (vocabulário, acentuação, vírgulas, uso de palavras, coesão);
+- Redação digital e manuscrita (OCR);
+- Rigor da redação configurável pelo professor com preset por ano;
+- Apresentação da redação corrigida com anotações visuais coloridas;
+- Vocabulário da redação alimentando questões na trilha do aluno;
+- Banco de questões por palavra com geração por IA quando necessário;
+- Validação de palavras com Hunspell antes de gerar questões;
+- Painel básico para escola/professor acompanhar progresso.
 
 ### Próxima fase provável
 
-Depois do núcleo validado:
-
-- análise de redações;
-- identificação de palavras repetidas;
-- sugestões de sinônimos;
-- geração de questões personalizadas a partir da redação.
-- Redação de x em x tempos feitas com algumas palavras selecionadas que o aluno dominou.
+- Questões de sintaxe e acentuação (se não entrarem no MVP);
+- Conexão dos erros de sintaxe da redação com questões de sintaxe;
+- Eventos e competições entre turmas;
+- Expansão do banco de palavras.
 
 ### Fases futuras ou em avaliação
 
-- análise mais profunda de sintaxe e estrutura da redação;
-- questões de língua portuguesa além de vocabulário;
-- módulo de livros com perguntas geradas por IA;
-- vocabulário extraído de livros;
-- eventos entre escolas;
-- expansão para Fundamental I.
+- Módulo de livros com perguntas geradas por IA;
+- Vocabulário extraído de livros;
+- Eventos entre escolas;
+- Expansão para Fundamental I;
+- Missões especiais de reforço com palavras dominadas.
 
 ---
 
 ## 09 - Fora do escopo atual
 
-Os itens abaixo apareceram em documentos antigos ou foram especificados cedo demais, mas não devem ser tratados como decisão atual:
+Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartados como escopo atual:
 
-- Flashcards de repertório como funcionalidade central;
+- Flashcards de repertório como funcionalidade central (substituído pelo card de descoberta);
 - SRS clássico como motor obrigatório;
-- mascote específico já decidido;
-- pricing fechado;
-- lista fechada de escolas-alvo;
-- stack técnica fechada;
-- módulo de livros como MVP obrigatório;
-- análise completa de redação como MVP obrigatório;
-- gramática/sintaxe como escopo obrigatório.
+- Mascote específico já decidido;
+- Pricing fechado;
+- Lista fechada de escolas-alvo;
+- Stack técnica fechada;
+- Módulo de livros como MVP obrigatório;
+- Gramática/sintaxe como escopo obrigatório do MVP;
+- Pipeline complexo de pré-processamento NLP como requisito do MVP.
 
 Esses itens podem voltar a ser discutidos, mas não devem guiar implementação agora.
 
@@ -302,16 +477,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 ## 10 - Decisões em aberto
 
-1. Quais serão exatamente os 3 ou 4 tipos de questões iniciais?
-2. Quantos exercícios uma palavra precisa ter para ser considerada dominada?
-3. Palavra dominada nunca volta ou pode voltar apenas em eventos/missões especiais?
-4. A análise de redação começa com texto digitado antes de OCR?
-5. A análise de redação usará regra simples, IA barata ou abordagem híbrida?
-6. A análise de redação ficará limitada a repetição de palavras ou incluirá sintaxe e estrutura?
-7. O módulo de livros entra no produto ou fica como experimento posterior?
-8. Como o vocabulário extraído de redações e livros será revisado antes de virar questão?
-9. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
-10. A expansão para Fundamental I começa no 3º, 4º ou 5º ano?
+1. Quais serão exatamente os 3 ou 4 tipos de questões iniciais? (os tipos previstos estão definidos, mas o conjunto final pode mudar)
+2. O módulo de livros entra no produto ou fica como experimento posterior?
+3. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
+4. A expansão para Fundamental I começa no 3º, 4º ou 5º ano?
+5. Qual modelo de IA será usado para análise de redações? (pesquisa feita, decisão técnica pendente)
+6. Questões de sintaxe entram no MVP ou na fase seguinte? (depende de orçamento e prazo)
+7. Quantas categorias semânticas serão necessárias no banco inicial de palavras?
+8. Qual serviço de OCR será usado para redações manuscritas? (Google Vision e Azure pesquisados)
 
 ---
 
@@ -320,3 +493,5 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 O VocabBR Kids não deve ser apenas um app de quiz.
 
 Ele deve ser um sistema que observa onde o aluno tem pobreza ou repetição de vocabulário, transforma isso em prática personalizada e acompanha a evolução até que novas palavras sejam realmente incorporadas ao repertório do aluno.
+
+O ciclo completo é: redação revela dificuldade → sistema ensina alternativas → aluno pratica → próxima redação mostra melhoria.
