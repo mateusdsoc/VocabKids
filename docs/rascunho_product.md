@@ -174,6 +174,27 @@ O sistema ajusta com base no desempenho:
 - Acertando muito (90%+) → acelera, oferece palavras mais difíceis
 - Errando muito (abaixo de 50%) → freia, consolida o nível atual
 
+#### Trilha independente do ano escolar
+
+A trilha não é organizada por série. O aluno avança conforme o nível de vocabulário dele, não pelo ano que está. Dois alunos do 7º ano podem estar em pontos completamente diferentes da trilha — isso é esperado e correto. O ano escolar afeta apenas a meta semanal configurada pelo professor e o preset de rigor da análise de redação.
+
+Um aluno novo que entra no 8º ano sem histórico no app faz o diagnóstico inicial e é posicionado diretamente no nível correspondente ao seu vocabulário real, sem precisar passar por palavras que já domina.
+
+#### Fontes de recomendação de palavras
+
+As palavras que chegam para o aluno vêm de quatro fontes, em ordem de prioridade:
+
+| Prioridade | Fonte | Quando ativa |
+|---|---|---|
+| 1ª | Erros de vocabulário da redação pessoal | Sempre que o aluno envia uma redação |
+| 2ª | Sinal de turma | Sempre que a turma escreve redações |
+| 3ª | Vocabulário de livros | Quando a turma está lendo um livro |
+| 4ª | Banco base por nível de dificuldade | Sempre — preenche os gaps das outras fontes |
+
+**Sinal de turma**: quando muitos alunos da turma erram ou evitam uma palavra nas redações, essa palavra é recomendada para todos os alunos que ainda não a dominaram, mesmo que individualmente não tenham cometido esse erro. Isso cria uma camada de currículo compartilhado baseado na realidade da turma, sem depender apenas dos erros pessoais. O peso do sinal de turma é menor que o da redação pessoal.
+
+**Banco base**: as fontes 1–3 têm cadência irregular — só geram palavras quando o aluno ou a turma escreve. O banco base preenche os gaps e garante que o aluno sempre tenha algo para praticar. A seleção dentro do banco não é aleatória: segue a progressão de dificuldade do aluno (nível atual primeiro, avançando conforme desempenho). Dentro do mesmo nível de dificuldade, a ordem entre palavras tem pouco impacto pedagógico.
+
 #### Base inicial de palavras
 
 O MVP deve começar com 500 a 800 palavras, suficientes para vários meses de uso. O banco será expandido progressivamente.
