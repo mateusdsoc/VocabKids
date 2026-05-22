@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 19 de maio de 2026.
+> Última atualização: 22 de maio de 2026.
 
 ---
 
@@ -47,18 +47,14 @@ Alunos do Fundamental I a partir do 3º ou 4º ano, dependendo de validação pe
 
 ### 3.1 App de questões de vocabulário
 
-O núcleo do produto é um aplicativo com questões de vocabulário. A hipótese atual é trabalhar com aproximadamente 3 a 4 tipos de questões.
-
-Tipos inicialmente previstos:
+O núcleo do produto é um aplicativo com questões de vocabulário. O produto trabalha com exatamente 4 tipos de questões, em progressão pedagógica fixa:
 
 1. Escolher o significado correto de uma palavra (reconhecimento);
 2. Escolher o melhor sinônimo em determinado contexto (associação);
 3. Completar uma frase com a palavra ou sinônimo adequado (aplicação);
 4. Identificar se uma palavra foi usada corretamente em uma frase (avaliação).
 
-A sequência dos tipos segue uma progressão pedagógica: do reconhecimento básico até a avaliação crítica. Cada tipo testa uma habilidade diferente do aluno em relação à palavra.
-
-O conjunto exato de tipos pode mudar, mas o produto não deve virar uma plataforma genérica de português. O centro continua sendo vocabulário.
+A sequência segue uma progressão do reconhecimento básico até a avaliação crítica. Cada tipo testa uma habilidade diferente do aluno em relação à palavra. O produto não deve virar uma plataforma genérica de português — o centro continua sendo vocabulário.
 
 ### 3.2 Card de descoberta
 
@@ -213,25 +209,31 @@ A ferramenta recomendada para essa validação é o Hunspell, que é open source
 
 As questões dão pontos de experiência (XP). O XP serve para o aluno subir de nível e avançar na trilha.
 
-A progressão deve ser representada por uma trilha temática visual, com inspiração em experiências como Candy Crush ou Duolingo:
+A progressão deve ser representada por uma trilha temática visual, com inspiração em experiências como Candy Crush ou Duolingo.
 
-- níveis organizados em sequência;
-- nós ou fases com exercícios;
-- temas ou capítulos visuais;
-- indicação clara do progresso;
-- recompensas ao completar etapas importantes.
+#### Progressão por XP
+
+A trilha avança por XP, não por número de palavras. As palavras geram XP ao serem dominadas, e o XP enche a barra de cada nó da trilha. Isso desacopla o ritmo visual do aluno (trilha) do currículo adaptativo (palavras por nível de dificuldade), permitindo que cada um evolua no seu ritmo sem travar a trilha.
+
+#### Estrutura da trilha
+
+A trilha é organizada em três camadas:
+
+- **Nó**: menor unidade visual. O aluno avança um nó por sessão aproximadamente. Completar um nó é o progresso que o aluno sente a cada vez que joga.
+- **Ponto turístico**: agrupamento de nós dentro de um tema local. Completar um ponto turístico desbloqueia uma ilustração ou recompensa visual.
+- **Cidade**: conjunto de pontos turísticos. Completar uma cidade é uma conquista relevante e deve ter recompensa especial.
+
+A definição exata de tema, cidades e recompensas ainda está em discussão.
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
 ### 3.8 Expansão para questões de sintaxe
 
-Existe interesse em avaliar questões além de vocabulário puro, como acentuação, sintaxe básica, estrutura da frase e outros pontos de língua portuguesa.
+Questões de sintaxe não entram no MVP. Erros de acentuação, vírgulas e estrutura identificados na redação são exibidos como feedback informativo para o aluno, mas não geram questões na trilha.
 
-Isso ainda não está decidido como escopo do MVP. Entretanto, a arquitetura do sistema deve ser extensível: da mesma forma como vocabulário da redação alimenta questões de vocabulário, no futuro erros de sintaxe identificados na redação devem poder alimentar questões de sintaxe, sem reconstruir o sistema.
+A arquitetura deve ser extensível: da mesma forma como vocabulário da redação alimenta questões de vocabulário, no futuro erros de sintaxe devem poder alimentar questões de sintaxe sem reconstruir o sistema. Isso é um requisito de design, não de prazo.
 
-A decisão de incluir ou não questões de sintaxe depende de orçamento e prazo. Se o custo permitir, é um diferencial competitivo forte para atrair mais escolas.
-
-Critério para entrar no produto: a funcionalidade precisa melhorar a escrita do aluno, não apenas transformar o app em um banco amplo de gramática.
+Critério para entrar no produto em fase futura: a funcionalidade precisa melhorar a escrita do aluno, não transformar o app em um banco genérico de gramática.
 
 ---
 
@@ -314,7 +316,7 @@ Riscos conhecidos do OCR:
 - Palavras mal lidas ou inexistentes: validadas contra dicionário (Hunspell) antes de qualquer ação.
 - Ruído do OCR: pré-processamento limpa o texto antes de enviar para análise.
 
-Serviços de OCR pesquisados: Google Cloud Vision ($1.50 por 1.000 páginas, primeiras 1.000/mês grátis) e Azure AI Vision. Ver `pesquisa_ferramentas.md` para detalhes.
+O serviço de OCR escolhido é o **Google Cloud Vision** ($1,50 por 1.000 páginas, primeiras 1.000/mês grátis, suporte PT-BR confirmado). Ver `pesquisa_ferramentas.md` para comparativo com Azure AI Vision.
 
 ### 4.7 Ferramenta de análise
 
@@ -337,36 +339,30 @@ A pesquisa de preços e ferramentas está documentada em `pesquisa_ferramentas.m
 
 ## 05 - Livros
 
-### 5.1 Ideia em avaliação
+O módulo de livros está no MVP.
 
-Existe interesse em incluir questões relacionadas a livros lidos pela turma, mas isso ainda não está totalmente decidido.
+### 5.1 Objetivo
 
-A ideia seria usar uma API de IA para gerar questões sobre um livro específico, ajudando o professor a verificar se os alunos leram e compreenderam a obra.
+O produto inclui questões relacionadas a livros lidos pela turma. A IA gera questões sobre um livro específico, ajudando o professor a verificar se os alunos leram e compreenderam a obra, e ampliando o vocabulário a partir das obras trabalhadas em sala.
 
-### 5.2 Possíveis usos
+### 5.2 Frentes do módulo
 
-O módulo de livros pode ter duas frentes:
+O módulo de livros tem duas frentes:
 
-- perguntas de compreensão sobre o livro;
-- vocabulário específico do livro.
-
-As perguntas de compreensão serviriam para avaliar leitura.
-
-O vocabulário do livro serviria para identificar palavras diferentes, relevantes ou mais sofisticadas que aparecem naquela obra e que poderiam ser úteis também em redações.
+- **Compreensão de leitura**: perguntas sobre o conteúdo, personagens, eventos e interpretação do livro.
+- **Vocabulário do livro**: identificação de palavras relevantes, pouco comuns ou sofisticadas que aparecem na obra e podem enriquecer o repertório do aluno.
 
 ### 5.3 Integração com vocabulário
 
-Se o módulo de livros for incluído, palavras relevantes dos livros poderão entrar no vocabulário do aluno.
+Palavras relevantes identificadas nos livros entram no vocabulário do aluno:
 
-Exemplo:
+1. A turma está lendo um livro com palavras pouco comuns, mas úteis.
+2. A IA identifica essas palavras.
+3. O professor ou o sistema aprova a lista.
+4. O app cria questões para praticar significado, sinônimos e aplicação.
+5. Essas palavras passam a fazer parte da trilha ou de uma missão específica.
 
-- a turma está lendo um livro com palavras pouco comuns, mas úteis;
-- a IA identifica essas palavras;
-- o professor ou o sistema aprova a lista;
-- o app cria questões para praticar significado, sinônimos e aplicação;
-- essas palavras passam a fazer parte da trilha ou de uma missão específica.
-
-Essa funcionalidade deve continuar em avaliação até ficar claro se vale o custo, a complexidade e o valor pedagógico.
+O fluxo de geração e validação de questões segue o mesmo modelo da seção 3.6 (banco por palavra, validação híbrida com professor).
 
 ---
 
@@ -423,34 +419,33 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 
 ### MVP
 
-- App de questões de vocabulário (3 a 4 tipos);
+- App de questões de vocabulário (4 tipos fixos: reconhecimento, sinônimo, aplicação, avaliação);
 - Card de descoberta na primeira interação com cada palavra;
 - Questões montadas dinamicamente (níveis 1–2) e pré-geradas (níveis 3–4);
 - Categorias semânticas para distratores seguros;
 - Domínio de palavras com sequência fixa e regressão controlada;
-- XP, níveis e trilha temática visual;
+- XP, níveis e trilha temática visual (progressão por XP, estrutura: cidade → ponto turístico → nó);
 - Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
 - Base inicial de 500 a 800 palavras;
 - Análise de redação multidimensional (vocabulário, acentuação, vírgulas, uso de palavras, coesão);
-- Redação digital e manuscrita (OCR);
+- Redação digital e manuscrita (OCR via Google Cloud Vision);
 - Rigor da redação configurável pelo professor com preset por ano;
 - Apresentação da redação corrigida com anotações visuais coloridas;
+- Erros de sintaxe e acentuação exibidos como feedback informativo (não geram questões no MVP);
 - Vocabulário da redação alimentando questões na trilha do aluno;
 - Banco de questões por palavra com geração por IA quando necessário;
 - Validação de palavras com Hunspell antes de gerar questões;
+- Módulo de livros: compreensão de leitura e vocabulário extraído de obras da turma;
 - Painel básico para escola/professor acompanhar progresso.
 
 ### Próxima fase provável
 
-- Questões de sintaxe e acentuação (se não entrarem no MVP);
-- Conexão dos erros de sintaxe da redação com questões de sintaxe;
+- Questões de sintaxe geradas a partir de erros identificados na redação;
 - Eventos e competições entre turmas;
 - Expansão do banco de palavras.
 
 ### Fases futuras ou em avaliação
 
-- Módulo de livros com perguntas geradas por IA;
-- Vocabulário extraído de livros;
 - Eventos entre escolas;
 - Expansão para Fundamental I;
 - Missões especiais de reforço com palavras dominadas.
@@ -467,8 +462,7 @@ Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartado
 - Pricing fechado;
 - Lista fechada de escolas-alvo;
 - Stack técnica fechada;
-- Módulo de livros como MVP obrigatório;
-- Gramática/sintaxe como escopo obrigatório do MVP;
+- Questões de sintaxe no MVP (sintaxe aparece apenas como feedback informativo na redação);
 - Pipeline complexo de pré-processamento NLP como requisito do MVP.
 
 Esses itens podem voltar a ser discutidos, mas não devem guiar implementação agora.
@@ -477,14 +471,20 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 ## 10 - Decisões em aberto
 
-1. Quais serão exatamente os 3 ou 4 tipos de questões iniciais? (os tipos previstos estão definidos, mas o conjunto final pode mudar)
-2. O módulo de livros entra no produto ou fica como experimento posterior?
+1. Qual modelo de IA será usado para análise de redações? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
+2. Quantas categorias semânticas serão necessárias no banco inicial de palavras? Quais são elas?
 3. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
-4. A expansão para Fundamental I começa no 3º, 4º ou 5º ano?
-5. Qual modelo de IA será usado para análise de redações? (pesquisa feita, decisão técnica pendente)
-6. Questões de sintaxe entram no MVP ou na fase seguinte? (depende de orçamento e prazo)
-7. Quantas categorias semânticas serão necessárias no banco inicial de palavras?
-8. Qual serviço de OCR será usado para redações manuscritas? (Google Vision e Azure pesquisados)
+4. Qual o tema visual da trilha? (cidades do Sudeste como MVP é uma direção forte, mas não está fechada)
+
+### Decisões fechadas (registradas para histórico)
+
+| Decisão | Resolução |
+|---|---|
+| Tipos de questões | 4 tipos fixos (seção 3.1) |
+| Módulo de livros no MVP | Sim |
+| Sintaxe no MVP | Não — apenas feedback informativo na redação |
+| OCR | Google Cloud Vision |
+| Expansão Fund. I | Não relevante para fase inicial; sem data |
 
 ---
 
