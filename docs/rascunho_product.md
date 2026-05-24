@@ -529,12 +529,10 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Quais recompensas para eventos entre turmas, anos e escolas?
-3. Qual o tema visual da trilha? (cidades do Sudeste é direção forte, não fechada)
-4. LGPD e política de privacidade — alunos são menores de idade; requer definição de consentimento, dados mínimos coletados e política de retenção.
-5. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos (escola pública, particular, sistemas municipais).
-6. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
-7. Valores de XP por questão e estrutura de níveis do aluno.
-8. Card de descoberta — quais campos exibir (definição, exemplo, imagem?).
+3. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
+4. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+5. Valores de XP por questão e estrutura de níveis do aluno.
+6. Card de descoberta — quais campos exibir (definição, exemplo, imagem?).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -548,12 +546,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Plataforma | Mobile (iOS e Android) + web |
 | Banco de palavras | Compartilhado entre escolas; dados de alunos isolados por escola |
 | Envio de redações | Feito pelo aluno (foto para manuscrita, PDF para digital) |
-| Banco de palavras — seleção inicial | LLM gera em lotes (assinatura Claude) com revisão humana; bancos de sinônimos descartados como dependência |
-| Banco de palavras — palavras-alvo | Alternativas de qualidade às palavras superutilizadas, não listas de frequência |
-| Geração em runtime | API com geração lazy |
+| Banco de palavras — palavras-alvo | Alternativas às palavras superutilizadas, não listas de frequência |
+| Banco de palavras — geração inicial | Assinatura Claude, lotes, revisão humana (tarefa única) |
+| Banco de palavras — runtime | API com geração lazy |
 | Validação de palavras | Hunspell valida existência; qualidade por revisão humana/professor |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
+| Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
+| LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 
 ---
 
