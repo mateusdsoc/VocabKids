@@ -204,7 +204,26 @@ As palavras que chegam para o aluno vêm de quatro fontes, em ordem de prioridad
 
 O MVP deve começar com 500 a 800 palavras, suficientes para vários meses de uso. O banco será expandido progressivamente.
 
-A seleção das palavras iniciais deve ser baseada em listas de frequência do português brasileiro — priorizando palavras que aparecem com mais frequência em textos e redações de alunos do Fundamental II, não palavras escolhidas arbitrariamente. Recursos como o corpus do NILC, WordLex PT-BR e corpus de redações do ENEM estão sendo avaliados para essa finalidade.
+**O que NÃO usar:** listas de frequência simples. As palavras mais frequentes são justamente as que o aluno já conhece e usa. O objetivo do produto é o oposto — ensinar as palavras que ele deveria usar e não usa.
+
+**Lógica correta:** as palavras-alvo são as alternativas de qualidade para as palavras que o aluno superutiliza. Se o aluno repete "importante", as palavras-alvo são "relevante", "essencial", "significativo", "fundamental". O ponto de partida é o vocabulário pobre/repetido; o banco é construído a partir das alternativas a ele.
+
+#### Motor de seleção e geração: LLM
+
+A seleção das palavras-alvo e a geração de suas questões são feitas por LLM, não por bancos de sinônimos externos (TeP, OpenWordNet-PT, Onto.PT). Esses bancos foram avaliados e descartados como dependência: são desatualizados, têm ruído de geração automática, viés de português europeu ou licença comercial incerta.
+
+A escolha pelo LLM se justifica porque nosso domínio é o caso mais favorável para um modelo: palavras comuns e superutilizadas e seus sinônimos — vocabulário central que LLMs dominam bem em PT-BR. Não é vocabulário raro ou técnico onde a alucinação seria um risco alto.
+
+A geração acontece em dois momentos distintos:
+
+| Momento | Mecanismo | Por quê |
+|---|---|---|
+| Banco inicial (~500–800 palavras, uma vez) | Assinatura mensal do Claude, geração em lotes, revisão humana | Tarefa pontual e manual; custo fixo compensa mais que tokens avulsos |
+| Runtime (palavra nova da redação) | API com geração lazy (ver seção 3.3) | Automático, em produção, sem humano no meio |
+
+**Validação:** em ambos os momentos, o Hunspell valida que a palavra existe (ortografia) antes de entrar no banco. A qualidade do sinônimo (adequação e nível) é garantida pela revisão humana no lote inicial e pela validação híbrida do professor no runtime (seção 3.6).
+
+**Identificação das palavras-alvo:** o corpus Essay-BR (~4.570 redações de ensino médio com nota por competência) pode ser usado para análise contrastiva — comparar o vocabulário de redações nota alta vs. baixa e extrair empiricamente as palavras superutilizadas nas redações fracas, que servem de gatilho para o banco.
 
 #### Banco compartilhado entre escolas
 
@@ -529,7 +548,10 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Plataforma | Mobile (iOS e Android) + web |
 | Banco de palavras | Compartilhado entre escolas; dados de alunos isolados por escola |
 | Envio de redações | Feito pelo aluno (foto para manuscrita, PDF para digital) |
-| Banco de palavras — seleção inicial | Por listas de frequência do PT-BR (NILC, WordLex, ENEM) |
+| Banco de palavras — seleção inicial | LLM gera em lotes (assinatura Claude) com revisão humana; bancos de sinônimos descartados como dependência |
+| Banco de palavras — palavras-alvo | Alternativas de qualidade às palavras superutilizadas, não listas de frequência |
+| Geração em runtime | API com geração lazy |
+| Validação de palavras | Hunspell valida existência; qualidade por revisão humana/professor |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 
