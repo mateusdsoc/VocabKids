@@ -72,7 +72,7 @@ Descoberta → Nível 1 (reconhecimento) → Nível 2 (sinônimo) → Nível 3 (
 
 ### 3.3 Montagem de questões e distratores
 
-Questões são geradas pela IA e armazenadas no banco vinculadas à palavra. O banco funciona como cache: na primeira vez que uma palavra precisa de questões, a IA as gera e salva; nas vezes seguintes, as questões já existem e são reutilizadas sem custo adicional.
+Questões são geradas pela IA e armazenadas no banco vinculadas à palavra. O banco é o único armazenamento: na primeira vez que uma palavra precisa de questões, a IA as gera e salva permanentemente; nas vezes seguintes, as questões já existem e são reutilizadas sem custo adicional. Esse padrão é chamado de geração lazy — sem replicação, sem camada separada, sem expiração.
 
 #### Fluxo de geração sob demanda
 
