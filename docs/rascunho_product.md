@@ -293,6 +293,28 @@ Os valores não variam por nível de dificuldade: o nível das questões já é 
 
 Completar uma palavra acertando tudo de primeira rende cerca de 900 XP (4 níveis × 100 + 500 de bônus). Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
 
+#### Bônus de sequência (combo)
+
+Acertos consecutivos de primeira tentativa acumulam um bônus de sequência, somado ao XP base de 100. O bônus tem uma parte fixa e uma parte crescente:
+
+> **bônus = 18 + (2 × posição na sequência)**
+
+| Acerto seguido | Cálculo | XP total da questão |
+|---|---|---|
+| 1º do dia | 100 (inicia a sequência, sem bônus) | 100 |
+| 2º seguido | 100 + (18 + 2) | 120 |
+| 3º seguido | 100 + (18 + 4) | 122 |
+| 4º seguido | 100 + (18 + 6) | 124 |
+| 10º seguido | 100 + (18 + 18) | 136 |
+
+A parte fixa (18) mantém o bônus perto de 20 e evita distorcer a economia de XP; a parte crescente (+2 por acerto) garante que o valor nunca se repita exatamente, dando a sensação de que cada acerto seguido vale mais. O crescimento é suave de propósito — mesmo após 20 acertos seguidos o bônus chega a apenas ~58.
+
+Regras da sequência:
+
+- **Zera ao errar**: qualquer erro reinicia a sequência do zero.
+- **Zera na 2ª tentativa**: acertar apenas na 2ª tentativa também reinicia a sequência. Só acertos de primeira tentativa constroem e mantêm o combo.
+- **Reinicia por dia**: a sequência é diária; começa do zero a cada novo dia.
+
 #### Estrutura da trilha
 
 A trilha é organizada em três camadas:
@@ -581,6 +603,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
 | Valores de XP | 100 (1ª tentativa), 70 (2ª tentativa), 500 (bônus por dominar palavra); sem variar por dificuldade |
+| Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
 
 ---
 
