@@ -204,6 +204,12 @@ As palavras que chegam para o aluno vêm de quatro fontes, em ordem de prioridad
 
 O MVP deve começar com 500 a 800 palavras, suficientes para vários meses de uso. O banco será expandido progressivamente.
 
+A seleção das palavras iniciais deve ser baseada em listas de frequência do português brasileiro — priorizando palavras que aparecem com mais frequência em textos e redações de alunos do Fundamental II, não palavras escolhidas arbitrariamente. Recursos como o corpus do NILC, WordLex PT-BR e corpus de redações do ENEM estão sendo avaliados para essa finalidade.
+
+#### Banco compartilhado entre escolas
+
+O banco de palavras e questões é compartilhado entre todas as escolas. Uma palavra gerada a partir da redação de um aluno de uma escola fica disponível para todos. Isso acelera o crescimento do banco e reduz custos de geração. Dados de alunos e redações continuam isolados por escola.
+
 ### 3.6 Geração dinâmica de questões a partir de redações
 
 Quando a redação do aluno identifica palavras fracas ou repetidas, essas palavras precisam virar questões na trilha do aluno.
@@ -333,18 +339,23 @@ Exemplo:
 
 O objetivo não é apenas mostrar uma métrica, mas fechar o ciclo: detectar dificuldade, ensinar alternativas e melhorar a escrita.
 
-### 4.6 Redações manuscritas e OCR
+### 4.6 Envio de redações
 
-Redações escritas à mão são enviadas por foto. O texto é extraído por OCR antes da análise.
+O envio é feito pelo próprio aluno, em dois formatos:
 
-Riscos conhecidos do OCR:
+- **Manuscrita**: o aluno fotografa a redação pelo app. O texto é extraído por OCR antes da análise.
+- **Digital**: o aluno envia em PDF.
+
+O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor não envia redações — apenas visualiza e acompanha.
+
+### 4.8 Riscos do OCR
 
 - Palavras mal lidas ou inexistentes: validadas contra dicionário (Hunspell) antes de qualquer ação.
 - Ruído do OCR: pré-processamento limpa o texto antes de enviar para análise.
 
 O serviço de OCR escolhido é o **Google Cloud Vision** ($1,50 por 1.000 páginas, primeiras 1.000/mês grátis, suporte PT-BR confirmado). Ver `pesquisa_ferramentas.md` para comparativo com Azure AI Vision.
 
-### 4.7 Ferramenta de análise
+### 4.9 Ferramenta de análise
 
 A decisão técnica sobre qual modelo de IA usar para a análise da redação está em aberto.
 
@@ -445,9 +456,10 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 
 ### MVP
 
+- Plataforma: mobile (iOS e Android) e web;
 - App de questões de vocabulário (4 tipos fixos: reconhecimento, sinônimo, aplicação, avaliação);
 - Card de descoberta na primeira interação com cada palavra;
-- Questões geradas pela IA sob demanda, armazenadas no banco como cache por palavra;
+- Questões geradas pela IA sob demanda (geração lazy), armazenadas permanentemente no banco por palavra;
 - Domínio de palavras com sequência fixa e regressão controlada;
 - XP, níveis e trilha temática visual (progressão por XP, estrutura: cidade → ponto turístico → nó);
 - Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
@@ -496,9 +508,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 ## 10 - Decisões em aberto
 
-1. Qual modelo de IA será usado para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
-2. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
-3. Qual o tema visual da trilha? (cidades do Sudeste como MVP é uma direção forte, mas não está fechada)
+1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
+2. Quais recompensas para eventos entre turmas, anos e escolas?
+3. Qual o tema visual da trilha? (cidades do Sudeste é direção forte, não fechada)
+4. LGPD e política de privacidade — alunos são menores de idade; requer definição de consentimento, dados mínimos coletados e política de retenção.
+5. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos (escola pública, particular, sistemas municipais).
+6. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+7. Valores de XP por questão e estrutura de níveis do aluno.
+8. Card de descoberta — quais campos exibir (definição, exemplo, imagem?).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -509,6 +526,12 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Sintaxe no MVP | Não — apenas feedback informativo na redação |
 | OCR | Google Cloud Vision |
 | Expansão Fund. I | Não relevante para fase inicial; sem data |
+| Plataforma | Mobile (iOS e Android) + web |
+| Banco de palavras | Compartilhado entre escolas; dados de alunos isolados por escola |
+| Envio de redações | Feito pelo aluno (foto para manuscrita, PDF para digital) |
+| Banco de palavras — seleção inicial | Por listas de frequência do PT-BR (NILC, WordLex, ENEM) |
+| Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
+| Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 
 ---
 
