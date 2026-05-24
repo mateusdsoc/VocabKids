@@ -64,6 +64,21 @@ O card aparece uma única vez, na primeira interação com a palavra. Se o aluno
 
 O objetivo é ensinar antes de testar. O aluno precisa ter contato com o significado da palavra antes de ser cobrado. O card não é um flashcard tradicional (não tem lado A/B, não exige memorização). É uma apresentação integrada na trilha, rápida e divertida.
 
+#### Conteúdo do card (mínimo)
+
+O card é deliberadamente mínimo. Campos:
+
+- **Palavra** em destaque;
+- **Definição curta e conversacional** — linguagem acessível para a faixa etária, não copiada de dicionário. Ex: "relevante = que importa, que faz diferença numa situação", não "que tem relevância; pertinente";
+- **Exemplo de uso em frase** — contexto concreto da palavra;
+- **Áudio de pronúncia** (recomendado) — ícone de alto-falante com TTS. Custo baixo e ajuda no contato com palavras nunca vistas.
+
+#### Gancho contextual
+
+Quando a palavra vem do erro da própria redação do aluno, o card mostra a conexão antes de apresentar a palavra nova. Ex: "Você usou 'importante' várias vezes. Conheça uma alternativa:" → card de "relevante". Isso transforma o card de genérico em pessoal e motivador, aplicando o ciclo central do produto (redação revela dificuldade → sistema ensina alternativa).
+
+Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.com (definição conversacional + exemplo, para falantes nativos), Duolingo, Memrise e Babbel (vocabulário sempre apresentado em contexto de frase).
+
 A sequência completa de uma palavra fica:
 
 ```
@@ -532,7 +547,6 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 3. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
 4. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
 5. Valores de XP por questão e estrutura de níveis do aluno.
-6. Card de descoberta — quais campos exibir (definição, exemplo, imagem?).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -554,6 +568,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
+| Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
 
 ---
 
