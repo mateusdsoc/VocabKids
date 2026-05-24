@@ -72,41 +72,46 @@ Descoberta → Nível 1 (reconhecimento) → Nível 2 (sinônimo) → Nível 3 (
 
 ### 3.3 Montagem de questões e distratores
 
-Nem todas as questões precisam ser armazenadas por completo no banco. Algumas podem ser montadas dinamicamente em tempo real.
+Questões são geradas pela IA e armazenadas no banco vinculadas à palavra. O banco funciona como cache: na primeira vez que uma palavra precisa de questões, a IA as gera e salva; nas vezes seguintes, as questões já existem e são reutilizadas sem custo adicional.
 
-#### Níveis 1 e 2 (montagem dinâmica)
+#### Fluxo de geração sob demanda
 
-- Nível 1: a definição correta vem do metadado da palavra. As alternativas erradas (distratores) são definições de outras palavras.
-- Nível 2: o sinônimo correto vem do metadado da palavra. Os distratores são sinônimos de outras palavras.
+```
+palavra identificada (redação, livro ou banco base)
+  → normalização para forma base (lematização)
+  → consulta indexada no banco: palavra existe?
+     ├─ sim → atribui questões existentes ao aluno
+     └─ não → IA gera questões completas → salva no banco → atribui ao aluno
+```
 
-#### Níveis 3 e 4 (conteúdo pré-gerado)
+#### Questões completas geradas pela IA
 
-- Nível 3: exige frases com lacunas, pré-escritas ou geradas por IA.
-- Nível 4: exige frases de julgamento (certa ou errada), pré-escritas ou geradas por IA.
+A IA gera cada questão de forma completa: resposta correta e distratores incluídos. Por entender contexto e significado, a IA garante que nenhum distrator seja secretamente correto — sem precisar de um sistema de categorias semânticas externo para isso.
+
+Cada palavra recebe no mínimo 2 variações de questão por nível (4 níveis no total).
 
 #### Dados armazenados por palavra
 
 | Dado | Tipo | Quantidade |
 |---|---|---|
-| Definição | Metadado da palavra | 1 |
-| Sinônimos | Metadado da palavra | 2–3 |
-| Categoria semântica | Metadado da palavra | 1 |
-| Nível de dificuldade | Metadado da palavra | 1 (escala numérica) |
-| Frases com lacuna (nível 3) | Conteúdo gerado | mínimo 2 variações |
-| Frases de julgamento (nível 4) | Conteúdo gerado | mínimo 2 variações |
+| Definição | Gerado pela IA | 1 |
+| Sinônimos | Gerado pela IA | 2–3 |
+| Nível de dificuldade | Atribuído na geração | 1 (escala 1–10) |
+| Questões nível 1 — reconhecimento | Gerado pela IA | mínimo 2 variações |
+| Questões nível 2 — sinônimo | Gerado pela IA | mínimo 2 variações |
+| Questões nível 3 — aplicação | Gerado pela IA | mínimo 2 variações |
+| Questões nível 4 — avaliação | Gerado pela IA | mínimo 2 variações |
 
-#### Categorias semânticas e segurança dos distratores
+#### Concerns de implementação
 
-Cada palavra pertence a uma categoria semântica (ex: tamanho, importância, velocidade, beleza, qualidade). A regra principal é: distratores nunca vêm da mesma categoria semântica da palavra-alvo. Isso impede que duas respostas estejam corretas ao mesmo tempo.
+**1. Normalização (crítico)**
+Antes de consultar o banco, a palavra precisa ser reduzida à sua forma base ("correndo" → "correr", "relevantes" → "relevante"). Sem isso, o banco acumula quase-duplicatas que custam geração e confundem o sistema. Hunspell ou um lematizador resolve antes da consulta.
 
-Exemplo para a palavra "relevante" (categoria: importância):
+**2. Latência no "miss"**
+Quando uma palavra é nova, a IA precisa gerar as questões antes de atribuir ao aluno. Essa geração deve ser assíncrona: a palavra entra em uma fila, as questões são geradas em background e aparecem na trilha em seguida — sem bloquear a experiência do aluno.
 
-- Resposta correta: "Que tem importância para algo"
-- Distratores: definições de palavras das categorias tamanho, velocidade, beleza — nunca importância
-
-Se não houver palavras suficientes de outras categorias no mesmo nível de dificuldade, o sistema relaxa o nível de dificuldade dos distratores. O importante é que a resposta correta esteja no nível adequado.
-
-Além da categoria semântica, o sistema mantém uma lista de sinônimos por palavra e verifica que nenhum distrator está nessa lista.
+**3. Segurança dos distratores é responsabilidade da IA**
+A IA gera a questão inteira e garante que os distratores não sejam respostas corretas. Não há sistema de categorias semânticas para isso. O professor pode sinalizar problemas via validação híbrida (seção 3.6), mas a geração em si depende da IA fazer isso corretamente no prompt.
 
 ### 3.4 Domínio de palavras
 
@@ -442,8 +447,7 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 
 - App de questões de vocabulário (4 tipos fixos: reconhecimento, sinônimo, aplicação, avaliação);
 - Card de descoberta na primeira interação com cada palavra;
-- Questões montadas dinamicamente (níveis 1–2) e pré-geradas (níveis 3–4);
-- Categorias semânticas para distratores seguros;
+- Questões geradas pela IA sob demanda, armazenadas no banco como cache por palavra;
 - Domínio de palavras com sequência fixa e regressão controlada;
 - XP, níveis e trilha temática visual (progressão por XP, estrutura: cidade → ponto turístico → nó);
 - Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
@@ -492,10 +496,9 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 ## 10 - Decisões em aberto
 
-1. Qual modelo de IA será usado para análise de redações? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
-2. Quantas categorias semânticas serão necessárias no banco inicial de palavras? Quais são elas?
-3. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
-4. Qual o tema visual da trilha? (cidades do Sudeste como MVP é uma direção forte, mas não está fechada)
+1. Qual modelo de IA será usado para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
+2. Quais recompensas fazem sentido para eventos entre turmas, anos e escolas?
+3. Qual o tema visual da trilha? (cidades do Sudeste como MVP é uma direção forte, mas não está fechada)
 
 ### Decisões fechadas (registradas para histórico)
 
