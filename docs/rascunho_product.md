@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 22 de maio de 2026.
+> Última atualização: 24 de maio de 2026.
 
 ---
 
@@ -281,6 +281,18 @@ A progressão deve ser representada por uma trilha temática visual, com inspira
 
 A trilha avança por XP, não por número de palavras. As palavras geram XP ao serem dominadas, e o XP enche a barra de cada nó da trilha. Isso desacopla o ritmo visual do aluno (trilha) do currículo adaptativo (palavras por nível de dificuldade), permitindo que cada um evolua no seu ritmo sem travar a trilha.
 
+#### Valores de XP
+
+| Evento | XP |
+|---|---|
+| Acertar questão (1ª tentativa) | 100 |
+| Acertar questão (2ª tentativa) | 70 |
+| Dominar palavra (bônus ao completar todos os níveis da palavra) | 500 |
+
+Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
+
+Completar uma palavra acertando tudo de primeira rende cerca de 900 XP (4 níveis × 100 + 500 de bônus). Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
+
 #### Estrutura da trilha
 
 A trilha é organizada em três camadas:
@@ -546,7 +558,6 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 2. Quais recompensas para eventos entre turmas, anos e escolas?
 3. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
 4. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
-5. Valores de XP por questão e estrutura de níveis do aluno.
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -569,6 +580,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
+| Valores de XP | 100 (1ª tentativa), 70 (2ª tentativa), 500 (bônus por dominar palavra); sem variar por dificuldade |
 
 ---
 
