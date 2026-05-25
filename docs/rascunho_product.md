@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 24 de maio de 2026.
+> Última atualização: 25 de maio de 2026.
 
 ---
 
@@ -335,6 +335,47 @@ A arquitetura deve ser extensível: da mesma forma como vocabulário da redaçã
 
 Critério para entrar no produto em fase futura: a funcionalidade precisa melhorar a escrita do aluno, não transformar o app em um banco genérico de gramática.
 
+### 3.9 Eventos, competições e leaderboards
+
+O produto tem duas economias de XP distintas: o **XP individual** (descrito em 3.7, que move a trilha do aluno) e o **XP de evento**, usado em competições coletivas.
+
+#### Leaderboard individual da turma
+
+O aluno sempre vê o próprio XP. Da turma, vê apenas o **top 3**, com o valor de XP de cada um dos três. Não tem acesso ao XP exato dos demais colegas. Mostrar o valor dá um objetivo concreto (saber a distância para o topo), e limitar ao top 3 evita expor a posição de quem está no meio ou no fim.
+
+#### XP de evento separado do individual
+
+Quando uma competição começa, o XP de evento **inicia do zero para todos os participantes**, independente do XP individual acumulado. Isso é essencial para a justiça: caso contrário, escolas com alunos usando o app há mais tempo venceriam por inércia, não por engajamento durante o evento. As duas pontuações são contabilizadas separadamente.
+
+#### Eventos de meta coletiva
+
+Existem em dois níveis:
+
+- **Entre turmas** (dentro da mesma escola): o XP de todos os alunos da turma é somado. Os alunos veem a progressão da própria turma e o **top 3 contribuintes** da turma.
+- **Entre escolas**: o XP de todos os alunos da escola é somado. O aluno vê a própria contribuição, o **top 10 contribuintes** da escola e a **posição geral das outras escolas** (sem acesso aos detalhes internos delas). A lógica é fazer o aluno se sentir parte da escola, não só da turma.
+
+#### Visibilidade dos educadores
+
+| Papel | Durante competição | Fora de competição |
+|---|---|---|
+| Professor | Total da escola + desempenho detalhado apenas dos seus próprios alunos | Seus alunos + estatísticas da sua turma |
+| Coordenador | Tudo da própria escola | Tudo da própria escola |
+
+Sobre outras escolas, professores e coordenadores veem o mesmo que os alunos: apenas a posição geral, sem detalhes internos.
+
+#### Criação e adesão a competições
+
+O **admin da plataforma** cria as competições. Cada escola **aceita ou rejeita** participar. A decisão de adesão pode acontecer fora da plataforma (o admin cadastra manualmente as escolas participantes), então a arquitetura precisa ser flexível para inscrever ou não cada escola em uma competição — não assumir que toda escola participa de tudo.
+
+#### Virada de ano letivo
+
+Há uma distinção importante entre o **algoritmo adaptativo** e o **XP/nível visível**:
+
+- O **algoritmo adaptativo nunca zera**. Ele acumula a competência real do aluno (palavras dominadas, padrões de erro, histórico) ano após ano para melhorar a recomendação. Esse é o dado valioso e não se perde.
+- O **XP/nível visível é redefinido para a média da turma** na virada de ano (todos os alunos vão para a média — acima, abaixo e na média). Isso evita que um aluno novo entre muito distante da turma e que o número visível vire uma barreira social.
+
+O raciocínio: o XP visível é um indicador motivacional, não o modelo de aprendizado. O aluno forte não perde competência real (volta ao topo rápido porque de fato sabe mais), e o aluno novo não começa milhares de XP atrás.
+
 ---
 
 ## 04 - Redações
@@ -473,7 +514,7 @@ O fluxo de geração e validação de questões segue o mesmo modelo da seção 
 
 ## 06 - Competições e eventos
 
-O software deve ter competições e eventos. Essa funcionalidade está prevista no produto, mas sem prioridade definida nem critério de MVP.
+O software deve ter competições e eventos. A mecânica detalhada (XP de evento separado, leaderboards, visibilidade por papel, criação e adesão) está definida na seção 3.9. Esta seção cobre os tipos de evento e as recompensas.
 
 Tipos possíveis:
 
@@ -577,9 +618,9 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 ## 10 - Decisões em aberto
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
-2. Quais recompensas para eventos entre turmas, anos e escolas?
-3. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
-4. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
+3. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -604,6 +645,12 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
 | Valores de XP | 100 (1ª tentativa), 70 (2ª tentativa), 500 (bônus por dominar palavra); sem variar por dificuldade |
 | Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
+| Leaderboard de turma | Aluno vê próprio XP + top 3 da turma com valores; não vê XP exato dos demais |
+| XP de evento | Separado do XP individual; zera para todos no início da competição |
+| Eventos coletivos | Entre turmas (top 3 contribuintes) e entre escolas (top 10 + posição geral das outras) |
+| Visibilidade educadores | Professor: total da escola + detalhe dos próprios alunos; coordenador: tudo da escola |
+| Criação de competições | Admin da plataforma cria; escola aceita/rejeita; arquitetura inscreve escolas flexivelmente |
+| Virada de ano | Algoritmo adaptativo acumula sempre; XP/nível visível vai para a média da turma |
 
 ---
 
