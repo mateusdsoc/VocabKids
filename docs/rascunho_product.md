@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 25 de maio de 2026.
+> Última atualização: 25 de maio de 2026 (rev. 2).
 
 ---
 
@@ -77,6 +77,10 @@ O card é deliberadamente mínimo. Campos:
 
 Quando a palavra vem do erro da própria redação do aluno, o card mostra a conexão antes de apresentar a palavra nova. Ex: "Você usou 'importante' várias vezes. Conheça uma alternativa:" → card de "relevante". Isso transforma o card de genérico em pessoal e motivador, aplicando o ciclo central do produto (redação revela dificuldade → sistema ensina alternativa).
 
+Para viabilizar isso sem recomputar nada na hora de exibir o card, a atribuição da palavra ao aluno guarda um campo `palavra_gatilho` — qual palavra superutilizada motivou a recomendação (ex.: "importante" gerou "relevante"). Esse dado já é computado durante a análise da redação, então é só persistir na atribuição e ler na exibição do card.
+
+O gancho é **exclusivo da origem pessoal**. Quando a palavra vem do sinal de turma (e não do erro do próprio aluno), o card aparece sem gancho, na forma genérica — para não expor a turma nem soar como culpa coletiva. O campo `palavra_gatilho` só é preenchido para palavras de origem pessoal.
+
 Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.com (definição conversacional + exemplo, para falantes nativos), Duolingo, Memrise e Babbel (vocabulário sempre apresentado em contexto de frase).
 
 A sequência completa de uma palavra fica:
@@ -92,7 +96,7 @@ Questões são geradas pela IA e armazenadas no banco vinculadas à palavra. O b
 #### Fluxo de geração sob demanda
 
 ```
-palavra identificada (redação, livro ou banco base)
+palavra identificada (redação ou banco base)
   → normalização para forma base (lematização)
   → consulta indexada no banco: palavra existe?
      ├─ sim → atribui questões existentes ao aluno
@@ -200,20 +204,33 @@ A trilha não é organizada por série. O aluno avança conforme o nível de voc
 
 Um aluno novo que entra no 8º ano sem histórico no app faz o diagnóstico inicial e é posicionado diretamente no nível correspondente ao seu vocabulário real, sem precisar passar por palavras que já domina.
 
+#### Meta semanal do professor
+
+O professor pode configurar uma meta semanal para a turma, medida em **palavras dominadas por semana**. Essa é a unidade porque é concreta e pedagogicamente significativa — diferente do XP, que varia com o bônus de combo e confundiria a leitura.
+
+- Há um valor padrão sugerido por ano escolar; o professor ajusta se quiser.
+- É opcional: se o professor não mexer, o padrão funciona sozinho.
+- Cumprir a meta da semana rende um **selo** ao aluno (ver passaporte, seção 3.10), conectando a meta ao balde de recompensas por feitos.
+
 #### Fontes de recomendação de palavras
 
-As palavras que chegam para o aluno vêm de quatro fontes, em ordem de prioridade:
+As palavras que chegam para o aluno vêm das seguintes fontes, em ordem de prioridade:
 
 | Prioridade | Fonte | Quando ativa |
 |---|---|---|
 | 1ª | Erros de vocabulário da redação pessoal | Sempre que o aluno envia uma redação |
 | 2ª | Sinal de turma | Sempre que a turma escreve redações |
-| 3ª | Vocabulário de livros | Quando a turma está lendo um livro |
-| 4ª | Banco base por nível de dificuldade | Sempre — preenche os gaps das outras fontes |
+| 3ª | Banco base por nível de dificuldade | Sempre — preenche os gaps das outras fontes |
 
-**Sinal de turma**: quando muitos alunos da turma erram ou evitam uma palavra nas redações, essa palavra é recomendada para todos os alunos que ainda não a dominaram, mesmo que individualmente não tenham cometido esse erro. Isso cria uma camada de currículo compartilhado baseado na realidade da turma, sem depender apenas dos erros pessoais. O peso do sinal de turma é menor que o da redação pessoal.
+O vocabulário de livros seria uma fonte adicional, mas o módulo de livros ficou fora do MVP (ver seção 05). Quando voltar, entra como mais uma fonte, acima do banco base.
 
-**Banco base**: as fontes 1–3 têm cadência irregular — só geram palavras quando o aluno ou a turma escreve. O banco base preenche os gaps e garante que o aluno sempre tenha algo para praticar. A seleção dentro do banco não é aleatória: segue a progressão de dificuldade do aluno (nível atual primeiro, avançando conforme desempenho). Dentro do mesmo nível de dificuldade, a ordem entre palavras tem pouco impacto pedagógico.
+**Sinal de turma**: quando muitos alunos da turma superutilizam ou evitam uma palavra nas redações, essa palavra é recomendada para todos os alunos que ainda não a dominaram, mesmo que individualmente não tenham cometido esse erro. Isso cria uma camada de currículo compartilhado baseado na realidade da turma, sem depender apenas dos erros pessoais. O peso do sinal de turma é menor que o da redação pessoal.
+
+*Critério*: uma palavra vira sinal de turma quando é marcada como fraca ou superutilizada nas redações de **pelo menos 30% da turma** dentro do período letivo atual. Em vocabulário não se trata de "erro" e sim de superuso/pobreza (vários alunos repetem a mesma palavra fraca). O limiar de 30% é inicial e ajustável com dados reais.
+
+*Deduplicação com a fonte pessoal*: se uma palavra já está na fila do aluno pela própria redação (fonte 1ª), o sinal de turma para a mesma palavra é ignorado para ele. A palavra aparece uma única vez, com o gancho pessoal. A prioridade pessoal vence.
+
+**Banco base**: as fontes 1ª e 2ª têm cadência irregular — só geram palavras quando o aluno ou a turma escreve. O banco base preenche os gaps e garante que o aluno sempre tenha algo para praticar. A seleção dentro do banco não é aleatória: segue a progressão de dificuldade do aluno (nível atual primeiro, avançando conforme desempenho). Dentro do mesmo nível de dificuldade, a ordem entre palavras tem pouco impacto pedagógico.
 
 #### Base inicial de palavras
 
@@ -317,13 +334,13 @@ Regras da sequência:
 
 #### Estrutura da trilha
 
-A trilha é organizada em três camadas:
+A trilha é organizada em três camadas, cada uma com sua recompensa de progressão (garantida — todo aluno ganha ao avançar):
 
-- **Nó**: menor unidade visual. O aluno avança um nó por sessão aproximadamente. Completar um nó é o progresso que o aluno sente a cada vez que joga.
-- **Ponto turístico**: agrupamento de nós dentro de um tema local. Completar um ponto turístico desbloqueia uma ilustração ou recompensa visual.
-- **Cidade**: conjunto de pontos turísticos. Completar uma cidade é uma conquista relevante e deve ter recompensa especial.
+- **Nó**: menor unidade visual. O aluno avança um nó por sessão aproximadamente. Completar um nó dá um feedback visual (ex.: confete), sem item colecionável.
+- **Ponto turístico**: agrupamento de nós dentro de um tema local. Completar um ponto turístico desbloqueia um **cartão-postal** colecionável da atração — encaixa no tema de viagem e vai para a coleção do aluno.
+- **Cidade**: conjunto de pontos turísticos. Completar uma cidade dá um **carimbo no passaporte** (ver seção 3.10).
 
-A definição exata de tema, cidades e recompensas ainda está em discussão.
+As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. As cidades do MVP estão definidas (BH, São Paulo, Rio de Janeiro); a definição visual fina de cada ponto turístico e cartão-postal é trabalho de arte, não de produto.
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
@@ -376,21 +393,27 @@ Há uma distinção importante entre o **algoritmo adaptativo** e o **XP/nível 
 
 O raciocínio: o XP visível é um indicador motivacional, não o modelo de aprendizado. O aluno forte não perde competência real (volta ao topo rápido porque de fato sabe mais), e o aluno novo não começa milhares de XP atrás.
 
-### 3.10 Passaporte, carimbos e selos (a revisar)
+### 3.10 Sistema de recompensas
 
-> **Status: a revisar.** A ideia está alinhada conceitualmente, mas precisa ser validada na prática (especialmente o custo de arte e se a metáfora funciona com os alunos) antes de virar requisito firme.
+As recompensas se dividem em três baldes, cada um com uma lógica distinta. Manter essa separação clara evita confundir progresso, mérito individual e competição.
 
-Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte**. O passaporte é uma tela onde o aluno acumula duas coisas:
+| Balde | Lógica | Recompensas |
+|---|---|---|
+| **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Ponto turístico: **cartão-postal** colecionável. Cidade: **carimbo no passaporte** |
+| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, X dias de sequência, dominar N palavras, cumprir a meta semanal) |
+| **Eventos** | Competitivo — só para destaques | **Troféus** digitais (1º/2º/3º) e destaque no hall da fama |
 
-- **Carimbos de cidade**: um carimbo por cidade cuja trilha foi completada. É progressão garantida — todo aluno ganha conforme avança pelas cidades, como quem carimba o passaporte ao visitar cada lugar.
-- **Selos de conquista**: ganhos por feitos individuais, independentes da trilha. Exemplos: acertar 10 questões seguidas, enviar a primeira redação, manter sequência de X dias usando o app, dominar N palavras.
+A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A camada visual colecionável — passaporte, carimbos, cartões-postais, selos — está **a revisar**: depende de validar o custo de arte e se a metáfora funciona com os alunos antes de virar requisito firme.
 
-Características:
+#### Passaporte (a revisar)
 
-- São **puramente colecionáveis** no MVP — sem bônus de gameplay (não dão XP extra nem vantagem), para manter a economia de XP intacta.
-- São **separados dos troféus de competição** (seção 06), que premiam vencedores de eventos.
+Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte** — uma tela onde o aluno acumula carimbos de cidade, cartões-postais de pontos turísticos e selos de conquista. São **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
-Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+
+#### Itens cosméticos de evento (adiado)
+
+Itens cosméticos exclusivos de competição (capa especial de passaporte, moldura no perfil, título exibido no leaderboard) exigem uma camada de customização de perfil que ainda não foi desenhada. Ficam **fora do MVP**: para eventos, troféus e destaque no hall da fama são suficientes. Cosméticos entram quando o perfil/customização do aluno for definido.
 
 ---
 
@@ -499,32 +522,31 @@ A pesquisa de preços e ferramentas está documentada em `pesquisa_ferramentas.m
 
 ---
 
-## 05 - Livros
+## 05 - Livros (fora do MVP)
 
-O módulo de livros está no MVP.
+> **Status: fora do MVP, registrado como fase futura.** O módulo foi avaliado e tirado do MVP por uma barreira técnica de conteúdo, descrita abaixo. O núcleo do produto (redação → vocabulário adaptativo) não depende dele.
 
 ### 5.1 Objetivo
 
-O produto inclui questões relacionadas a livros lidos pela turma. A IA gera questões sobre um livro específico, ajudando o professor a verificar se os alunos leram e compreenderam a obra, e ampliando o vocabulário a partir das obras trabalhadas em sala.
+O produto poderia incluir questões relacionadas a livros lidos pela turma: gerar perguntas sobre uma obra específica para verificar leitura e compreensão, e ampliar o vocabulário a partir das obras trabalhadas em sala.
 
-### 5.2 Frentes do módulo
+### 5.2 Por que ficou fora do MVP
 
-O módulo de livros tem duas frentes:
+O obstáculo é o acesso ao conteúdo do livro. Tanto a compreensão de leitura quanto a extração de vocabulário exigem que a IA conheça o texto da obra a fundo. Para livros canônicos (clássicos, paradidáticos famosos) a LLM conhece bem; para obras obscuras, recentes ou regionais, ela alucina — e a alucinação de vocabulário é ainda mais perigosa que a de enredo, porque uma palavra plausível que não está no livro passa despercebida, enquanto um enredo errado o professor percebe na hora.
 
-- **Compreensão de leitura**: perguntas sobre o conteúdo, personagens, eventos e interpretação do livro.
-- **Vocabulário do livro**: identificação de palavras relevantes, pouco comuns ou sofisticadas que aparecem na obra e podem enriquecer o repertório do aluno.
+As três saídas possíveis têm, cada uma, um custo inescapável:
 
-### 5.3 Integração com vocabulário
+| Abordagem | Custo |
+|---|---|
+| Catálogo curado de livros conhecidos | Limita os livros que o professor pode escolher |
+| Professor fornece o texto (PDF) | Burocracia de LGPD/pirataria e esforço do professor |
+| LLM gera a partir do título | Qualidade não confiável para livros que ela não conhece |
 
-Palavras relevantes identificadas nos livros entram no vocabulário do aluno:
+Não é possível ter qualidade confiável, qualquer livro e sem fornecer texto ao mesmo tempo. Sem uma dessas restrições resolvida, o módulo não tem qualidade para um MVP.
 
-1. A turma está lendo um livro com palavras pouco comuns, mas úteis.
-2. A IA identifica essas palavras.
-3. O professor ou o sistema aprova a lista.
-4. O app cria questões para praticar significado, sinônimos e aplicação.
-5. Essas palavras passam a fazer parte da trilha ou de uma missão específica.
+### 5.3 Condição para entrar em fase futura
 
-O fluxo de geração e validação de questões segue o mesmo modelo da seção 3.6 (banco por palavra, validação híbrida com professor).
+O módulo volta quando houver uma solução de conteúdo confiável — por exemplo, um fornecedor de conteúdo licenciado, RAG sobre texto autorizado, ou uma integração que dê à IA acesso real ao texto da obra. Quando entrar, o vocabulário do livro deve alimentar a trilha pelo mesmo fluxo de geração lazy e validação híbrida das demais fontes (seção 3.6).
 
 ---
 
@@ -544,19 +566,16 @@ Eventos menores, como entre turmas, podem acontecer com mais frequência.
 
 ### Recompensas
 
-Os eventos devem ter recompensas para os vencedores, proporcionais à dificuldade e ao tamanho da competição.
+Os eventos devem ter recompensas para os vencedores, proporcionais à dificuldade e ao tamanho da competição. As recompensas de evento são o balde "Eventos" do sistema de recompensas (seção 3.10), distinto dos selos, carimbos e cartões-postais (que são por feitos individuais e por progressão de trilha).
 
-Exemplos de recompensas possíveis:
+No MVP, as recompensas de evento são:
 
-- selos;
-- troféus digitais;
-- itens cosméticos;
-- destaque no ranking;
-- reconhecimento por turma, ano ou escola.
+- **Troféus digitais** para 1º, 2º e 3º lugares;
+- **Destaque no hall da fama** (reconhecimento por turma, ano ou escola).
+
+Itens cosméticos exclusivos de evento ficam **fora do MVP** — exigem uma camada de customização de perfil ainda não definida (ver seção 3.10).
 
 As recompensas não devem prejudicar o aprendizado nem criar vantagem pedagógica injusta. Elas existem para motivar participação e senso de progresso.
-
-Os troféus de competição são distintos dos selos e carimbos do passaporte (seção 3.10): os primeiros premiam vencedores de eventos; os segundos são colecionáveis individuais por feitos e por completar trilhas de cidade.
 
 ---
 
@@ -599,20 +618,25 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 - Vocabulário da redação alimentando questões na trilha do aluno;
 - Banco de questões por palavra com geração por IA quando necessário;
 - Validação de palavras com Hunspell antes de gerar questões;
-- Módulo de livros: compreensão de leitura e vocabulário extraído de obras da turma;
+- Bônus de sequência (combo) no XP;
+- Meta semanal configurável pelo professor (palavras dominadas por semana);
 - Painel básico para escola/professor acompanhar progresso.
+
+> Sistema de recompensas colecionáveis (passaporte, carimbos, cartões-postais, selos) está **a revisar** (seção 3.10) — não é compromisso firme de MVP até validação de arte e da metáfora.
 
 ### Próxima fase provável
 
 - Questões de sintaxe geradas a partir de erros identificados na redação;
-- Eventos e competições entre turmas;
+- Eventos e competições entre turmas (mecânica já especificada na seção 3.9);
 - Expansão do banco de palavras.
 
 ### Fases futuras ou em avaliação
 
 - Eventos entre escolas;
 - Expansão para Fundamental I;
-- Missões especiais de reforço com palavras dominadas.
+- Missões especiais de reforço com palavras dominadas;
+- Módulo de livros (compreensão de leitura + vocabulário), quando houver solução de conteúdo confiável (ver seção 05);
+- Itens cosméticos de evento, quando houver camada de customização de perfil.
 
 ---
 
@@ -627,6 +651,8 @@ Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartado
 - Lista fechada de escolas-alvo;
 - Stack técnica fechada;
 - Questões de sintaxe no MVP (sintaxe aparece apenas como feedback informativo na redação);
+- Módulo de livros no MVP (barreira de acesso confiável ao conteúdo das obras — ver seção 05);
+- Itens cosméticos de evento no MVP (dependem de camada de customização de perfil);
 - Pipeline complexo de pré-processamento NLP como requisito do MVP.
 
 Esses itens podem voltar a ser discutidos, mas não devem guiar implementação agora.
@@ -646,7 +672,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Decisão | Resolução |
 |---|---|
 | Tipos de questões | 4 tipos fixos (seção 3.1) |
-| Módulo de livros no MVP | Sim |
+| Módulo de livros no MVP | Não — fora do MVP por barreira de acesso ao conteúdo; fase futura (seção 05) |
 | Sintaxe no MVP | Não — apenas feedback informativo na redação |
 | OCR | Google Cloud Vision |
 | Expansão Fund. I | Não relevante para fase inicial; sem data |
@@ -670,6 +696,13 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Visibilidade educadores | Professor: total da escola + detalhe dos próprios alunos; coordenador: tudo da escola |
 | Criação de competições | Admin da plataforma cria; escola aceita/rejeita; arquitetura inscreve escolas flexivelmente |
 | Virada de ano | Algoritmo adaptativo acumula sempre; XP/nível visível vai para a média da turma |
+| Gancho contextual / `palavra_gatilho` | Campo guarda só a origem pessoal; palavra de sinal de turma usa card genérico sem gancho |
+| Critério de sinal de turma | Palavra fraca/superutilizada em ≥30% da turma no período letivo (ajustável) |
+| Deduplicação de fontes | Palavra já na fila por redação pessoal ignora o sinal de turma; aparece uma vez, gancho pessoal |
+| Taxonomia de recompensas | Três baldes: trilha (cartão-postal/carimbo), feitos (selos) e eventos (troféus); seção 3.10 |
+| Recompensa de ponto turístico | Cartão-postal colecionável |
+| Recompensas de evento | Troféus (1º/2º/3º) + hall da fama; itens cosméticos fora do MVP |
+| Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir rende selo |
 
 ---
 
