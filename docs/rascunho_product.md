@@ -272,9 +272,10 @@ As questões são recursos do banco da palavra, não do aluno. O aluno recebe um
 Fluxo:
 
 1. A redação identifica que o aluno usa "importante" demais.
-2. O sistema busca no banco: já existem questões para "importante"?
-3. Se sim: atribui essas questões à trilha do aluno.
-4. Se não: gera por IA, valida e salva no banco, depois atribui.
+2. A IA sugere palavras alternativas: "relevante", "essencial", "significativo", "fundamental".
+3. O sistema busca cada alternativa no banco: já existem questões para ela?
+4. Se sim: atribui as questões existentes à trilha do aluno.
+5. Se não: gera por IA, valida e salva no banco, depois atribui.
 
 Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas questões do banco. Não há duplicação.
 
@@ -308,7 +309,7 @@ A trilha avança por XP, não por número de palavras. As palavras geram XP ao s
 
 Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
 
-Completar uma palavra acertando tudo de primeira rende cerca de 900 XP (4 níveis × 100 + 500 de bônus). Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
+Completar uma palavra acertando tudo de primeira rende cerca de 900 XP de base (4 níveis × 100 + 500 de bônus), sem contar o bônus de combo, que adiciona mais conforme a sequência de acertos. Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
 
 #### Bônus de sequência (combo)
 
@@ -426,7 +427,7 @@ O produto deve ter uma funcionalidade de análise de redações para identificar
 A análise deve aceitar:
 
 - redações escritas à mão, enviadas por foto ou imagem (com OCR);
-- redações digitadas.
+- redações digitais enviadas em PDF.
 
 Ambos os formatos estão no MVP.
 
@@ -438,7 +439,7 @@ A análise da redação cobre múltiplas dimensões:
 - acentuação;
 - uso de vírgulas e pontuação;
 - uso adequado de palavras no contexto;
-- possivelmente: coesão, estrutura do texto (início, meio e fim) e clareza.
+- coesão, estrutura do texto (início, meio e fim) e clareza.
 
 Todas as dimensões são analisadas e retornadas como feedback. Entretanto, apenas vocabulário gera questões na trilha do aluno no MVP. As demais dimensões são informativas.
 
@@ -496,14 +497,14 @@ O envio é feito pelo próprio aluno, em dois formatos:
 
 O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor não envia redações — apenas visualiza e acompanha.
 
-### 4.8 Riscos do OCR
+### 4.7 Riscos do OCR
 
 - Palavras mal lidas ou inexistentes: validadas contra dicionário (Hunspell) antes de qualquer ação.
 - Ruído do OCR: pré-processamento limpa o texto antes de enviar para análise.
 
 O serviço de OCR escolhido é o **Google Cloud Vision** ($1,50 por 1.000 páginas, primeiras 1.000/mês grátis, suporte PT-BR confirmado). Ver `pesquisa_ferramentas.md` para comparativo com Azure AI Vision.
 
-### 4.9 Ferramenta de análise
+### 4.8 Ferramenta de análise
 
 A decisão técnica sobre qual modelo de IA usar para a análise da redação está em aberto.
 
