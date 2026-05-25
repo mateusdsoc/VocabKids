@@ -376,6 +376,22 @@ Há uma distinção importante entre o **algoritmo adaptativo** e o **XP/nível 
 
 O raciocínio: o XP visível é um indicador motivacional, não o modelo de aprendizado. O aluno forte não perde competência real (volta ao topo rápido porque de fato sabe mais), e o aluno novo não começa milhares de XP atrás.
 
+### 3.10 Passaporte, carimbos e selos (a revisar)
+
+> **Status: a revisar.** A ideia está alinhada conceitualmente, mas precisa ser validada na prática (especialmente o custo de arte e se a metáfora funciona com os alunos) antes de virar requisito firme.
+
+Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte**. O passaporte é uma tela onde o aluno acumula duas coisas:
+
+- **Carimbos de cidade**: um carimbo por cidade cuja trilha foi completada. É progressão garantida — todo aluno ganha conforme avança pelas cidades, como quem carimba o passaporte ao visitar cada lugar.
+- **Selos de conquista**: ganhos por feitos individuais, independentes da trilha. Exemplos: acertar 10 questões seguidas, enviar a primeira redação, manter sequência de X dias usando o app, dominar N palavras.
+
+Características:
+
+- São **puramente colecionáveis** no MVP — sem bônus de gameplay (não dão XP extra nem vantagem), para manter a economia de XP intacta.
+- São **separados dos troféus de competição** (seção 06), que premiam vencedores de eventos.
+
+Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+
 ---
 
 ## 04 - Redações
@@ -540,6 +556,8 @@ Exemplos de recompensas possíveis:
 
 As recompensas não devem prejudicar o aprendizado nem criar vantagem pedagógica injusta. Elas existem para motivar participação e senso de progresso.
 
+Os troféus de competição são distintos dos selos e carimbos do passaporte (seção 3.10): os primeiros premiam vencedores de eventos; os segundos são colecionáveis individuais por feitos e por completar trilhas de cidade.
+
 ---
 
 ## 07 - Painel e métricas
@@ -621,6 +639,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
 3. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
 4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
+5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
 
 ### Decisões fechadas (registradas para histórico)
 
