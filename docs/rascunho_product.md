@@ -350,9 +350,10 @@ A trilha avança por XP, não por número de palavras. As palavras geram XP ao s
 |---|---|
 | Acertar questão (1ª tentativa) | 100 |
 | Acertar questão (2ª tentativa) | 70 |
+| Acertar questão (3ª tentativa em diante) | 50 (piso) |
 | Dominar palavra (bônus ao completar todos os níveis da palavra) | 500 |
 
-Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
+Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. A partir da 3ª tentativa o XP continua decrescente, mas com **piso de 50** — como as questões são de múltipla escolha e o aluno sempre acaba acertando (seção 3.4), o piso garante que insistir nunca valha zero, sem premiar o chute como um acerto de primeira. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
 
 Completar uma palavra acertando tudo de primeira rende cerca de 900 XP de base (4 níveis × 100 + 500 de bônus), sem contar o bônus de combo, que adiciona mais conforme a sequência de acertos. Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
 
@@ -754,7 +755,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
-| Valores de XP | 100 (1ª tentativa), 70 (2ª tentativa), 500 (bônus por dominar palavra); sem variar por dificuldade |
+| Valores de XP | 100 (1ª tentativa), 70 (2ª), 50 da 3ª em diante (piso), 500 (bônus por dominar palavra); sem variar por dificuldade |
 | Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
 | Leaderboard de turma | Aluno vê próprio XP + top 3 da turma com valores; não vê XP exato dos demais |
 | XP de evento | Separado do XP individual; zera para todos no início da competição |
