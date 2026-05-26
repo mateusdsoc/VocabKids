@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 3).
+> Última atualização: 26 de maio de 2026 (rev. 4).
 
 ---
 
@@ -60,7 +60,7 @@ A sequência segue uma progressão do reconhecimento básico até a avaliação 
 
 Quando uma palavra nova aparece pela primeira vez para o aluno, ele não vai direto para uma questão. Antes, vê um card de descoberta: uma tela rápida e visual que apresenta a palavra, sua definição curta e um exemplo de uso em contexto.
 
-O card aparece uma única vez, na primeira interação com a palavra. Se o aluno regredir em níveis, não vê o card novamente.
+O card aparece uma única vez, no início da sessão em que a palavra é introduzida (ver "Estrutura da sessão" na seção 3.4) — não reaparece depois; o lembrete passa a ser o destaque inline (ver abaixo). Como não há regressão de nível (seção 3.4), a palavra nunca volta ao estado de descoberta.
 
 O objetivo é ensinar antes de testar. O aluno precisa ter contato com o significado da palavra antes de ser cobrado. O card não é um flashcard tradicional (não tem lado A/B, não exige memorização). É uma apresentação integrada na trilha, rápida e divertida.
 
@@ -82,6 +82,10 @@ Para viabilizar isso sem recomputar nada na hora de exibir o card, a atribuiçã
 O gancho é **exclusivo da origem pessoal**. Quando a palavra vem do sinal de turma (e não do erro do próprio aluno), o card aparece sem gancho, na forma genérica — para não expor a turma nem soar como culpa coletiva. O campo `palavra_gatilho` só é preenchido para palavras de origem pessoal.
 
 Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.com (definição conversacional + exemplo, para falantes nativos), Duolingo, Memrise e Babbel (vocabulário sempre apresentado em contexto de frase).
+
+#### Destaque inline (lembrete)
+
+Depois do card, nas questões daquela palavra, a palavra nova fica **destacada** visualmente (cor/marcação). Tocar nela **reabre o card** (definição, exemplo, áudio) sem sair da questão — um lembrete leve, inspirado na marcação "palavra nova" do Duolingo. O card cheio aparece uma vez (no início da sessão); o destaque inline é o reforço nas questões seguintes, para quem precisar relembrar sem quebrar o fluxo.
 
 A sequência completa de uma palavra fica:
 
@@ -134,7 +138,7 @@ A IA gera a questão inteira e garante que os distratores não sejam respostas c
 
 ### 3.4 Domínio de palavras
 
-Cada palavra tem um estado de aprendizado por aluno. A mecânica de domínio segue uma sequência fixa com regressão controlada.
+Cada palavra tem um estado de aprendizado por aluno. A mecânica segue uma sequência fixa de 4 níveis; no erro o aluno **repete o nível até acertar** (sem regredir), com os retries intercalados ao longo da sessão.
 
 #### Sequência de domínio
 
@@ -145,14 +149,47 @@ A palavra passa por 4 níveis de questão, na ordem:
 3. Completar frase (aplicação)
 4. Julgar uso (avaliação)
 
-Cada nível tem no mínimo 2 variações de questão.
+Cada nível tem no mínimo 2 variações de questão (a/b). Passar um nível é acertar **uma** das variações.
 
-#### Regras de progressão e regressão
+#### Regras de progressão
 
-- Acertou a questão → avança para o próximo nível.
-- Errou a questão → tenta a segunda variação do mesmo nível.
-- Errou as duas variações do mesmo nível → regride um nível, para uma variação que ainda não realizou. Se já realizou todas do nível anterior, repete uma que já errou.
-- Acertou a última questão do nível 4 → palavra dominada.
+- Acertou uma variação do nível → nível concluído, avança para o próximo.
+- Errou → a outra variação ainda não acertada do mesmo nível volta para a fila e reaparece **mais à frente na sessão**, não na hora (ver "Intercalação de erros"). **Não há regressão** a níveis anteriores.
+- Nunca se repergunta uma variação que o aluno já acertou.
+- Acertou o nível 4 → palavra dominada.
+
+#### Intercalação de erros (estilo fila)
+
+A sessão é uma fila de questões pendentes. Quando o aluno erra, o retry vai para o **fim da fila** — intercala-se com as outras questões pendentes em vez de reaparecer na hora. Isso espaça a repetição, retém melhor e evita monotonia (modelo do Duolingo). Só quando a questão é a **única pendente** restante é que ela entra em loop fixo imediato (alternando entre as variações ainda não acertadas) até o aluno acertar.
+
+Como as questões são de múltipla escolha, o aluno sempre acaba acertando; o "custo" de errar é o tempo gasto, o que naturalmente recompensa quem tenta de verdade em vez de chutar.
+
+#### Estrutura da sessão
+
+Cada sessão tem ~12 questões e introduz **2 palavras novas**. Arranjo no caminho feliz (sem erros):
+
+```
+Card palavra 1 → P1 nível 1 → P1 nível 2
+Card palavra 2 → P2 nível 1 → P2 nível 2
+P1 nível 3 → P2 nível 3
++ 4 questões de revisão (palavras já apresentadas, ainda não dominadas)
+```
+
+Os cards das palavras novas ficam **agrupados no início**, cada um colado às primeiras questões da sua palavra — nenhum card interrompe o meio da sessão (ver 3.2).
+
+O **nível 4 (avaliação) de cada palavra nova é adiado ~2 sessões**, entrando como conteúdo de revisão de uma sessão futura, junto de uma questão de revisão dos níveis anteriores. Esse espaçamento antes da avaliação final reforça a retenção: a palavra só é dominada ao passar o nível 4 depois de um intervalo, nunca no mesmo fôlego da introdução.
+
+Quando faltam palavras em progresso para preencher as 4 questões de revisão (ex.: aluno recém-diagnosticado), os slots são completados com mais palavras novas do banco base — as primeiras sessões são naturalmente mais "novas".
+
+#### Seleção da questão de revisão
+
+Para cada palavra em revisão, a questão escolhida segue a prioridade:
+
+1. Variação ainda não usada do **nível 2**.
+2. Se as duas variações do nível 2 já se esgotaram (o aluno errou o nível 2 na introdução) → variação não usada do **nível 3** (e vice-versa).
+3. Se níveis 2 e 3 já se esgotaram → repete a variação errada do nível 2; errando de novo, a do nível 3; alternando até acertar.
+
+O **nível 1 nunca** é usado como revisão — é o mais fácil (reconhecimento) e só reaparece na própria sessão de introdução, caso o aluno erre lá. Na sessão de revisão, a questão de revisão vem **antes** do nível 4 da palavra.
 
 #### Palavra dominada
 
@@ -163,9 +200,17 @@ Exceção prevista: palavras dominadas podem aparecer em eventos ou missões esp
 #### Exemplos de fluxo
 
 ```
-Acerta 1 → Acerta 2 → Erra 3a → Acerta 3b → Acerta 4 → Dominada ✅
+Caminho feliz
+  Intro:    Card → N1 ✓ → N2 ✓ → N3 ✓        (N4 fica para ~2 sessões depois)
+  Revisão:  revisão de N2 ✓ → N4 ✓ → Dominada ✅
 
-Acerta 1 → Acerta 2 → Erra 3a → Erra 3b → Volta pra 2 (variação não feita) → Acerta 2 → Tenta 3 (uma das que errou) → Acerta 3 → Acerta 4 → Dominada ✅
+Erro no nível 2 na introdução (retry vai pro fim da fila, intercalado)
+  Intro:    N1 ✓ → N2a ✗ → (segue as outras questões) → ... → N2b ✓
+            (as duas variações de N2 ficaram gastas → a revisão dessa palavra usará N3)
+  Revisão:  revisão de N3 ✓ → N4 ✓ → Dominada ✅
+
+Última questão pendente da sessão (loop fixo, nada com que intercalar)
+  ... → N3a ✗ → N3b ✗ → N3a ✗ → N3b ✓
 ```
 
 ### 3.5 Vocabulário adaptativo
@@ -726,6 +771,10 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir rende selo |
 | Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
 | Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
+| Estrutura da sessão | ~12 questões, 2 palavras novas; cards no início; nível 4 adiado ~2 sessões; 4 questões de revisão (seção 3.4) |
+| Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
+| Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |
+| Lembrete inline do card | Palavra destacada nas questões; tocar reabre o card sem sair (seção 3.2) |
 
 ---
 
