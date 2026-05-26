@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 25 de maio de 2026 (rev. 2).
+> Última atualização: 26 de maio de 2026 (rev. 3).
 
 ---
 
@@ -345,6 +345,16 @@ As recompensas de trilha são um dos três baldes do sistema de recompensas (tri
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
+#### Feedback de progresso na sessão
+
+O progresso é mostrado em camadas, para o aluno sempre sentir avanço sem que a trilha precise interromper o fluxo a cada sessão:
+
+- **Durante a sessão** — uma barra de progresso fina no topo enche a cada questão respondida (inspiração: Duolingo). É o feedback contínuo, dentro da própria questão, sem levar o aluno de volta ao mapa.
+- **No fim da sessão** — uma tela de resumo leve, separada da trilha, mostrando o **XP ganho** e a **progressão das palavras** trabalhadas na sessão (ex.: "relevante" subiu de nível, ou foi dominada). Não exibe percentual de acerto — transformaria a sessão em boletim, contra o princípio "errar é aprender" — nem tempo/velocidade — recompensar rapidez incentivaria chute, ruim para vocabulário.
+- **Ao completar um nó** — a animação na trilha (marcador avançando, confete). É a celebração maior; o resumo de sessão é o feedback leve e frequente. As duas camadas ficam distintas para que a celebração de nó não vire rotina. A cadência (quantas sessões enchem um nó) é calibração de XP, ainda em ajuste.
+
+Princípio de animação: curtas e não-bloqueantes. Nenhuma animação deve travar o aluno antes de poder seguir — é o que mantém a experiência rápida mesmo com muito feedback visual (observado no Duolingo).
+
 ### 3.8 Expansão para questões de sintaxe
 
 Questões de sintaxe não entram no MVP. Erros de acentuação, vírgulas e estrutura identificados na redação são exibidos como feedback informativo para o aluno, mas não geram questões na trilha.
@@ -411,6 +421,16 @@ A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A cam
 Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte** — uma tela onde o aluno acumula carimbos de cidade, cartões-postais de pontos turísticos e selos de conquista. São **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
 Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+
+#### Revelação de recompensa
+
+Quando o aluno ganha um carimbo, cartão-postal ou selo, a recompensa é revelada com uma animação de **abrir com toque** (inspiração: a abertura de baús do Duolingo, que cria antecipação antes de mostrar o prêmio). A interação é aproveitada; a mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
+
+Concerns:
+
+- **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o ponto turístico X dá o cartão-postal de X). Sem aleatoriedade.
+- **Sem loot box** — recompensa aleatória ou por chance levanta questões éticas e regulatórias com público infantil; fica fora.
+- **Animação curta e não-bloqueante** — a revelação não pode travar o aluno; mesmo princípio das animações de sessão (seção 3.7).
 
 #### Itens cosméticos de evento (adiado)
 
@@ -704,6 +724,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Recompensa de ponto turístico | Cartão-postal colecionável |
 | Recompensas de evento | Troféus (1º/2º/3º) + hall da fama; itens cosméticos fora do MVP |
 | Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir rende selo |
+| Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
+| Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
 
 ---
 
