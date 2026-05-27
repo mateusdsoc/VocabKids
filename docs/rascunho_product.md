@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 4).
+> Última atualização: 26 de maio de 2026 (rev. 5).
 
 ---
 
@@ -134,7 +134,7 @@ Antes de consultar o banco, a palavra precisa ser reduzida à sua forma base ("c
 Quando uma palavra é nova, a IA precisa gerar as questões antes de atribuir ao aluno. Essa geração deve ser assíncrona: a palavra entra em uma fila, as questões são geradas em background e aparecem na trilha em seguida — sem bloquear a experiência do aluno.
 
 **3. Segurança dos distratores é responsabilidade da IA**
-A IA gera a questão inteira e garante que os distratores não sejam respostas corretas. Não há sistema de categorias semânticas para isso. O professor pode sinalizar problemas via validação híbrida (seção 3.6), mas a geração em si depende da IA fazer isso corretamente no prompt.
+A IA gera a questão inteira e garante que os distratores não sejam respostas corretas. Não há sistema de categorias semânticas para isso. Problemas que escaparem podem ser sinalizados pelo report do aluno (seção 3.6), mas a geração em si depende da IA fazer isso corretamente no prompt.
 
 ### 3.4 Domínio de palavras
 
@@ -298,7 +298,7 @@ A geração acontece em dois momentos distintos:
 | Banco inicial (~500–800 palavras, uma vez) | Assinatura mensal do Claude, geração em lotes, revisão humana | Tarefa pontual e manual; custo fixo compensa mais que tokens avulsos |
 | Runtime (palavra nova da redação) | API com geração lazy (ver seção 3.3) | Automático, em produção, sem humano no meio |
 
-**Validação:** em ambos os momentos, o Hunspell valida que a palavra existe (ortografia) antes de entrar no banco. A qualidade do sinônimo (adequação e nível) é garantida pela revisão humana no lote inicial e pela validação híbrida do professor no runtime (seção 3.6).
+**Validação:** em ambos os momentos, o Hunspell valida que a palavra existe (ortografia) antes de entrar no banco. A qualidade do sinônimo (adequação e nível) é garantida pela revisão humana no lote inicial e pelo report do aluno no runtime (seção 3.6).
 
 **Identificação das palavras-alvo:** o corpus Essay-BR (~4.570 redações de ensino médio com nota por competência) pode ser usado para análise contrastiva — comparar o vocabulário de redações nota alta vs. baixa e extrair empiricamente as palavras superutilizadas nas redações fracas, que servem de gatilho para o banco.
 
@@ -324,9 +324,18 @@ Fluxo:
 
 Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas questões do banco. Não há duplicação.
 
-#### Validação híbrida
+#### Publicação direta e report do aluno (MVP)
 
-Questões geradas por IA são liberadas diretamente para o aluno, mas marcadas como "geradas automaticamente". O professor tem visibilidade e pode revisar, corrigir ou reportar problemas a qualquer momento.
+No MVP as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia. O professor **não** revisa nem aprova questões — a qualidade no runtime é controlada depois da publicação, pelo report do aluno.
+
+Quando uma questão parece errada (ex.: resposta incoerente com o enunciado, sinal de alucinação da IA), o aluno pode **reportá-la** escolhendo um **motivo predefinido** numa caixa de opções (ex.: "a resposta parece errada", "não entendi a palavra"). O report sobe para o **admin da plataforma** — não para o professor. Como o banco de questões é compartilhado entre escolas (seção 3.5), os reports de uma mesma questão **agregam entre todas as escolas**.
+
+Regras:
+
+- **Não isenta a questão**: reportar não pula nem anula a questão; o aluno responde normalmente. Evita usar o report para fugir de questão difícil.
+- **Não dá XP**: reportar não rende pontos, para não incentivar spam.
+- **Auto-ocultar em 10 reports**: ao acumular 10 reports, a questão **sai automaticamente de circulação** (deixa de ser atribuída) e fica pendente para o admin revisar junto com os reports. O admin decide corrigir, manter ou remover.
+- A ferramenta de report é apresentada uma vez ao aluno, no onboarding.
 
 #### Validação de palavras inexistentes
 
@@ -613,7 +622,7 @@ Não é possível ter qualidade confiável, qualquer livro e sem fornecer texto 
 
 ### 5.3 Condição para entrar em fase futura
 
-O módulo volta quando houver uma solução de conteúdo confiável — por exemplo, um fornecedor de conteúdo licenciado, RAG sobre texto autorizado, ou uma integração que dê à IA acesso real ao texto da obra. Quando entrar, o vocabulário do livro deve alimentar a trilha pelo mesmo fluxo de geração lazy e validação híbrida das demais fontes (seção 3.6).
+O módulo volta quando houver uma solução de conteúdo confiável — por exemplo, um fornecedor de conteúdo licenciado, RAG sobre texto autorizado, ou uma integração que dê à IA acesso real ao texto da obra. Quando entrar, o vocabulário do livro deve alimentar a trilha pelo mesmo fluxo de geração lazy e validação das demais fontes (seção 3.6).
 
 ---
 
@@ -749,7 +758,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Banco de palavras — palavras-alvo | Alternativas às palavras superutilizadas, não listas de frequência |
 | Banco de palavras — geração inicial | Assinatura Claude, lotes, revisão humana (tarefa única) |
 | Banco de palavras — runtime | API com geração lazy |
-| Validação de palavras | Hunspell valida existência; qualidade por revisão humana/professor |
+| Validação de palavras | Hunspell valida existência; qualidade por revisão humana (lote inicial) e report do aluno → admin (runtime) |
+| Validação de questões (runtime) | Publicação direta no MVP (sem revisão do professor); report do aluno com motivo predefinido → admin; 10 reports auto-ocultam a questão, pendente de revisão |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
