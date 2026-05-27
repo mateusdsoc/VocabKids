@@ -496,8 +496,7 @@ Como eventos são pós-MVP (ver seção 06 e escopo por fase), isto fica registr
 
 - Durante um evento, a **trilha pausa**: a atividade do evento alimenta o **XP de evento** (separado, acima) e **não enche os nós** da trilha individual.
 - As **recompensas de trilha pausam junto**: nenhum cartão-postal ou carimbo novo é concedido enquanto a trilha está congelada — voltam a progredir quando o evento termina. Coerência: se a trilha pausa, suas recompensas também pausam.
-- A **ofensiva (sequência de dias) continua contando**: jogar o evento conta como presença; não se pune quem participa.
-- A **meta semanal continua contando** durante o evento. Não se assume que evento seja só revisão — ver decisão em aberto sobre o conteúdo do evento (seção 10).
+- A **meta semanal continua contando** durante o evento; participar não pune o aluno. Não se assume que evento seja só revisão — ver decisão em aberto sobre o conteúdo do evento (seção 10).
 - A recompensa do próprio evento é o balde "Eventos" (troféus + hall da fama, seção 3.10), com espaço para recompensas mais **temáticas** a explorar (seção 06).
 
 ### 3.10 Sistema de recompensas
@@ -507,7 +506,7 @@ As recompensas se dividem em três baldes, cada um com uma lógica distinta. Man
 | Balde | Lógica | Recompensas |
 |---|---|---|
 | **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Ponto turístico: **cartão-postal** colecionável. Cidade: **carimbo no passaporte** |
-| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, X dias de sequência, dominar N palavras, cumprir a meta semanal) |
+| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, dominar N palavras, cumprir a meta semanal) |
 | **Eventos** | Competitivo — só para destaques | **Troféus** digitais (1º/2º/3º) e destaque no hall da fama |
 
 A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A camada visual colecionável — passaporte, carimbos, cartões-postais, selos — está **a revisar**: depende de validar o custo de arte e se a metáfora funciona com os alunos antes de virar requisito firme.
@@ -774,6 +773,7 @@ Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartado
 - Questões de sintaxe no MVP (sintaxe aparece apenas como feedback informativo na redação);
 - Módulo de livros no MVP (barreira de acesso confiável ao conteúdo das obras — ver seção 05);
 - Itens cosméticos de evento no MVP (dependem de camada de customização de perfil);
+- Ofensiva / sequência de dias (streak diário ao estilo Duolingo) — decidido não usar; o combo por acertos seguidos (seção 3.7) é mecânica distinta e permanece;
 - Pipeline complexo de pré-processamento NLP como requisito do MVP.
 
 Esses itens podem voltar a ser discutidos, mas não devem guiar implementação agora.
@@ -838,7 +838,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
 | Tela inicial (home) | Home-hub (não a trilha): status do aluno (XP/nível, nó atual, nº de palavras dominadas), "Continuar" como CTA primário + acesso ao mapa, atalho de redação, eventos e leaderboards; trilha é seção dedicada (seção 3.7) |
 | Saída da sessão | Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home (seção 3.7) |
-| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); ofensiva e meta semanal continuam contando; recompensa do evento = troféu + hall da fama (seção 3.9) |
+| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); meta semanal continua contando; recompensa do evento = troféu + hall da fama (seção 3.9) |
+| Ofensiva / streak de dias | Fora do produto — não haverá sequência de dias ao estilo Duolingo; o combo por acertos seguidos (seção 3.7) é distinto e permanece (seção 09) |
 
 ---
 

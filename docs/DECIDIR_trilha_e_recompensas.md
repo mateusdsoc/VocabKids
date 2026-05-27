@@ -27,7 +27,7 @@ Fonte da verdade do produto: **`docs/rascunho_product.md`**. Seções relevantes
   - **Nó** → feedback visual (**confete**), sem item colecionável → **custo de arte ZERO**.
   - **Ponto turístico** → **cartão-postal** colecionável → **precisa de arte**.
   - **Cidade** → **carimbo** no passaporte → **precisa de arte**.
-  - **Feitos** (10 acertos seguidos, X dias de sequência, etc.) → **selos** → **precisa de arte**.
+  - **Feitos** (10 acertos seguidos, dominar N palavras, etc.) → **selos** → **precisa de arte**. (Sem ofensiva/streak de dias — decidido não usar.)
   - **Eventos** → troféus + hall da fama (fora do escopo desta decisão).
 - **Cidades do MVP**: 3 — **BH, São Paulo, Rio de Janeiro**.
 - **Progressão por XP** (3.7): os nós enchem por XP, não por nº de palavras. Limiares na "casa dos milhares".
@@ -52,7 +52,7 @@ Fonte da verdade do produto: **`docs/rascunho_product.md`**. Seções relevantes
 - **Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home** — reforça o senso de progresso e puxa para a trilha.
 - Hierarquia visual fina dos botões = detalhe de design.
 
-**Bônus resolvido nesta rodada (eventos × trilha/recompensas, pós-MVP — mesclado na seção 3.9):** evento **pausa a trilha** e suas recompensas (cartão-postal/carimbo pausam junto); **ofensiva e meta semanal continuam contando**; recompensa do evento = troféu + hall da fama, com espaço para recompensas mais **temáticas** a explorar.
+**Bônus resolvido nesta rodada (eventos × trilha/recompensas, pós-MVP — mesclado na seção 3.9):** evento **pausa a trilha** e suas recompensas (cartão-postal/carimbo pausam junto); **a meta semanal continua contando**; recompensa do evento = troféu + hall da fama, com espaço para recompensas mais **temáticas** a explorar. (O app **não terá ofensiva/streak de dias** — decidido nesta rodada.)
 
 **Ficou em aberto (registrado na seção 10 do rascunho):**
 - Conteúdo do evento: só revisão de palavras dominadas ou também palavras novas? (afeta a meta semanal durante eventos)
