@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 5).
+> Última atualização: 26 de maio de 2026 (rev. 6).
 
 ---
 
@@ -235,6 +235,18 @@ Quando o aluno entra no app, faz uma avaliação diagnóstica curta (10 a 15 que
 - Aluno forte do 7º ano → começa no nível 4–5
 - Aluno com dificuldade do 7º ano → começa no nível 2
 - Ambos estão na mesma turma, mas cada um na sua trilha
+
+#### Onboarding (primeira vez)
+
+A primeira experiência do aluno costura entrada, diagnóstico e a primeira palavra:
+
+1. **Entrada** — via código de turma (provisório, até a decisão de autenticação — seção 10).
+2. **Boas-vindas temáticas** — uma tela curta apresentando a viagem pelas cidades.
+3. **Demonstração** — duas questões-demo roteirizadas: uma mostra como é **acertar** (XP, confete) e outra como é **errar** (feedback gentil, recuperação, sem punição). O objetivo é normalizar o erro antes de cobrar.
+4. **Diagnóstico** — a avaliação diagnóstica (acima), enquadrada como jogo e não como prova; posiciona o aluno na trilha.
+5. **Primeira palavra** — card de descoberta → nível 1 → primeiro XP, fechando o onboarding com uma vitória.
+
+A ferramenta de report (seção 3.6) é apresentada uma vez durante essas primeiras questões. As demos vêm antes do diagnóstico de propósito: ensinam a mecânica (e que errar é seguro) antes de o sistema calibrar o nível.
 
 #### Adaptação contínua
 
@@ -565,12 +577,14 @@ O objetivo não é apenas mostrar uma métrica, mas fechar o ciclo: detectar dif
 
 ### 4.6 Envio de redações
 
-O envio é feito pelo próprio aluno, em dois formatos:
+O professor **atribui** a redação à turma (tema e prazo); o **aluno envia** em resposta, em dois formatos:
 
 - **Manuscrita**: o aluno fotografa a redação pelo app. O texto é extraído por OCR antes da análise.
 - **Digital**: o aluno envia em PDF.
 
-O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor não envia redações — apenas visualiza e acompanha.
+O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor **não escreve nem envia** redações — atribui, visualiza e acompanha.
+
+Como o envio é disparado pela atribuição do professor, enquanto não houver atribuição a fonte de palavras do aluno é o banco base e o sinal de turma (seção 3.5); a fonte pessoal (redação) entra a partir da primeira redação atribuída.
 
 ### 4.7 Riscos do OCR
 
@@ -739,7 +753,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
-3. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+3. Workflow recorrente — onboarding já definido (seção 3.5); falta fechar a trilha como home (a revisar) e o ritmo do nó/recompensas (seção 3.7/3.10).
 4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
 5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
 
@@ -786,6 +800,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
 | Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |
 | Lembrete inline do card | Palavra destacada nas questões; tocar reabre o card sem sair (seção 3.2) |
+| Onboarding | Entrada (código de turma, provisório) → boas-vindas → 2 questões-demo (acerto e erro) → diagnóstico como jogo → primeira palavra com card; report apresentado 1x (seção 3.5) |
+| Envio de redação | Professor atribui (tema/prazo); aluno envia (foto/PDF); fonte pessoal entra na 1ª redação atribuída (seção 4.6) |
 
 ---
 
