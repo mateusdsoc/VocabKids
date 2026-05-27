@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 25 de maio de 2026 (rev. 2).
+> Última atualização: 26 de maio de 2026 (rev. 7).
 
 ---
 
@@ -60,7 +60,7 @@ A sequência segue uma progressão do reconhecimento básico até a avaliação 
 
 Quando uma palavra nova aparece pela primeira vez para o aluno, ele não vai direto para uma questão. Antes, vê um card de descoberta: uma tela rápida e visual que apresenta a palavra, sua definição curta e um exemplo de uso em contexto.
 
-O card aparece uma única vez, na primeira interação com a palavra. Se o aluno regredir em níveis, não vê o card novamente.
+O card aparece uma única vez, no início da sessão em que a palavra é introduzida (ver "Estrutura da sessão" na seção 3.4) — não reaparece depois; o lembrete passa a ser o destaque inline (ver abaixo). Como não há regressão de nível (seção 3.4), a palavra nunca volta ao estado de descoberta.
 
 O objetivo é ensinar antes de testar. O aluno precisa ter contato com o significado da palavra antes de ser cobrado. O card não é um flashcard tradicional (não tem lado A/B, não exige memorização). É uma apresentação integrada na trilha, rápida e divertida.
 
@@ -81,7 +81,13 @@ Para viabilizar isso sem recomputar nada na hora de exibir o card, a atribuiçã
 
 O gancho é **exclusivo da origem pessoal**. Quando a palavra vem do sinal de turma (e não do erro do próprio aluno), o card aparece sem gancho, na forma genérica — para não expor a turma nem soar como culpa coletiva. O campo `palavra_gatilho` só é preenchido para palavras de origem pessoal.
 
+A palavra de origem pessoal **não recebe alerta nem notificação à parte**: ela entra na fila de prioridade pessoal (seção 3.5) e aparece numa sessão seguinte como palavra nova, com card e gancho, pelo fluxo normal — sem interromper o aluno com um aviso separado do tipo "nova palavra da sua redação".
+
 Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.com (definição conversacional + exemplo, para falantes nativos), Duolingo, Memrise e Babbel (vocabulário sempre apresentado em contexto de frase).
+
+#### Destaque inline (lembrete)
+
+Depois do card, nas questões daquela palavra, a palavra nova fica **destacada** visualmente (cor/marcação). Tocar nela **reabre o card** (definição, exemplo, áudio) sem sair da questão — um lembrete leve, inspirado na marcação "palavra nova" do Duolingo. O card cheio aparece uma vez (no início da sessão); o destaque inline é o reforço nas questões seguintes, para quem precisar relembrar sem quebrar o fluxo.
 
 A sequência completa de uma palavra fica:
 
@@ -130,11 +136,11 @@ Antes de consultar o banco, a palavra precisa ser reduzida à sua forma base ("c
 Quando uma palavra é nova, a IA precisa gerar as questões antes de atribuir ao aluno. Essa geração deve ser assíncrona: a palavra entra em uma fila, as questões são geradas em background e aparecem na trilha em seguida — sem bloquear a experiência do aluno.
 
 **3. Segurança dos distratores é responsabilidade da IA**
-A IA gera a questão inteira e garante que os distratores não sejam respostas corretas. Não há sistema de categorias semânticas para isso. O professor pode sinalizar problemas via validação híbrida (seção 3.6), mas a geração em si depende da IA fazer isso corretamente no prompt.
+A IA gera a questão inteira e garante que os distratores não sejam respostas corretas. Não há sistema de categorias semânticas para isso. Problemas que escaparem podem ser sinalizados pelo report do aluno (seção 3.6), mas a geração em si depende da IA fazer isso corretamente no prompt.
 
 ### 3.4 Domínio de palavras
 
-Cada palavra tem um estado de aprendizado por aluno. A mecânica de domínio segue uma sequência fixa com regressão controlada.
+Cada palavra tem um estado de aprendizado por aluno. A mecânica segue uma sequência fixa de 4 níveis; no erro o aluno **repete o nível até acertar** (sem regredir), com os retries intercalados ao longo da sessão.
 
 #### Sequência de domínio
 
@@ -145,14 +151,47 @@ A palavra passa por 4 níveis de questão, na ordem:
 3. Completar frase (aplicação)
 4. Julgar uso (avaliação)
 
-Cada nível tem no mínimo 2 variações de questão.
+Cada nível tem no mínimo 2 variações de questão (a/b). Passar um nível é acertar **uma** das variações.
 
-#### Regras de progressão e regressão
+#### Regras de progressão
 
-- Acertou a questão → avança para o próximo nível.
-- Errou a questão → tenta a segunda variação do mesmo nível.
-- Errou as duas variações do mesmo nível → regride um nível, para uma variação que ainda não realizou. Se já realizou todas do nível anterior, repete uma que já errou.
-- Acertou a última questão do nível 4 → palavra dominada.
+- Acertou uma variação do nível → nível concluído, avança para o próximo.
+- Errou → a outra variação ainda não acertada do mesmo nível volta para a fila e reaparece **mais à frente na sessão**, não na hora (ver "Intercalação de erros"). **Não há regressão** a níveis anteriores.
+- Nunca se repergunta uma variação que o aluno já acertou.
+- Acertou o nível 4 → palavra dominada.
+
+#### Intercalação de erros (estilo fila)
+
+A sessão é uma fila de questões pendentes. Quando o aluno erra, o retry vai para o **fim da fila** — intercala-se com as outras questões pendentes em vez de reaparecer na hora. Isso espaça a repetição, retém melhor e evita monotonia (modelo do Duolingo). Só quando a questão é a **única pendente** restante é que ela entra em loop fixo imediato (alternando entre as variações ainda não acertadas) até o aluno acertar.
+
+Como as questões são de múltipla escolha, o aluno sempre acaba acertando; o "custo" de errar é o tempo gasto, o que naturalmente recompensa quem tenta de verdade em vez de chutar.
+
+#### Estrutura da sessão
+
+Cada sessão tem ~12 questões e introduz **2 palavras novas**. Arranjo no caminho feliz (sem erros):
+
+```
+Card palavra 1 → P1 nível 1 → P1 nível 2
+Card palavra 2 → P2 nível 1 → P2 nível 2
+P1 nível 3 → P2 nível 3
++ 4 questões de revisão (palavras já apresentadas, ainda não dominadas)
+```
+
+Os cards das palavras novas ficam **agrupados no início**, cada um colado às primeiras questões da sua palavra — nenhum card interrompe o meio da sessão (ver 3.2).
+
+O **nível 4 (avaliação) de cada palavra nova é adiado ~2 sessões**, entrando como conteúdo de revisão de uma sessão futura, junto de uma questão de revisão dos níveis anteriores. Esse espaçamento antes da avaliação final reforça a retenção: a palavra só é dominada ao passar o nível 4 depois de um intervalo, nunca no mesmo fôlego da introdução.
+
+Quando faltam palavras em progresso para preencher as 4 questões de revisão (ex.: aluno recém-diagnosticado), os slots são completados com mais palavras novas do banco base — as primeiras sessões são naturalmente mais "novas".
+
+#### Seleção da questão de revisão
+
+Para cada palavra em revisão, a questão escolhida segue a prioridade:
+
+1. Variação ainda não usada do **nível 2**.
+2. Se as duas variações do nível 2 já se esgotaram (o aluno errou o nível 2 na introdução) → variação não usada do **nível 3** (e vice-versa).
+3. Se níveis 2 e 3 já se esgotaram → repete a variação errada do nível 2; errando de novo, a do nível 3; alternando até acertar.
+
+O **nível 1 nunca** é usado como revisão — é o mais fácil (reconhecimento) e só reaparece na própria sessão de introdução, caso o aluno erre lá. Na sessão de revisão, a questão de revisão vem **antes** do nível 4 da palavra.
 
 #### Palavra dominada
 
@@ -163,9 +202,17 @@ Exceção prevista: palavras dominadas podem aparecer em eventos ou missões esp
 #### Exemplos de fluxo
 
 ```
-Acerta 1 → Acerta 2 → Erra 3a → Acerta 3b → Acerta 4 → Dominada ✅
+Caminho feliz
+  Intro:    Card → N1 ✓ → N2 ✓ → N3 ✓        (N4 fica para ~2 sessões depois)
+  Revisão:  revisão de N2 ✓ → N4 ✓ → Dominada ✅
 
-Acerta 1 → Acerta 2 → Erra 3a → Erra 3b → Volta pra 2 (variação não feita) → Acerta 2 → Tenta 3 (uma das que errou) → Acerta 3 → Acerta 4 → Dominada ✅
+Erro no nível 2 na introdução (retry vai pro fim da fila, intercalado)
+  Intro:    N1 ✓ → N2a ✗ → (segue as outras questões) → ... → N2b ✓
+            (as duas variações de N2 ficaram gastas → a revisão dessa palavra usará N3)
+  Revisão:  revisão de N3 ✓ → N4 ✓ → Dominada ✅
+
+Última questão pendente da sessão (loop fixo, nada com que intercalar)
+  ... → N3a ✗ → N3b ✗ → N3a ✗ → N3b ✓
 ```
 
 ### 3.5 Vocabulário adaptativo
@@ -190,6 +237,18 @@ Quando o aluno entra no app, faz uma avaliação diagnóstica curta (10 a 15 que
 - Aluno forte do 7º ano → começa no nível 4–5
 - Aluno com dificuldade do 7º ano → começa no nível 2
 - Ambos estão na mesma turma, mas cada um na sua trilha
+
+#### Onboarding (primeira vez)
+
+A primeira experiência do aluno costura entrada, diagnóstico e a primeira palavra:
+
+1. **Entrada** — via código de turma (provisório, até a decisão de autenticação — seção 10).
+2. **Boas-vindas temáticas** — uma tela curta apresentando a viagem pelas cidades.
+3. **Demonstração** — duas questões-demo roteirizadas: uma mostra como é **acertar** (XP, confete) e outra como é **errar** (feedback gentil, recuperação, sem punição). O objetivo é normalizar o erro antes de cobrar.
+4. **Diagnóstico** — a avaliação diagnóstica (acima), enquadrada como jogo e não como prova; posiciona o aluno na trilha.
+5. **Primeira palavra** — card de descoberta → nível 1 → primeiro XP, fechando o onboarding com uma vitória.
+
+A ferramenta de report (seção 3.6) é apresentada uma vez durante essas primeiras questões. As demos vêm antes do diagnóstico de propósito: ensinam a mecânica (e que errar é seguro) antes de o sistema calibrar o nível.
 
 #### Adaptação contínua
 
@@ -253,7 +312,7 @@ A geração acontece em dois momentos distintos:
 | Banco inicial (~500–800 palavras, uma vez) | Assinatura mensal do Claude, geração em lotes, revisão humana | Tarefa pontual e manual; custo fixo compensa mais que tokens avulsos |
 | Runtime (palavra nova da redação) | API com geração lazy (ver seção 3.3) | Automático, em produção, sem humano no meio |
 
-**Validação:** em ambos os momentos, o Hunspell valida que a palavra existe (ortografia) antes de entrar no banco. A qualidade do sinônimo (adequação e nível) é garantida pela revisão humana no lote inicial e pela validação híbrida do professor no runtime (seção 3.6).
+**Validação:** em ambos os momentos, o Hunspell valida que a palavra existe (ortografia) antes de entrar no banco. A qualidade do sinônimo (adequação e nível) é garantida pela revisão humana no lote inicial e pelo report do aluno no runtime (seção 3.6).
 
 **Identificação das palavras-alvo:** o corpus Essay-BR (~4.570 redações de ensino médio com nota por competência) pode ser usado para análise contrastiva — comparar o vocabulário de redações nota alta vs. baixa e extrair empiricamente as palavras superutilizadas nas redações fracas, que servem de gatilho para o banco.
 
@@ -279,9 +338,18 @@ Fluxo:
 
 Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas questões do banco. Não há duplicação.
 
-#### Validação híbrida
+#### Publicação direta e report do aluno (MVP)
 
-Questões geradas por IA são liberadas diretamente para o aluno, mas marcadas como "geradas automaticamente". O professor tem visibilidade e pode revisar, corrigir ou reportar problemas a qualquer momento.
+No MVP as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia. O professor **não** revisa nem aprova questões — a qualidade no runtime é controlada depois da publicação, pelo report do aluno.
+
+Quando uma questão parece errada (ex.: resposta incoerente com o enunciado, sinal de alucinação da IA), o aluno pode **reportá-la** escolhendo um **motivo predefinido** numa caixa de opções (ex.: "a resposta parece errada", "não entendi a palavra"). O report sobe para o **admin da plataforma** — não para o professor. Como o banco de questões é compartilhado entre escolas (seção 3.5), os reports de uma mesma questão **agregam entre todas as escolas**.
+
+Regras:
+
+- **Não isenta a questão**: reportar não pula nem anula a questão; o aluno responde normalmente. Evita usar o report para fugir de questão difícil.
+- **Não dá XP**: reportar não rende pontos, para não incentivar spam.
+- **Auto-ocultar em 10 reports**: ao acumular 10 reports, a questão **sai automaticamente de circulação** (deixa de ser atribuída) e fica pendente para o admin revisar junto com os reports. O admin decide corrigir, manter ou remover.
+- A ferramenta de report é apresentada uma vez ao aluno, no onboarding.
 
 #### Validação de palavras inexistentes
 
@@ -305,9 +373,10 @@ A trilha avança por XP, não por número de palavras. As palavras geram XP ao s
 |---|---|
 | Acertar questão (1ª tentativa) | 100 |
 | Acertar questão (2ª tentativa) | 70 |
+| Acertar questão (3ª tentativa em diante) | 50 (piso) |
 | Dominar palavra (bônus ao completar todos os níveis da palavra) | 500 |
 
-Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
+Os valores não variam por nível de dificuldade: o nível das questões já é adaptado ao aluno, então toda questão acertada vale o mesmo reconhecimento. A penalidade leve da 2ª tentativa (70 em vez de zero) é intencional — errar e corrigir ainda é aprender, e o objetivo é manter o aluno motivado, não punir o erro. A partir da 3ª tentativa o XP continua decrescente, mas com **piso de 50** — como as questões são de múltipla escolha e o aluno sempre acaba acertando (seção 3.4), o piso garante que insistir nunca valha zero, sem premiar o chute como um acerto de primeira. O bônus alto por dominar a palavra (500) reforça a conclusão como a conquista mais valiosa.
 
 Completar uma palavra acertando tudo de primeira rende cerca de 900 XP de base (4 níveis × 100 + 500 de bônus), sem contar o bônus de combo, que adiciona mais conforme a sequência de acertos. Os limiares de XP de cada nó da trilha devem ser dimensionados nessa escala (casa dos milhares). São valores iniciais, ajustáveis depois com dados reais de uso.
 
@@ -344,6 +413,16 @@ A trilha é organizada em três camadas, cada uma com sua recompensa de progress
 As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. As cidades do MVP estão definidas (BH, São Paulo, Rio de Janeiro); a definição visual fina de cada ponto turístico e cartão-postal é trabalho de arte, não de produto.
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
+
+#### Feedback de progresso na sessão
+
+O progresso é mostrado em camadas, para o aluno sempre sentir avanço sem que a trilha precise interromper o fluxo a cada sessão:
+
+- **Durante a sessão** — uma barra de progresso fina no topo enche a cada questão respondida (inspiração: Duolingo). É o feedback contínuo, dentro da própria questão, sem levar o aluno de volta ao mapa.
+- **No fim da sessão** — uma tela de resumo leve, separada da trilha, mostrando o **XP ganho** e a **progressão das palavras** trabalhadas na sessão (ex.: "relevante" subiu de nível, ou foi dominada). Não exibe percentual de acerto — transformaria a sessão em boletim, contra o princípio "errar é aprender" — nem tempo/velocidade — recompensar rapidez incentivaria chute, ruim para vocabulário.
+- **Ao completar um nó** — a animação na trilha (marcador avançando, confete). É a celebração maior; o resumo de sessão é o feedback leve e frequente. As duas camadas ficam distintas para que a celebração de nó não vire rotina. A cadência (quantas sessões enchem um nó) é calibração de XP, ainda em ajuste.
+
+Princípio de animação: curtas e não-bloqueantes. Nenhuma animação deve travar o aluno antes de poder seguir — é o que mantém a experiência rápida mesmo com muito feedback visual (observado no Duolingo).
 
 ### 3.8 Expansão para questões de sintaxe
 
@@ -411,6 +490,16 @@ A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A cam
 Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte** — uma tela onde o aluno acumula carimbos de cidade, cartões-postais de pontos turísticos e selos de conquista. São **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
 Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+
+#### Revelação de recompensa
+
+Quando o aluno ganha um carimbo, cartão-postal ou selo, a recompensa é revelada com uma animação de **abrir com toque** (inspiração: a abertura de baús do Duolingo, que cria antecipação antes de mostrar o prêmio). A interação é aproveitada; a mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
+
+Concerns:
+
+- **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o ponto turístico X dá o cartão-postal de X). Sem aleatoriedade.
+- **Sem loot box** — recompensa aleatória ou por chance levanta questões éticas e regulatórias com público infantil; fica fora.
+- **Animação curta e não-bloqueante** — a revelação não pode travar o aluno; mesmo princípio das animações de sessão (seção 3.7).
 
 #### Itens cosméticos de evento (adiado)
 
@@ -490,12 +579,14 @@ O objetivo não é apenas mostrar uma métrica, mas fechar o ciclo: detectar dif
 
 ### 4.6 Envio de redações
 
-O envio é feito pelo próprio aluno, em dois formatos:
+O professor **atribui** a redação à turma (tema e prazo); o **aluno envia** em resposta, em dois formatos:
 
 - **Manuscrita**: o aluno fotografa a redação pelo app. O texto é extraído por OCR antes da análise.
 - **Digital**: o aluno envia em PDF.
 
-O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor não envia redações — apenas visualiza e acompanha.
+O professor tem acesso às redações de todos os alunos da turma, com estatísticas agregadas por aluno, turma e dimensão de análise. O professor **não escreve nem envia** redações — atribui, visualiza e acompanha.
+
+Como o envio é disparado pela atribuição do professor, enquanto não houver atribuição a fonte de palavras do aluno é o banco base e o sinal de turma (seção 3.5); a fonte pessoal (redação) entra a partir da primeira redação atribuída.
 
 ### 4.7 Riscos do OCR
 
@@ -547,7 +638,7 @@ Não é possível ter qualidade confiável, qualquer livro e sem fornecer texto 
 
 ### 5.3 Condição para entrar em fase futura
 
-O módulo volta quando houver uma solução de conteúdo confiável — por exemplo, um fornecedor de conteúdo licenciado, RAG sobre texto autorizado, ou uma integração que dê à IA acesso real ao texto da obra. Quando entrar, o vocabulário do livro deve alimentar a trilha pelo mesmo fluxo de geração lazy e validação híbrida das demais fontes (seção 3.6).
+O módulo volta quando houver uma solução de conteúdo confiável — por exemplo, um fornecedor de conteúdo licenciado, RAG sobre texto autorizado, ou uma integração que dê à IA acesso real ao texto da obra. Quando entrar, o vocabulário do livro deve alimentar a trilha pelo mesmo fluxo de geração lazy e validação das demais fontes (seção 3.6).
 
 ---
 
@@ -664,7 +755,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
-3. Onboarding e workflow do aluno — fluxo completo de uso ainda a definir.
+3. Workflow recorrente — onboarding já definido (seção 3.5); falta fechar a trilha como home (a revisar) e o ritmo do nó/recompensas (seção 3.7/3.10).
 4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
 5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
 
@@ -683,13 +774,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Banco de palavras — palavras-alvo | Alternativas às palavras superutilizadas, não listas de frequência |
 | Banco de palavras — geração inicial | Assinatura Claude, lotes, revisão humana (tarefa única) |
 | Banco de palavras — runtime | API com geração lazy |
-| Validação de palavras | Hunspell valida existência; qualidade por revisão humana/professor |
+| Validação de palavras | Hunspell valida existência; qualidade por revisão humana (lote inicial) e report do aluno → admin (runtime) |
+| Validação de questões (runtime) | Publicação direta no MVP (sem revisão do professor); report do aluno com motivo predefinido → admin; 10 reports auto-ocultam a questão, pendente de revisão |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
-| Valores de XP | 100 (1ª tentativa), 70 (2ª tentativa), 500 (bônus por dominar palavra); sem variar por dificuldade |
+| Valores de XP | 100 (1ª tentativa), 70 (2ª), 50 da 3ª em diante (piso), 500 (bônus por dominar palavra); sem variar por dificuldade |
 | Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
 | Leaderboard de turma | Aluno vê próprio XP + top 3 da turma com valores; não vê XP exato dos demais |
 | XP de evento | Separado do XP individual; zera para todos no início da competição |
@@ -704,6 +796,15 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Recompensa de ponto turístico | Cartão-postal colecionável |
 | Recompensas de evento | Troféus (1º/2º/3º) + hall da fama; itens cosméticos fora do MVP |
 | Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir rende selo |
+| Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
+| Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
+| Estrutura da sessão | ~12 questões, 2 palavras novas; cards no início; nível 4 adiado ~2 sessões; 4 questões de revisão (seção 3.4) |
+| Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
+| Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |
+| Lembrete inline do card | Palavra destacada nas questões; tocar reabre o card sem sair (seção 3.2) |
+| Onboarding | Entrada (código de turma, provisório) → boas-vindas → 2 questões-demo (acerto e erro) → diagnóstico como jogo → primeira palavra com card; report apresentado 1x (seção 3.5) |
+| Envio de redação | Professor atribui (tema/prazo); aluno envia (foto/PDF); fonte pessoal entra na 1ª redação atribuída (seção 4.6) |
+| Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
 
 ---
 
