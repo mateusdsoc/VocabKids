@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 7).
+> Última atualização: 27 de maio de 2026 (rev. 8).
 
 ---
 
@@ -414,6 +414,23 @@ As recompensas de trilha são um dos três baldes do sistema de recompensas (tri
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
+#### Tela inicial (home) e a trilha como seção
+
+Ao abrir o app, o aluno cai numa **home-hub**, não direto na trilha. A trilha é uma **seção dedicada**, a um toque da home. A escolha é deliberada: o Duolingo pode ter o caminho como tela inicial porque o app *é* só a trilha; o VocabBR Kids orquestra também redação, eventos, leaderboards e dashboards, então uma home que dá acesso a tudo isso faz mais sentido, com a trilha como destino central da prática.
+
+A **home** reúne:
+
+- **Status do aluno** — XP/nível, bolha do nó atual, **número de palavras dominadas** (o contador, não a lista, que ficaria longa demais) e métricas básicas.
+- **Ação de prática** — um botão **"Continuar"** como CTA primário, que leva direto à próxima sessão (menor fricção para praticar), e o **acesso ao mapa da trilha** como ação secundária.
+- **Atalho de redação** — leva à área de redação (envio das redações atribuídas e dashboards de correção — da última e do ano).
+- **Acesso a eventos e leaderboards.**
+
+A **trilha** (seção) mostra o mapa, "você está aqui", o próximo nó/ponto turístico e permite continuar a sessão a partir dali.
+
+**Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home.** Isso reforça o senso de progresso ("avancei aqui") e puxa o aluno para a trilha naturalmente. Cada tela ganha um papel claro: a **home** é o que se vê ao *abrir* o app (o hub); a **trilha** é onde se *aterrissa depois de praticar*.
+
+A hierarquia visual fina dos botões (tamanho do "Continuar" vs. acesso ao mapa) é detalhe de design, a definir na tela.
+
 #### Feedback de progresso na sessão
 
 O progresso é mostrado em camadas, para o aluno sempre sentir avanço sem que a trilha precise interromper o fluxo a cada sessão:
@@ -472,6 +489,16 @@ Há uma distinção importante entre o **algoritmo adaptativo** e o **XP/nível 
 - O **XP/nível visível é redefinido para a média da turma** na virada de ano (todos os alunos vão para a média — acima, abaixo e na média). Isso evita que um aluno novo entre muito distante da turma e que o número visível vire uma barreira social.
 
 O raciocínio: o XP visível é um indicador motivacional, não o modelo de aprendizado. O aluno forte não perde competência real (volta ao topo rápido porque de fato sabe mais), e o aluno novo não começa milhares de XP atrás.
+
+#### Comportamento da trilha e recompensas durante eventos
+
+Como eventos são pós-MVP (ver seção 06 e escopo por fase), isto fica registrado como **princípio de design**, a refinar quando eventos entrarem no escopo:
+
+- Durante um evento, a **trilha pausa**: a atividade do evento alimenta o **XP de evento** (separado, acima) e **não enche os nós** da trilha individual.
+- As **recompensas de trilha pausam junto**: nenhum cartão-postal ou carimbo novo é concedido enquanto a trilha está congelada — voltam a progredir quando o evento termina. Coerência: se a trilha pausa, suas recompensas também pausam.
+- A **ofensiva (sequência de dias) continua contando**: jogar o evento conta como presença; não se pune quem participa.
+- A **meta semanal continua contando** durante o evento. Não se assume que evento seja só revisão — ver decisão em aberto sobre o conteúdo do evento (seção 10).
+- A recompensa do próprio evento é o balde "Eventos" (troféus + hall da fama, seção 3.10), com espaço para recompensas mais **temáticas** a explorar (seção 06).
 
 ### 3.10 Sistema de recompensas
 
@@ -665,6 +692,8 @@ No MVP, as recompensas de evento são:
 - **Troféus digitais** para 1º, 2º e 3º lugares;
 - **Destaque no hall da fama** (reconhecimento por turma, ano ou escola).
 
+Há espaço para recompensas mais **temáticas** (ligadas ao tema de cada evento) além do troféu e do hall da fama — registrado como direção a explorar, não como compromisso firme.
+
 Itens cosméticos exclusivos de evento ficam **fora do MVP** — exigem uma camada de customização de perfil ainda não definida (ver seção 3.10).
 
 As recompensas não devem prejudicar o aprendizado nem criar vantagem pedagógica injusta. Elas existem para motivar participação e senso de progresso.
@@ -755,9 +784,11 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
-3. Workflow recorrente — onboarding já definido (seção 3.5); falta fechar a trilha como home (a revisar) e o ritmo do nó/recompensas (seção 3.7/3.10).
+3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
 4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
 5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
+6. Conteúdo do evento (pós-MVP) — só revisão de palavras já dominadas ou também palavras novas? Afeta como a meta semanal progride durante eventos (seção 3.9).
+7. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -805,6 +836,9 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Onboarding | Entrada (código de turma, provisório) → boas-vindas → 2 questões-demo (acerto e erro) → diagnóstico como jogo → primeira palavra com card; report apresentado 1x (seção 3.5) |
 | Envio de redação | Professor atribui (tema/prazo); aluno envia (foto/PDF); fonte pessoal entra na 1ª redação atribuída (seção 4.6) |
 | Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
+| Tela inicial (home) | Home-hub (não a trilha): status do aluno (XP/nível, nó atual, nº de palavras dominadas), "Continuar" como CTA primário + acesso ao mapa, atalho de redação, eventos e leaderboards; trilha é seção dedicada (seção 3.7) |
+| Saída da sessão | Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home (seção 3.7) |
+| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); ofensiva e meta semanal continuam contando; recompensa do evento = troféu + hall da fama (seção 3.9) |
 
 ---
 
