@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 6).
+> Última atualização: 26 de maio de 2026 (rev. 7).
 
 ---
 
@@ -80,6 +80,8 @@ Quando a palavra vem do erro da própria redação do aluno, o card mostra a con
 Para viabilizar isso sem recomputar nada na hora de exibir o card, a atribuição da palavra ao aluno guarda um campo `palavra_gatilho` — qual palavra superutilizada motivou a recomendação (ex.: "importante" gerou "relevante"). Esse dado já é computado durante a análise da redação, então é só persistir na atribuição e ler na exibição do card.
 
 O gancho é **exclusivo da origem pessoal**. Quando a palavra vem do sinal de turma (e não do erro do próprio aluno), o card aparece sem gancho, na forma genérica — para não expor a turma nem soar como culpa coletiva. O campo `palavra_gatilho` só é preenchido para palavras de origem pessoal.
+
+A palavra de origem pessoal **não recebe alerta nem notificação à parte**: ela entra na fila de prioridade pessoal (seção 3.5) e aparece numa sessão seguinte como palavra nova, com card e gancho, pelo fluxo normal — sem interromper o aluno com um aviso separado do tipo "nova palavra da sua redação".
 
 Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.com (definição conversacional + exemplo, para falantes nativos), Duolingo, Memrise e Babbel (vocabulário sempre apresentado em contexto de frase).
 
@@ -802,6 +804,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Lembrete inline do card | Palavra destacada nas questões; tocar reabre o card sem sair (seção 3.2) |
 | Onboarding | Entrada (código de turma, provisório) → boas-vindas → 2 questões-demo (acerto e erro) → diagnóstico como jogo → primeira palavra com card; report apresentado 1x (seção 3.5) |
 | Envio de redação | Professor atribui (tema/prazo); aluno envia (foto/PDF); fonte pessoal entra na 1ª redação atribuída (seção 4.6) |
+| Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
 
 ---
 
