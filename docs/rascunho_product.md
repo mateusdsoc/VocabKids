@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 28 de maio de 2026 (rev. 10).
+> Última atualização: 28 de maio de 2026 (rev. 11).
 
 ---
 
@@ -477,6 +477,8 @@ Existem em dois níveis:
 
 Sobre outras escolas, professores e coordenadores veem o mesmo que os alunos: apenas a posição geral, sem detalhes internos.
 
+O modelo de papéis e permissões que sustenta essa visibilidade está na seção 3.11.
+
 #### Criação e adesão a competições
 
 O **admin da plataforma** cria as competições. Cada escola **aceita ou rejeita** participar. A decisão de adesão pode acontecer fora da plataforma (o admin cadastra manualmente as escolas participantes), então a arquitetura precisa ser flexível para inscrever ou não cada escola em uma competição — não assumir que toda escola participa de tudo.
@@ -530,6 +532,32 @@ Concerns:
 #### Itens cosméticos de evento (adiado)
 
 Itens cosméticos exclusivos de competição (capa especial de passaporte, moldura no perfil, título exibido no leaderboard) exigem uma camada de customização de perfil que ainda não foi desenhada. Ficam **fora do MVP**: para eventos, troféus e destaque no hall da fama são suficientes. Cosméticos entram quando o perfil/customização do aluno for definido.
+
+### 3.11 Papéis e permissões
+
+O produto tem quatro papéis: **aluno**, **professor**, **coordenador** e **admin da plataforma**. O que separa professor de coordenador não é um conjunto diferente de telas — são os **mesmos dashboards com escopo diferente** — somado à distinção entre **ver** e **configurar**.
+
+#### Modelo de dados: identidade + associações
+
+A identidade (login) é separada do vínculo com a escola. Um `usuário` tem uma ou mais **associações** (memberships); cada associação liga o usuário a uma escola, com um papel e um escopo:
+
+| Papel | Escopo da associação | Pode ver | Pode configurar/agir |
+|---|---|---|---|
+| Aluno | Uma turma | Próprio progresso + leaderboard limitado (seção 3.9) | Responder questões, enviar redação, reportar questão |
+| Professor | Conjunto de turmas | Detalhe dos próprios alunos/turmas | Meta semanal, preset de rigor de redação e atribuição de redação — **só nas próprias turmas** |
+| Coordenador | Escola inteira | Tudo da escola (todas as turmas, alunos e professores) | **Nada de configuração pedagógica** — papel de supervisão |
+| Admin da plataforma | Global (sem escola) | Agregados de plataforma e reports de questões | Cria competições, trata reports, cuida do banco compartilhado |
+
+Modelar o vínculo como **associação** (em vez de cravar a escola dentro do usuário) resolve de graça o professor que atua em duas escolas (duas associações) e o caso de quem é **coordenador e também leciona** (uma associação de coordenador na escola + uma de professor nas turmas que dá) — sem precisar de um papel híbrido especial. Isso encosta na decisão de autenticação (seção 10), mas a estrutura aqui não a trava.
+
+#### Ver ≠ configurar
+
+A permissão é função de **(papel, escopo, capacidade)**, com duas capacidades distintas:
+
+- **Ver** é por escopo: o professor enxerga as próprias turmas; o coordenador enxerga a escola inteira.
+- **Configurar/agir** (meta semanal — seção 3.5; preset de rigor — seção 4.3; atribuir redação — seção 4.6) é **exclusivo do professor**, e só nas suas turmas. O coordenador **não configura nem atribui** — acompanha. Isso separa responsabilidade: quem age na turma é o professor; o coordenador supervisiona.
+
+Os defaults continuam vindo do sistema (valor sugerido por ano — seções 3.5 e 4.3) e são ajustados pelo professor; o coordenador não define padrões. A adesão a competições segue como já decidido (admin cadastra a escola — seção 3.9), fora do fluxo de configuração de turma.
 
 ---
 
@@ -806,9 +834,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
 3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
-4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
-5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
-6. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
+4. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
+5. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -863,6 +890,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Conteúdo/dinâmica do evento (pós-MVP) | A dinâmica decide o vocabulário: com velocidade → só palavras dominadas; sem cronômetro → pode introduzir palavra nova (prévia, não vira dominada). Evento é mundo à parte, com dinâmicas e temas próprios; duas famílias (mini-jogos e produção/colaboração) (seção 06) |
 | Estrutura do evento (pós-MVP) | Trilha temática curta (~5–8 nós) cujos nós são mini-jogos; substitui o mapa principal durante o evento; jogos rotacionam entre eventos (seção 06) |
 | Entrega técnica de eventos (pós-MVP) | Motor de cada jogo embarca no app e fica; conteúdo do evento baixa no início e é descartado no fim ("motor fica, conteúdo gira"); só mecânica nova pede atualização da loja (seção 06) |
+| Papéis e permissões | Quatro papéis (aluno, professor, coordenador, admin); identidade + associações (papel + escopo); permissão = (papel, escopo, capacidade) (seção 3.11) |
+| Professor x coordenador | Mesmos dashboards, escopos diferentes: professor vê e configura as próprias turmas; coordenador vê a escola inteira mas é supervisão — não configura nem atribui (seção 3.11) |
 | Ofensiva / streak de dias | Fora do produto — não haverá sequência de dias ao estilo Duolingo; o combo por acertos seguidos (seção 3.7) é distinto e permanece (seção 09) |
 
 ---
