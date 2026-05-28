@@ -1,8 +1,8 @@
-# DECIDIR IMEDIATAMENTE — Trilha, nós, pontos turísticos, cidades e recompensas
+# DECIDIR — Trilha, nós, pontos turísticos, cidades e recompensas
 
-> **Status:** decisão pendente, para ser discutida em sessão dedicada (contexto zerado).
-> **Objetivo:** dimensionar a trilha (nós → pontos turísticos → cidades), definir o ritmo de progressão, o custo de recompensas/arte, e decidir se a trilha é a tela inicial (home).
-> **Ao terminar:** mesclar as decisões de volta em `rascunho_product.md` (seções 3.7, 3.10, 3.5 e a tabela de decisões fechadas) e **apagar este arquivo**.
+> **Status:** EM ANDAMENTO — parcialmente resolvido. O **Tópico 4 (a trilha é a home?) está FECHADO** e já mesclado no `rascunho_product.md` (seção 3.7 + tabela de decisões). O **Tópico B (dimensionamento da trilha e custo de recompensas) segue em andamento** — números ainda a confirmar. **Não apagar este arquivo ainda**: ele só some quando o Tópico B fechar.
+> **Objetivo:** dimensionar a trilha (nós → pontos turísticos → cidades), definir o ritmo de progressão e o custo de recompensas/arte. (A pergunta "a trilha é a home?" já foi respondida — ver abaixo.)
+> **Ao terminar o que falta:** mesclar o dimensionamento em `rascunho_product.md` (seções 3.7 e 3.10) e **apagar este arquivo**.
 >
 > Este documento é autossuficiente de propósito — quem pegar isto não precisa do histórico de conversa.
 
@@ -27,7 +27,7 @@ Fonte da verdade do produto: **`docs/rascunho_product.md`**. Seções relevantes
   - **Nó** → feedback visual (**confete**), sem item colecionável → **custo de arte ZERO**.
   - **Ponto turístico** → **cartão-postal** colecionável → **precisa de arte**.
   - **Cidade** → **carimbo** no passaporte → **precisa de arte**.
-  - **Feitos** (10 acertos seguidos, X dias de sequência, etc.) → **selos** → **precisa de arte**.
+  - **Feitos** (10 acertos seguidos, dominar N palavras, etc.) → **selos** → **precisa de arte**. (Sem ofensiva/streak de dias — decidido não usar.)
   - **Eventos** → troféus + hall da fama (fora do escopo desta decisão).
 - **Cidades do MVP**: 3 — **BH, São Paulo, Rio de Janeiro**.
 - **Progressão por XP** (3.7): os nós enchem por XP, não por nº de palavras. Limiares na "casa dos milhares".
@@ -40,19 +40,27 @@ Fonte da verdade do produto: **`docs/rascunho_product.md`**. Seções relevantes
 
 ## 3. As perguntas a decidir
 
-### Tópico 4 — A trilha é a home?
+### Tópico 4 — A trilha é a home? — ✅ RESOLVIDO (mesclado no rascunho, seção 3.7)
 
-**Pergunta:** ao abrir o app, o aluno cai direto na trilha (a trilha É a tela inicial, estilo Duolingo), ou numa home mais enxuta (ex.: um botão "continuar" com a trilha a um toque)?
+**Decisão:** a trilha **NÃO** é a home. Ao abrir o app, o aluno cai numa **home-hub**; a trilha é uma **seção dedicada**, a um toque da home.
 
-- **Preocupação do dono do produto:** trilha como home pode jogar informação demais na cara ao abrir.
-- **Referência (Duolingo):** o caminho É a home, mas funciona porque há **um único ponto focal** (a bolha "continuar" do próximo nó) e os metadados (ofensiva, XP, meta) ficam numa **barra fina no topo**. Ou seja, o problema não é "trilha na home", é **hierarquia visual**.
-- **Status:** o dono não tem certeza; quer revisar. **Nada foi escrito no rascunho sobre isso ainda.**
+**Raciocínio:** o Duolingo pode ter o caminho como home porque o app *é* só a trilha. O VocabBR Kids orquestra também redação, eventos, leaderboards e dashboards — então uma home-hub que dá acesso a tudo isso faz mais sentido, com a trilha como destino central da prática.
 
-**Dúvidas a resolver:**
-- Trilha-como-home com 1 CTA dominante resolve o medo de "informação demais", ou ainda assim o dono prefere uma home separada?
-- Onde ficam meta da semana e combo do dia (barra fina no topo da trilha vs. tela própria)?
+**Como ficou:**
+- **Home** = status do aluno (XP/nível, nó atual, **número** de palavras dominadas, métricas básicas) + **"Continuar"** (CTA primário, vai direto à próxima sessão) + acesso ao mapa da trilha (secundário) + atalho de redação + acesso a eventos e leaderboards.
+- **Trilha (seção)** = mapa, "você está aqui", próximo nó/ponto turístico, continuar a sessão dali.
+- **Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home** — reforça o senso de progresso e puxa para a trilha.
+- Hierarquia visual fina dos botões = detalhe de design.
 
-### Tópico B — Dimensionamento da trilha e custo de recompensas
+**Bônus resolvido nesta rodada (eventos × trilha/recompensas, pós-MVP — mesclado na seção 3.9):** evento **pausa a trilha** e suas recompensas (cartão-postal/carimbo pausam junto); **a meta semanal continua contando**; recompensa do evento = troféu + hall da fama, com espaço para recompensas mais **temáticas** a explorar. (O app **não terá ofensiva/streak de dias** — decidido nesta rodada.)
+
+**Ficou em aberto (registrado na seção 10 do rascunho):**
+- Conteúdo do evento: só revisão de palavras dominadas ou também palavras novas? (afeta a meta semanal durante eventos)
+- Recompensas temáticas de evento, além de troféu + hall da fama.
+
+### Tópico B — Dimensionamento da trilha e custo de recompensas — ⏳ EM ANDAMENTO
+
+> **Status:** os números (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto de selos) ainda **não estão fechados** — ficaram como "em andamento, a discutir". A proposta de partida abaixo é a baseline de trabalho, ainda a confirmar com o dono. Este é o que falta para poder apagar este arquivo.
 
 **Insight-chave (já alinhado):** o **custo de arte vem dos pontos turísticos (cartão-postal) e cidades (carimbo)** — NÃO dos nós (confete é grátis). Logo, a velocidade do nó é só "sensação" e é barata; o lever real para controlar custo de arte é a **granularidade de pontos turísticos e cidades**.
 
@@ -82,11 +90,11 @@ Fonte da verdade do produto: **`docs/rascunho_product.md`**. Seções relevantes
 ## 4. Resultado esperado desta sessão
 
 Definir números (ou faixas iniciais ajustáveis) para:
-- [ ] Trilha é home? (sim, estilo Duolingo / não, home separada) — e a hierarquia visual.
+- [x] **Trilha é home?** — RESOLVIDO: não; home-hub separada, trilha é seção dedicada (ver Tópico 4).
 - [ ] Pontos turísticos por cidade.
 - [ ] Nós por ponto turístico.
 - [ ] XP por nó / sessões por nó (e reconciliar a frase "um nó por sessão" da 3.7).
 - [ ] Tamanho do conjunto inicial de selos.
 - [ ] Plano para quando o conteúdo (3 cidades / banco) se esgotar.
 
-Depois: mesclar em `rascunho_product.md`, atualizar a tabela de decisões fechadas e **apagar este arquivo**.
+Depois de fechar os itens restantes: mesclar em `rascunho_product.md`, atualizar a tabela de decisões fechadas e **apagar este arquivo**.

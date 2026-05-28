@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 26 de maio de 2026 (rev. 7).
+> Última atualização: 28 de maio de 2026 (rev. 11).
 
 ---
 
@@ -414,6 +414,23 @@ As recompensas de trilha são um dos três baldes do sistema de recompensas (tri
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
+#### Tela inicial (home) e a trilha como seção
+
+Ao abrir o app, o aluno cai numa **home-hub**, não direto na trilha. A trilha é uma **seção dedicada**, a um toque da home. A escolha é deliberada: o Duolingo pode ter o caminho como tela inicial porque o app *é* só a trilha; o VocabBR Kids orquestra também redação, eventos, leaderboards e dashboards, então uma home que dá acesso a tudo isso faz mais sentido, com a trilha como destino central da prática.
+
+A **home** reúne:
+
+- **Status do aluno** — XP/nível, bolha do nó atual, **número de palavras dominadas** (o contador, não a lista, que ficaria longa demais) e métricas básicas.
+- **Ação de prática** — um botão **"Continuar"** como CTA primário, que leva direto à próxima sessão (menor fricção para praticar), e o **acesso ao mapa da trilha** como ação secundária.
+- **Atalho de redação** — leva à área de redação (envio das redações atribuídas e dashboards de correção — da última e do ano).
+- **Acesso a eventos e leaderboards.**
+
+A **trilha** (seção) mostra o mapa, "você está aqui", o próximo nó/ponto turístico e permite continuar a sessão a partir dali.
+
+**Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home.** Isso reforça o senso de progresso ("avancei aqui") e puxa o aluno para a trilha naturalmente. Cada tela ganha um papel claro: a **home** é o que se vê ao *abrir* o app (o hub); a **trilha** é onde se *aterrissa depois de praticar*.
+
+A hierarquia visual fina dos botões (tamanho do "Continuar" vs. acesso ao mapa) é detalhe de design, a definir na tela.
+
 #### Feedback de progresso na sessão
 
 O progresso é mostrado em camadas, para o aluno sempre sentir avanço sem que a trilha precise interromper o fluxo a cada sessão:
@@ -460,6 +477,8 @@ Existem em dois níveis:
 
 Sobre outras escolas, professores e coordenadores veem o mesmo que os alunos: apenas a posição geral, sem detalhes internos.
 
+O modelo de papéis e permissões que sustenta essa visibilidade está na seção 3.11.
+
 #### Criação e adesão a competições
 
 O **admin da plataforma** cria as competições. Cada escola **aceita ou rejeita** participar. A decisão de adesão pode acontecer fora da plataforma (o admin cadastra manualmente as escolas participantes), então a arquitetura precisa ser flexível para inscrever ou não cada escola em uma competição — não assumir que toda escola participa de tudo.
@@ -473,6 +492,15 @@ Há uma distinção importante entre o **algoritmo adaptativo** e o **XP/nível 
 
 O raciocínio: o XP visível é um indicador motivacional, não o modelo de aprendizado. O aluno forte não perde competência real (volta ao topo rápido porque de fato sabe mais), e o aluno novo não começa milhares de XP atrás.
 
+#### Comportamento da trilha e recompensas durante eventos
+
+Como eventos são pós-MVP (ver seção 06 e escopo por fase), isto fica registrado como **princípio de design**, a refinar quando eventos entrarem no escopo:
+
+- Durante um evento, a **trilha pausa**: a atividade do evento alimenta o **XP de evento** (separado, acima) e **não enche os nós** da trilha individual.
+- As **recompensas de trilha pausam junto**: nenhum cartão-postal ou carimbo novo é concedido enquanto a trilha está congelada — voltam a progredir quando o evento termina. Coerência: se a trilha pausa, suas recompensas também pausam.
+- **Participar do evento conta como meta semanal cumprida** naqueles dias. Como o evento é um mundo à parte e **não gera palavra dominada** (ver dinâmicas e estrutura na seção 06), ele não soma na meta no sentido literal de "palavras dominadas/semana"; em vez disso, participar **protege** a meta — quem joga o evento não é penalizado por não dominar palavras novas naquela janela.
+- A recompensa do próprio evento é o balde "Eventos" (troféus + hall da fama, seção 3.10), com espaço para recompensas mais **temáticas** a explorar (seção 06).
+
 ### 3.10 Sistema de recompensas
 
 As recompensas se dividem em três baldes, cada um com uma lógica distinta. Manter essa separação clara evita confundir progresso, mérito individual e competição.
@@ -480,7 +508,7 @@ As recompensas se dividem em três baldes, cada um com uma lógica distinta. Man
 | Balde | Lógica | Recompensas |
 |---|---|---|
 | **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Ponto turístico: **cartão-postal** colecionável. Cidade: **carimbo no passaporte** |
-| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, X dias de sequência, dominar N palavras, cumprir a meta semanal) |
+| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, dominar N palavras, cumprir a meta semanal) |
 | **Eventos** | Competitivo — só para destaques | **Troféus** digitais (1º/2º/3º) e destaque no hall da fama |
 
 A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A camada visual colecionável — passaporte, carimbos, cartões-postais, selos — está **a revisar**: depende de validar o custo de arte e se a metáfora funciona com os alunos antes de virar requisito firme.
@@ -504,6 +532,32 @@ Concerns:
 #### Itens cosméticos de evento (adiado)
 
 Itens cosméticos exclusivos de competição (capa especial de passaporte, moldura no perfil, título exibido no leaderboard) exigem uma camada de customização de perfil que ainda não foi desenhada. Ficam **fora do MVP**: para eventos, troféus e destaque no hall da fama são suficientes. Cosméticos entram quando o perfil/customização do aluno for definido.
+
+### 3.11 Papéis e permissões
+
+O produto tem quatro papéis: **aluno**, **professor**, **coordenador** e **admin da plataforma**. O que separa professor de coordenador não é um conjunto diferente de telas — são os **mesmos dashboards com escopo diferente** — somado à distinção entre **ver** e **configurar**.
+
+#### Modelo de dados: identidade + associações
+
+A identidade (login) é separada do vínculo com a escola. Um `usuário` tem uma ou mais **associações** (memberships); cada associação liga o usuário a uma escola, com um papel e um escopo:
+
+| Papel | Escopo da associação | Pode ver | Pode configurar/agir |
+|---|---|---|---|
+| Aluno | Uma turma | Próprio progresso + leaderboard limitado (seção 3.9) | Responder questões, enviar redação, reportar questão |
+| Professor | Conjunto de turmas | Detalhe dos próprios alunos/turmas | Meta semanal, preset de rigor de redação e atribuição de redação — **só nas próprias turmas** |
+| Coordenador | Escola inteira | Tudo da escola (todas as turmas, alunos e professores) | **Nada de configuração pedagógica** — papel de supervisão |
+| Admin da plataforma | Global (sem escola) | Agregados de plataforma e reports de questões | Cria competições, trata reports, cuida do banco compartilhado |
+
+Modelar o vínculo como **associação** (em vez de cravar a escola dentro do usuário) resolve de graça o professor que atua em duas escolas (duas associações) e o caso de quem é **coordenador e também leciona** (uma associação de coordenador na escola + uma de professor nas turmas que dá) — sem precisar de um papel híbrido especial. Isso encosta na decisão de autenticação (seção 10), mas a estrutura aqui não a trava.
+
+#### Ver ≠ configurar
+
+A permissão é função de **(papel, escopo, capacidade)**, com duas capacidades distintas:
+
+- **Ver** é por escopo: o professor enxerga as próprias turmas; o coordenador enxerga a escola inteira.
+- **Configurar/agir** (meta semanal — seção 3.5; preset de rigor — seção 4.3; atribuir redação — seção 4.6) é **exclusivo do professor**, e só nas suas turmas. O coordenador **não configura nem atribui** — acompanha. Isso separa responsabilidade: quem age na turma é o professor; o coordenador supervisiona.
+
+Os defaults continuam vindo do sistema (valor sugerido por ano — seções 3.5 e 4.3) e são ajustados pelo professor; o coordenador não define padrões. A adesão a competições segue como já decidido (admin cadastra a escola — seção 3.9), fora do fluxo de configuração de turma.
 
 ---
 
@@ -656,6 +710,26 @@ Eventos entre escolas devem acontecer em intervalos maiores, possivelmente a cad
 
 Eventos menores, como entre turmas, podem acontecer com mais frequência.
 
+### Dinâmicas e estrutura do evento (pós-MVP)
+
+> Direção de design registrada; eventos são pós-MVP (ver escopo por fase). A refinar quando entrarem no escopo.
+
+Um evento **não** é a trilha com placar. É um **mundo à parte**, com dinâmicas próprias e variadas e temas diversos (pré-história, espaço, Napoleão, fundo do mar...), para não repetir o formato da prática regular e ficar maçante.
+
+**Regra central — a dinâmica decide o vocabulário.** O divisor é a pressão de tempo:
+
+- **Dinâmica com velocidade/cronômetro → só palavras já dominadas.** Velocidade somada a palavra nova premia o chute e atropela o aprendizado cuidadoso de palavra nova (mesmo princípio de "não recompensar rapidez", seção 3.7).
+- **Dinâmica exploratória, sem cronômetro → pode introduzir palavra nova**, por dedução, significado e sinônimo. A palavra introduzida no evento é **prévia/aquecimento**: não vira "dominada" por aqui (só na trilha), mas dá familiaridade se reaparecer depois.
+
+**Duas famílias de evento:**
+
+- **A) Mini-jogos de vocabulário** — curtos, gamados, competitivos. Ex.: caça-palavras (palavras antigas, com a pista sendo o significado/sinônimo, não só achar letras); quiz "quem acerta mais" (palavras dominadas; o erro custa mais que a lentidão, para premiar quem sabe e não quem toca rápido); forca por significado e sinônimos (pode ser palavra nova, sem cronômetro).
+- **B) Produção e colaboração** — mais longos, sociais, de ordem superior. Ex.: correção de redações entre alunos de forma anônima. Exige cuidado extra: correção **guiada/estruturada** (rubrica, marcar trechos, "a palavra X foi bem usada?"), nunca texto livre, com professor no circuito — o anonimato protege o autor mas pode desinibir comentário maldoso. Amarrada à missão: foco em usar as palavras-alvo na escrita. É uma expansão consciente de escopo (toca escrita, não só vocabulário). Registrada como **ideia para o futuro, não para o MVP** (ver escopo por fase, seção 08).
+
+**Estrutura — evento como trilha temática curta.** Cada evento é uma trilha curta (poucos nós, ~5–8, dimensionada para a janela do evento, ex.: ~7 dias) cujos **nós são mini-jogos diferentes**, com um tema dando a cara da temporada. Os jogos rotacionam entre eventos (uns disponíveis agora, outros depois). Durante o evento, o mapa do evento **substitui** o mapa da trilha principal (que já está congelada, seção 3.9) — nunca dois mapas ao mesmo tempo.
+
+**Entrega técnica (sem travar o celular).** Mini-jogos de palavra são leves (texto + lógica, sem 3D/física) — o gameplay não é o risco; o risco é tamanho/peso. Padrão: o **motor** de cada tipo de jogo embarca uma vez no app e **fica** (é minúsculo e reutilizado); o **conteúdo** do evento (tema, mapa, artes, lista de palavras) é **baixado quando o evento começa e descartado quando termina**. Resumo: "motor fica, conteúdo gira". Assim o app não incha e roda em celular comum. Só uma **mecânica realmente nova** (não tema/palavra nova) pede atualização da loja.
+
 ### Recompensas
 
 Os eventos devem ter recompensas para os vencedores, proporcionais à dificuldade e ao tamanho da competição. As recompensas de evento são o balde "Eventos" do sistema de recompensas (seção 3.10), distinto dos selos, carimbos e cartões-postais (que são por feitos individuais e por progressão de trilha).
@@ -664,6 +738,8 @@ No MVP, as recompensas de evento são:
 
 - **Troféus digitais** para 1º, 2º e 3º lugares;
 - **Destaque no hall da fama** (reconhecimento por turma, ano ou escola).
+
+Há espaço para recompensas mais **temáticas** (ligadas ao tema de cada evento) além do troféu e do hall da fama — registrado como direção a explorar, não como compromisso firme.
 
 Itens cosméticos exclusivos de evento ficam **fora do MVP** — exigem uma camada de customização de perfil ainda não definida (ver seção 3.10).
 
@@ -727,6 +803,7 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 - Eventos entre escolas;
 - Expansão para Fundamental I;
 - Missões especiais de reforço com palavras dominadas;
+- Evento de correção de redações entre alunos (família de produção/colaboração; exige moderação guiada/estruturada e toca escrita além de vocabulário — ver seção 06);
 - Módulo de livros (compreensão de leitura + vocabulário), quando houver solução de conteúdo confiável (ver seção 05);
 - Itens cosméticos de evento, quando houver camada de customização de perfil.
 
@@ -745,6 +822,7 @@ Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartado
 - Questões de sintaxe no MVP (sintaxe aparece apenas como feedback informativo na redação);
 - Módulo de livros no MVP (barreira de acesso confiável ao conteúdo das obras — ver seção 05);
 - Itens cosméticos de evento no MVP (dependem de camada de customização de perfil);
+- Ofensiva / sequência de dias (streak diário ao estilo Duolingo) — decidido não usar; o combo por acertos seguidos (seção 3.7) é mecânica distinta e permanece;
 - Pipeline complexo de pré-processamento NLP como requisito do MVP.
 
 Esses itens podem voltar a ser discutidos, mas não devem guiar implementação agora.
@@ -755,9 +833,9 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
-3. Workflow recorrente — onboarding já definido (seção 3.5); falta fechar a trilha como home (a revisar) e o ritmo do nó/recompensas (seção 3.7/3.10).
-4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
-5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
+3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
+4. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
+5. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -805,6 +883,16 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Onboarding | Entrada (código de turma, provisório) → boas-vindas → 2 questões-demo (acerto e erro) → diagnóstico como jogo → primeira palavra com card; report apresentado 1x (seção 3.5) |
 | Envio de redação | Professor atribui (tema/prazo); aluno envia (foto/PDF); fonte pessoal entra na 1ª redação atribuída (seção 4.6) |
 | Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
+| Tela inicial (home) | Home-hub (não a trilha): status do aluno (XP/nível, nó atual, nº de palavras dominadas), "Continuar" como CTA primário + acesso ao mapa, atalho de redação, eventos e leaderboards; trilha é seção dedicada (seção 3.7) |
+| Saída da sessão | Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home (seção 3.7) |
+| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); participar conta como meta semanal cumprida na janela (protege, não soma palavra dominada); recompensa do evento = troféu + hall da fama (seção 3.9) |
+| Evento de correção de redação | Ideia para o futuro, não MVP (família produção/colaboração; exige moderação estruturada — seções 06 e 08) |
+| Conteúdo/dinâmica do evento (pós-MVP) | A dinâmica decide o vocabulário: com velocidade → só palavras dominadas; sem cronômetro → pode introduzir palavra nova (prévia, não vira dominada). Evento é mundo à parte, com dinâmicas e temas próprios; duas famílias (mini-jogos e produção/colaboração) (seção 06) |
+| Estrutura do evento (pós-MVP) | Trilha temática curta (~5–8 nós) cujos nós são mini-jogos; substitui o mapa principal durante o evento; jogos rotacionam entre eventos (seção 06) |
+| Entrega técnica de eventos (pós-MVP) | Motor de cada jogo embarca no app e fica; conteúdo do evento baixa no início e é descartado no fim ("motor fica, conteúdo gira"); só mecânica nova pede atualização da loja (seção 06) |
+| Papéis e permissões | Quatro papéis (aluno, professor, coordenador, admin); identidade + associações (papel + escopo); permissão = (papel, escopo, capacidade) (seção 3.11) |
+| Professor x coordenador | Mesmos dashboards, escopos diferentes: professor vê e configura as próprias turmas; coordenador vê a escola inteira mas é supervisão — não configura nem atribui (seção 3.11) |
+| Ofensiva / streak de dias | Fora do produto — não haverá sequência de dias ao estilo Duolingo; o combo por acertos seguidos (seção 3.7) é distinto e permanece (seção 09) |
 
 ---
 
