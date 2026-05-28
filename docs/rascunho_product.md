@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 28 de maio de 2026 (rev. 9).
+> Última atualização: 28 de maio de 2026 (rev. 10).
 
 ---
 
@@ -496,7 +496,7 @@ Como eventos são pós-MVP (ver seção 06 e escopo por fase), isto fica registr
 
 - Durante um evento, a **trilha pausa**: a atividade do evento alimenta o **XP de evento** (separado, acima) e **não enche os nós** da trilha individual.
 - As **recompensas de trilha pausam junto**: nenhum cartão-postal ou carimbo novo é concedido enquanto a trilha está congelada — voltam a progredir quando o evento termina. Coerência: se a trilha pausa, suas recompensas também pausam.
-- **Participar do evento não pode punir o aluno na meta semanal.** Como o evento é um mundo à parte e **não gera palavra dominada** (ver dinâmicas e estrutura na seção 06), ele não soma na meta no sentido literal de "palavras dominadas/semana". Como tratar a meta na janela do evento — participar conta como meta cumprida naqueles dias (protege) ou a meta apenas não corre (pausa) — fica **em aberto** (seção 10).
+- **Participar do evento conta como meta semanal cumprida** naqueles dias. Como o evento é um mundo à parte e **não gera palavra dominada** (ver dinâmicas e estrutura na seção 06), ele não soma na meta no sentido literal de "palavras dominadas/semana"; em vez disso, participar **protege** a meta — quem joga o evento não é penalizado por não dominar palavras novas naquela janela.
 - A recompensa do próprio evento é o balde "Eventos" (troféus + hall da fama, seção 3.10), com espaço para recompensas mais **temáticas** a explorar (seção 06).
 
 ### 3.10 Sistema de recompensas
@@ -696,7 +696,7 @@ Um evento **não** é a trilha com placar. É um **mundo à parte**, com dinâmi
 **Duas famílias de evento:**
 
 - **A) Mini-jogos de vocabulário** — curtos, gamados, competitivos. Ex.: caça-palavras (palavras antigas, com a pista sendo o significado/sinônimo, não só achar letras); quiz "quem acerta mais" (palavras dominadas; o erro custa mais que a lentidão, para premiar quem sabe e não quem toca rápido); forca por significado e sinônimos (pode ser palavra nova, sem cronômetro).
-- **B) Produção e colaboração** — mais longos, sociais, de ordem superior. Ex.: correção de redações entre alunos de forma anônima. Exige cuidado extra: correção **guiada/estruturada** (rubrica, marcar trechos, "a palavra X foi bem usada?"), nunca texto livre, com professor no circuito — o anonimato protege o autor mas pode desinibir comentário maldoso. Amarrada à missão: foco em usar as palavras-alvo na escrita. É uma expansão consciente de escopo (toca escrita, não só vocabulário).
+- **B) Produção e colaboração** — mais longos, sociais, de ordem superior. Ex.: correção de redações entre alunos de forma anônima. Exige cuidado extra: correção **guiada/estruturada** (rubrica, marcar trechos, "a palavra X foi bem usada?"), nunca texto livre, com professor no circuito — o anonimato protege o autor mas pode desinibir comentário maldoso. Amarrada à missão: foco em usar as palavras-alvo na escrita. É uma expansão consciente de escopo (toca escrita, não só vocabulário). Registrada como **ideia para o futuro, não para o MVP** (ver escopo por fase, seção 08).
 
 **Estrutura — evento como trilha temática curta.** Cada evento é uma trilha curta (poucos nós, ~5–8, dimensionada para a janela do evento, ex.: ~7 dias) cujos **nós são mini-jogos diferentes**, com um tema dando a cara da temporada. Os jogos rotacionam entre eventos (uns disponíveis agora, outros depois). Durante o evento, o mapa do evento **substitui** o mapa da trilha principal (que já está congelada, seção 3.9) — nunca dois mapas ao mesmo tempo.
 
@@ -775,6 +775,7 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 - Eventos entre escolas;
 - Expansão para Fundamental I;
 - Missões especiais de reforço com palavras dominadas;
+- Evento de correção de redações entre alunos (família de produção/colaboração; exige moderação guiada/estruturada e toca escrita além de vocabulário — ver seção 06);
 - Módulo de livros (compreensão de leitura + vocabulário), quando houver solução de conteúdo confiável (ver seção 05);
 - Itens cosméticos de evento, quando houver camada de customização de perfil.
 
@@ -807,8 +808,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
 4. Papéis de professor e coordenador — modelo de dados precisa distinguir os dois (visibilidade diferente em competições, conforme seção 3.9).
 5. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
-6. Meta semanal durante eventos (pós-MVP) — como o evento é mundo à parte e **não gera palavra dominada** (seção 06), falta decidir se participar conta como meta cumprida na janela (protege) ou se a meta apenas não corre (pausa). A regra de conteúdo/dinâmica do evento ("a dinâmica decide o vocabulário") já está definida na seção 06.
-7. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
+6. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -858,7 +858,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Palavra da redação na trilha | Entra na fila pessoal e aparece com card + gancho pelo fluxo normal; sem alerta/notificação à parte (seção 3.2) |
 | Tela inicial (home) | Home-hub (não a trilha): status do aluno (XP/nível, nó atual, nº de palavras dominadas), "Continuar" como CTA primário + acesso ao mapa, atalho de redação, eventos e leaderboards; trilha é seção dedicada (seção 3.7) |
 | Saída da sessão | Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home (seção 3.7) |
-| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); participar não pode punir a meta semanal (tratamento exato em aberto); recompensa do evento = troféu + hall da fama (seção 3.9) |
+| Eventos x trilha (pós-MVP) | Evento pausa a trilha e suas recompensas (cartão-postal/carimbo); participar conta como meta semanal cumprida na janela (protege, não soma palavra dominada); recompensa do evento = troféu + hall da fama (seção 3.9) |
+| Evento de correção de redação | Ideia para o futuro, não MVP (família produção/colaboração; exige moderação estruturada — seções 06 e 08) |
 | Conteúdo/dinâmica do evento (pós-MVP) | A dinâmica decide o vocabulário: com velocidade → só palavras dominadas; sem cronômetro → pode introduzir palavra nova (prévia, não vira dominada). Evento é mundo à parte, com dinâmicas e temas próprios; duas famílias (mini-jogos e produção/colaboração) (seção 06) |
 | Estrutura do evento (pós-MVP) | Trilha temática curta (~5–8 nós) cujos nós são mini-jogos; substitui o mapa principal durante o evento; jogos rotacionam entre eventos (seção 06) |
 | Entrega técnica de eventos (pós-MVP) | Motor de cada jogo embarca no app e fica; conteúdo do evento baixa no início e é descartado no fim ("motor fica, conteúdo gira"); só mecânica nova pede atualização da loja (seção 06) |
