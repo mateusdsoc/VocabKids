@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 28 de maio de 2026 (rev. 11).
+> Última atualização: 28 de maio de 2026 (rev. 12).
 
 ---
 
@@ -832,7 +832,8 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 ## 10 - Decisões em aberto
 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
-2. Autenticação — como alunos e professores fazem login. Decisão envolve conversa com escolas; precisa ser flexível para atender diferentes contextos.
+2. Autenticação e política de privacidade — **decididas apenas quando houver o primeiro cliente interessado**, não antes. Justificativa: o prazo entre a escola aceitar e a implementação é de ~2 semanas (folgado), e o ciclo de venda (oferta em out/nov → implementação em fev, no início do ano letivo) dá bastante tempo. O build de apresentação para as escolas roda com acesso provisório (código de turma — seção 3.5) e não depende dessa decisão. A arquitetura já é auth-agnóstica: o modelo de identidade + associações (seção 3.11) suporta diferentes flows sem retrabalho.
+   - *Direção provável, a confirmar com a escola cliente*: SSO institucional (Google/Microsoft) para professores, coordenadores e alunos de escolas que têm e-mail; para escolas sem e-mail, professor/coordenador usam e-mail + magic link e os alunos recebem **código temporário de primeiro acesso** (gerado em lote pelo admin, distribuído em sala) com o qual **definem a própria senha** — só o aluno a conhece. Reset de senha é feito pelo professor, que emite um novo código temporário (sem e-mail nem QR no fluxo do aluno).
 3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
 4. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
 5. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
@@ -858,6 +859,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
+| Sequência de autenticação e privacidade | Decididas só com o primeiro cliente interessado (ciclo de venda dá folga); arquitetura já auth-agnóstica via identidade + associações (seções 3.11 e 10) |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
 | Valores de XP | 100 (1ª tentativa), 70 (2ª), 50 da 3ª em diante (piso), 500 (bônus por dominar palavra); sem variar por dificuldade |
 | Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
