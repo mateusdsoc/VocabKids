@@ -269,7 +269,7 @@ O professor pode configurar uma meta semanal para a turma, medida em **palavras 
 
 - Há um valor padrão sugerido por ano escolar; o professor ajusta se quiser.
 - É opcional: se o professor não mexer, o padrão funciona sozinho.
-- Cumprir a meta da semana rende um **selo** ao aluno (ver passaporte, seção 3.10), conectando a meta ao balde de recompensas por feitos.
+- Cumprir a meta da semana é reconhecido com um indicador visual na home do aluno ("meta cumprida nesta semana"), sem gerar um colecionável no passaporte — a meta tem visibilidade própria, separada do balde de selos de feitos.
 
 #### Fontes de recomendação de palavras
 
@@ -406,11 +406,13 @@ Regras da sequência:
 
 A trilha é organizada em três camadas, cada uma com sua recompensa de progressão (garantida — todo aluno ganha ao avançar):
 
-- **Nó**: menor unidade visual. O aluno avança um nó por sessão aproximadamente. Completar um nó dá um feedback visual (ex.: confete), sem item colecionável.
+- **Nó**: menor unidade visual. O aluno completa um nó a cada 2–4 sessões (limiar de ~4.500 XP por nó). Completar um nó dá um feedback visual (confete), sem item colecionável.
 - **Ponto turístico**: agrupamento de nós dentro de um tema local. Completar um ponto turístico desbloqueia um **cartão-postal** colecionável da atração — encaixa no tema de viagem e vai para a coleção do aluno.
 - **Cidade**: conjunto de pontos turísticos. Completar uma cidade dá um **carimbo no passaporte** (ver seção 3.10).
 
-As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. As cidades do MVP estão definidas (BH, São Paulo, Rio de Janeiro); a definição visual fina de cada ponto turístico e cartão-postal é trabalho de arte, não de produto.
+As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. O MVP tem **3 cidades** (BH, São Paulo, Rio de Janeiro), cada uma com **6 pontos turísticos** e **4 nós por ponto** — 72 nós no total, dimensionados para ~1 ano letivo de uso típico (~10 palavras dominadas/semana). A definição visual fina de cada ponto turístico e cartão-postal é trabalho de arte, não de produto.
+
+Quando o aluno termina as 3 cidades, entra em **modo livre**: a prática continua normalmente (questões, XP, palavras dominadas), mas o mapa da trilha fica no último nó. Novas cidades serão adicionadas com base nos dados reais de uso do primeiro cliente.
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
@@ -437,7 +439,7 @@ O progresso é mostrado em camadas, para o aluno sempre sentir avanço sem que a
 
 - **Durante a sessão** — uma barra de progresso fina no topo enche a cada questão respondida (inspiração: Duolingo). É o feedback contínuo, dentro da própria questão, sem levar o aluno de volta ao mapa.
 - **No fim da sessão** — uma tela de resumo leve, separada da trilha, mostrando o **XP ganho** e a **progressão das palavras** trabalhadas na sessão (ex.: "relevante" subiu de nível, ou foi dominada). Não exibe percentual de acerto — transformaria a sessão em boletim, contra o princípio "errar é aprender" — nem tempo/velocidade — recompensar rapidez incentivaria chute, ruim para vocabulário.
-- **Ao completar um nó** — a animação na trilha (marcador avançando, confete). É a celebração maior; o resumo de sessão é o feedback leve e frequente. As duas camadas ficam distintas para que a celebração de nó não vire rotina. A cadência (quantas sessões enchem um nó) é calibração de XP, ainda em ajuste.
+- **Ao completar um nó** — a animação na trilha (marcador avançando, confete). É a celebração maior; o resumo de sessão é o feedback leve e frequente. O aluno típico completa um nó a cada 2–4 sessões; assim a celebração de nó é um marco real, mais raro que o resumo de fim de sessão.
 
 Princípio de animação: curtas e não-bloqueantes. Nenhuma animação deve travar o aluno antes de poder seguir — é o que mantém a experiência rápida mesmo com muito feedback visual (observado no Duolingo).
 
@@ -508,22 +510,28 @@ As recompensas se dividem em três baldes, cada um com uma lógica distinta. Man
 | Balde | Lógica | Recompensas |
 |---|---|---|
 | **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Ponto turístico: **cartão-postal** colecionável. Cidade: **carimbo no passaporte** |
-| **Feitos** | Condicional individual | **Selos** no passaporte (10 acertos seguidos, primeira redação, dominar N palavras, cumprir a meta semanal) |
+| **Feitos** | Condicional individual | **Selos** no passaporte: primeira redação enviada; combo de 10 acertos seguidos; 25, 100 e 250 palavras dominadas (5 selos no total) |
 | **Eventos** | Competitivo — só para destaques | **Troféus** digitais (1º/2º/3º) e destaque no hall da fama |
 
-A taxonomia (os três baldes e o que entra em cada um) está **decidida**. A camada visual colecionável — passaporte, carimbos, cartões-postais, selos — está **a revisar**: depende de validar o custo de arte e se a metáfora funciona com os alunos antes de virar requisito firme.
+A taxonomia (os três baldes e o que entra em cada um) e o conjunto de colecionáveis estão **decididos**. A arte total do MVP é: **18 cartões-postais** (6 pontos turísticos × 3 cidades) + **3 carimbos** (1 por cidade) + **5 selos** = **26 peças**.
 
-#### Passaporte (a revisar)
+#### Passaporte
 
-Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte** — uma tela onde o aluno acumula carimbos de cidade, cartões-postais de pontos turísticos e selos de conquista. São **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
+Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte**. O passaporte é também o **perfil do aluno** — ao tocar no próprio avatar ou ícone de perfil, o aluno abre o passaporte, que reúne toda a coleção e o status pessoal em um só lugar. Não há tela separada de "achievements" ou "perfil": o passaporte cumpre esse papel. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
-Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado com cuidado visual. Esse custo escala com a quantidade; no MVP são poucas cidades (3) e um conjunto inicial pequeno de selos, então é gerenciável e expansível depois sem mexer no sistema.
+O passaporte opera em dois modos distintos:
+
+**Modo 1 — Conquista (animado, disparado uma vez):** ocorre logo após o resumo de sessão, quando há um item novo para revelar. O passaporte sobe em tela cheia, vira automaticamente até a página correta com uma animação de virada de página, o slot do item novo pulsa, o aluno toca para abrir e o item se revela e se encaixa no lugar. Após a revelação, o passaporte permanece aberto para exploração ou o aluno pode fechar. A animação de virada de página é reservada exclusivamente para esse momento de conquista — ela não aparece no Modo 2, o que preserva o impacto.
+
+**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte pelo perfil a qualquer hora, o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de cidades, seção de cartões-postais por cidade, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. Tocar num item já conquistado pode reproduzir uma versão curta da animação de revelação.
+
+Sobre armazenamento: a coleção do aluno é trivialmente pequena — até 26 flags booleanas por aluno (ganhou ou não cada item). Não representa preocupação de armazenamento em nenhuma escala relevante para o MVP.
+
+Sobre a complexidade técnica: a parte lógica é simples (verificar condição → marcar item como ganho → disparar animação). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado. O conjunto do MVP é de 26 peças (18 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível sem mexer no sistema.
 
 #### Revelação de recompensa
 
-Quando o aluno ganha um carimbo, cartão-postal ou selo, a recompensa é revelada com uma animação de **abrir com toque** (inspiração: a abertura de baús do Duolingo, que cria antecipação antes de mostrar o prêmio). A interação é aproveitada; a mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
-
-Concerns:
+A revelação usa uma animação genérica de **abrir com toque** — o aluno toca no item que pulsa e ele se abre antes de se encaixar no passaporte. A mesma animação é reutilizada para todos os 26 itens; só o asset de arte muda. A mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
 
 - **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o ponto turístico X dá o cartão-postal de X). Sem aleatoriedade.
 - **Sem loot box** — recompensa aleatória ou por chance levanta questões éticas e regulatórias com público infantil; fica fora.
@@ -790,7 +798,6 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 - Meta semanal configurável pelo professor (palavras dominadas por semana);
 - Painel básico para escola/professor acompanhar progresso.
 
-> Sistema de recompensas colecionáveis (passaporte, carimbos, cartões-postais, selos) está **a revisar** (seção 3.10) — não é compromisso firme de MVP até validação de arte e da metáfora.
 
 ### Próxima fase provável
 
@@ -834,9 +841,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
 2. Autenticação e política de privacidade — **decididas apenas quando houver o primeiro cliente interessado**, não antes. Justificativa: o prazo entre a escola aceitar e a implementação é de ~2 semanas (folgado), e o ciclo de venda (oferta em out/nov → implementação em fev, no início do ano letivo) dá bastante tempo. O build de apresentação para as escolas roda com acesso provisório (código de turma — seção 3.5) e não depende dessa decisão. A arquitetura já é auth-agnóstica: o modelo de identidade + associações (seção 3.11) suporta diferentes flows sem retrabalho.
    - *Direção provável, a confirmar com a escola cliente*: SSO institucional (Google/Microsoft) para professores, coordenadores e alunos de escolas que têm e-mail; para escolas sem e-mail, professor/coordenador usam e-mail + magic link e os alunos recebem **código temporário de primeiro acesso** (gerado em lote pelo admin, distribuído em sala) com o qual **definem a própria senha** — só o aluno a conhece. Reset de senha é feito pelo professor, que emite um novo código temporário (sem e-mail nem QR no fluxo do aluno).
-3. Workflow recorrente — onboarding (seção 3.5) e tela inicial (home-hub, seção 3.7) definidos; falta fechar o **dimensionamento da trilha** (pontos turísticos por cidade, nós por ponto, XP/sessões por nó, conjunto inicial de selos) e o ritmo do nó — **em andamento** (ver `DECIDIR_trilha_e_recompensas.md`).
-4. Passaporte com carimbos e selos (seção 3.10) — conceito alinhado, mas a revisar: validar custo de arte e se a metáfora funciona na prática antes de virar requisito firme.
-5. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
+3. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
 ### Decisões fechadas (registradas para histórico)
 
@@ -875,9 +880,15 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Taxonomia de recompensas | Três baldes: trilha (cartão-postal/carimbo), feitos (selos) e eventos (troféus); seção 3.10 |
 | Recompensa de ponto turístico | Cartão-postal colecionável |
 | Recompensas de evento | Troféus (1º/2º/3º) + hall da fama; itens cosméticos fora do MVP |
-| Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir rende selo |
+| Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir dá indicador visual na home, não um colecionável |
+| Dimensionamento da trilha | 3 cidades × 6 pontos turísticos × 4 nós = 72 nós; limiar ~4.500 XP por nó; aluno típico completa um nó a cada 2–4 sessões; calibrado para ~1 ano letivo a ~10 palavras/semana |
+| Selos de feitos (conjunto inicial) | 5 selos: primeira redação enviada, combo de 10 acertos seguidos, 25/100/250 palavras dominadas |
+| Arte total do MVP (colecionáveis) | 18 cartões-postais + 3 carimbos + 5 selos = 26 peças |
+| Passaporte e metáfora de colecionáveis | Confirmado como requisito firme do MVP; escala com os 26 itens definidos acima |
+| Trilha esgotada (aluno termina as 3 cidades) | Modo livre: prática continua sem avançar o mapa; novas cidades adicionadas com base nos dados reais do primeiro cliente |
 | Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
 | Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
+| Passaporte como perfil do aluno | Passaporte é a tela de perfil — reúne coleção e status em um lugar só; dois modos: Conquista (animado, pós-sessão, com virada de página) e Exploração (scroll vertical, estático); virada de página reservada ao momento de conquista; itens bloqueados exibidos como silhuetas (seção 3.10) |
 | Estrutura da sessão | ~12 questões, 2 palavras novas; cards no início; nível 4 adiado ~2 sessões; 4 questões de revisão (seção 3.4) |
 | Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
 | Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |
