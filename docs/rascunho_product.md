@@ -802,6 +802,30 @@ arriscada:
 A lista de funcionalidades abaixo é o MVP completo. Stack e infraestrutura na
 seção 12; racional detalhado em `analise_riscos.md`.
 
+### Cronograma alvo (definido em 29/05/2026)
+
+**Equipe:** o dono do produto + agentes de IA (Claude). Não há equipe tradicional;
+o cronograma reflete essa realidade e se ancora no ano letivo (alunos em fevereiro).
+
+| Janela | Fase | Entregas |
+|---|---|---|
+| **Jun–Set/26** | Construir o **apresentável** | App Flutter: trilha + banco base + diagnóstico + XP/recompensas + UI de redação estática |
+| **Set–Out/26** | **Reuniões de venda** | Demos para escolas; precificação, contratos, adesão para o ano letivo seguinte |
+| **Out/26–início Jan/27** | Construir o **completo** + pré-lançamento | Pipeline real de redação (OCR→análise→atribuição), telemetria, auth, LGPD/privacidade, testes de carga, ajustes de features |
+| **Início Jan/27** | **Implantação** | Onboarding das escolas; cadastro de turmas/alunos |
+| **Fev/27** | **Uso real** | Alunos começam (início do ano letivo) |
+
+Decisões atreladas (como já registrado): modelo de LLM, auth e LGPD/privacidade são
+resolvidos na fase **Out–Jan** (com o cliente); a **telemetria** é construída nessa
+mesma janela.
+
+**Risco de cronograma (ver `analise_riscos.md`, seção 05):** fevereiro é **deadline
+duro** (perdeu, espera o próximo ano letivo) e a janela Out–Jan concentra o trabalho
+**mais arriscado** (pipeline de redação, LGPD, carga) em ~3 meses. Mitigação: o
+fatiamento protege a venda (o apresentável não depende disso); se Out–Jan apertar, a
+regra de corte é priorizar **o que o aluno toca em fevereiro** (prática + redação
+funcionando) sobre o adiável (dashboards ricos, eventos).
+
 ### MVP (completo)
 
 - Plataforma: mobile (iOS e Android); web (dashboards) no MVP completo;

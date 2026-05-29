@@ -113,19 +113,29 @@ artefato necessário é um modelo de dados + desenho dos pipelines
   motor adaptativo completo, diagnóstico, pipeline de geração por IA, pipeline de
   OCR + análise multidimensional com anotações coloridas, trilha de 72 nós,
   passaporte com dois modos de animação, dashboards, papéis/permissões, combo de
-  XP, meta semanal. O conjunto como "MVP" é um produto inteiro.
+  XP, meta semanal. O conjunto como "MVP" é um produto inteiro. ✅ **Mitigado** pelo
+  fatiamento (apresentável vs. completo, seção 08): a venda só depende do
+  apresentável.
 - **Arte no caminho crítico.** 26 peças (18 cartões-postais + 3 carimbos +
   5 selos) + animações. O doc reconhece que "o custo real é arte". Dependência de
   ilustração externa é atraso clássico — e bloqueia o passaporte, requisito firme.
-- **Equipe não dimensionada.** Se for fundador solo, o escopo acima é incompatível
-  com prazo curto.
+  (Ferramenta de animação em aberto; teste da peça-âncora — seção 07.)
+- **Equipe enxuta + deadline duro (atualizado 29/05).** Equipe = dono + agentes de
+  IA. Cronograma definido (seção 08): apresentável até Set/26, venda Set–Out, completo
+  Out–Jan, alunos em **Fev/27 (deadline duro — perdeu, espera o próximo ano)**. O
+  risco concreto: a janela **Out–Jan (~3 meses)** concentra o trabalho mais arriscado
+  (pipeline de redação, LGPD, auth, testes de carga). Mitigação: regra de corte —
+  priorizar o que o aluno toca em fevereiro (prática + redação) sobre o adiável
+  (dashboards ricos, eventos).
 
 ---
 
 ## 06 - Recomendações (próximos passos, em ordem)
 
-1. **Decidir a stack** — destrava estimativa, cronograma e contratação.
-2. **Cronograma com MVP fatiado** — separar um "MVP apresentável para venda"
+1. ~~**Decidir a stack**~~ ✅ resolvida (seção 07).
+2. ~~**Cronograma com MVP fatiado**~~ ✅ definido (seção 08 do produto): apresentável
+   até Set/26 → venda Set–Out → completo Out–Jan → alunos Fev/27. — Separar um "MVP
+   apresentável para venda"
    (trilha + questões do banco base + diagnóstico) de um "MVP completo".
    A **redação entra no apresentável de forma estática** — a UI do ciclo (tela de
    redação anotada com cores, dashboard de correção) com dados mockados, **sem**
