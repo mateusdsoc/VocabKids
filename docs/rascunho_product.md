@@ -515,17 +515,23 @@ As recompensas se dividem em três baldes, cada um com uma lógica distinta. Man
 
 A taxonomia (os três baldes e o que entra em cada um) e o conjunto de colecionáveis estão **decididos**. A arte total do MVP é: **18 cartões-postais** (6 pontos turísticos × 3 cidades) + **3 carimbos** (1 por cidade) + **5 selos** = **26 peças**.
 
-#### Passaporte (a revisar)
+#### Passaporte
 
-Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte** — uma tela onde o aluno acumula carimbos de cidade, cartões-postais de pontos turísticos e selos de conquista. São **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
+Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte**. O passaporte é também o **perfil do aluno** — ao tocar no próprio avatar ou ícone de perfil, o aluno abre o passaporte, que reúne toda a coleção e o status pessoal em um só lugar. Não há tela separada de "achievements" ou "perfil": o passaporte cumpre esse papel. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
-Sobre a complexidade: a parte técnica é simples (revelar uma arte pré-feita quando o feito é atingido). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado com cuidado visual. O conjunto do MVP é de 26 peças (18 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível depois sem mexer no sistema.
+O passaporte opera em dois modos distintos:
+
+**Modo 1 — Conquista (animado, disparado uma vez):** ocorre logo após o resumo de sessão, quando há um item novo para revelar. O passaporte sobe em tela cheia, vira automaticamente até a página correta com uma animação de virada de página, o slot do item novo pulsa, o aluno toca para abrir e o item se revela e se encaixa no lugar. Após a revelação, o passaporte permanece aberto para exploração ou o aluno pode fechar. A animação de virada de página é reservada exclusivamente para esse momento de conquista — ela não aparece no Modo 2, o que preserva o impacto.
+
+**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte pelo perfil a qualquer hora, o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de cidades, seção de cartões-postais por cidade, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. Tocar num item já conquistado pode reproduzir uma versão curta da animação de revelação.
+
+Sobre armazenamento: a coleção do aluno é trivialmente pequena — até 26 flags booleanas por aluno (ganhou ou não cada item). Não representa preocupação de armazenamento em nenhuma escala relevante para o MVP.
+
+Sobre a complexidade técnica: a parte lógica é simples (verificar condição → marcar item como ganho → disparar animação). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado. O conjunto do MVP é de 26 peças (18 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível sem mexer no sistema.
 
 #### Revelação de recompensa
 
-Quando o aluno ganha um carimbo, cartão-postal ou selo, a recompensa é revelada com uma animação de **abrir com toque** (inspiração: a abertura de baús do Duolingo, que cria antecipação antes de mostrar o prêmio). A interação é aproveitada; a mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
-
-Concerns:
+A revelação usa uma animação genérica de **abrir com toque** — o aluno toca no item que pulsa e ele se abre antes de se encaixar no passaporte. A mesma animação é reutilizada para todos os 26 itens; só o asset de arte muda. A mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
 
 - **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o ponto turístico X dá o cartão-postal de X). Sem aleatoriedade.
 - **Sem loot box** — recompensa aleatória ou por chance levanta questões éticas e regulatórias com público infantil; fica fora.
@@ -882,6 +888,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Trilha esgotada (aluno termina as 3 cidades) | Modo livre: prática continua sem avançar o mapa; novas cidades adicionadas com base nos dados reais do primeiro cliente |
 | Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
 | Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
+| Passaporte como perfil do aluno | Passaporte é a tela de perfil — reúne coleção e status em um lugar só; dois modos: Conquista (animado, pós-sessão, com virada de página) e Exploração (scroll vertical, estático); virada de página reservada ao momento de conquista; itens bloqueados exibidos como silhuetas (seção 3.10) |
 | Estrutura da sessão | ~12 questões, 2 palavras novas; cards no início; nível 4 adiado ~2 sessões; 4 questões de revisão (seção 3.4) |
 | Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
 | Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |
