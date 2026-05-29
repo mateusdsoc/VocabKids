@@ -126,10 +126,14 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 ## 06 - Recomendações (próximos passos, em ordem)
 
 1. **Decidir a stack** — destrava estimativa, cronograma e contratação.
-2. **Cronograma com MVP fatiado** — separar um "MVP demonstrável para venda"
-   (trilha + questões do banco base + diagnóstico, *sem* pipeline de redação) de
-   um "MVP completo". O ciclo redação→OCR→análise é o de maior risco e maior valor;
-   isolá-lo evita que afunde a data de apresentação.
+2. **Cronograma com MVP fatiado** — separar um "MVP apresentável para venda"
+   (trilha + questões do banco base + diagnóstico) de um "MVP completo".
+   A **redação entra no apresentável de forma estática** — a UI do ciclo (tela de
+   redação anotada com cores, dashboard de correção) com dados mockados, **sem**
+   OCR/LLM/pipeline rodando. Isso mostra o diferencial e justifica a atenção de
+   compra sem construir a parte mais arriscada antes da venda. O pipeline real
+   (redação→OCR→análise→atribuição) — de maior risco e maior valor — entra só no
+   MVP completo, isolado para não afundar a data de apresentação.
 3. **Resolver lematização** (escolher spaCy ou equivalente; tirar do limbo).
 4. **Telemetria como requisito de MVP** — sem ela, nenhum "ajustaremos com dados"
    acontece.
@@ -153,9 +157,13 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 | **Web (dashboards)** | **React/Next separado** | Adiado para o MVP completo. Não compartilha codebase com o app. |
 | **Backend** | **Python + FastAPI** | Escolha aberta de equipe; vence pelo ecossistema de IA/NLP e carga I/O-bound. |
 | **Banco de dados** | **PostgreSQL** | JSONB p/ payload de questão; pgvector disponível p/ dedup semântico. |
-| **Cache / fila** | **Redis** + **arq** | Redis como broker dos jobs assíncronos (e cache do banco de palavras). |
-| **Animações** | **Rive** + **Lottie/nativo** | Rive p/ passaporte, reveals e trilha; Lottie/nativo p/ one-shots (confete). |
-| **Hospedagem** | **Cloud Run (GCP)** | Região `southamerica-east1` (São Paulo). |
+| **Fila de jobs** | **Postgres-backed** (`procrastinate`) | Roda dentro do Postgres existente. Redis **adiado** (ver abaixo). |
+| **Cache** | **Adiado** | Sem pressão de cache no MVP. Upstash (serverless) quando precisar. |
+| **Animações** | **Flutter nativo** (`flutter_animate`, `confetti`) + **Lottie pronto** | IA escreve bem animação em Dart; one-shots vêm prontos da LottieFiles. Rive **adiado** (precisa designer). |
+| **Compute** | **Cloud Run (GCP)** | Escala a zero; ótimo custo/benefício. Render/Railway são alternativas mais simples. |
+| **Banco gerenciado** | **Neon** ou **Supabase** | Postgres serverless (scale-to-zero/free tier) — melhor custo/benefício que Cloud SQL no início. |
+| **Storage de arquivos** | **Cloudflare R2** ou Supabase Storage | Fotos/PDFs de redação. R2 sem taxa de egress. |
+| **Região** | `southamerica-east1` (São Paulo) | Residência de dados (crianças BR) — alinhado à LGPD adiada. |
 
 ### Racional
 
@@ -180,19 +188,30 @@ artefato necessário é um modelo de dados + desenho dos pipelines
   palavra, questão, atribuição, estado de domínio, redação, report). JSONB guarda o
   payload flexível da questão gerada pela IA; pgvector fica disponível se houver
   dedup semântico no banco de palavras.
-- **Redis + arq.** Ganha o lugar principalmente como broker da fila de jobs
-  (geração lazy no "miss", pipeline OCR+análise, recálculo do sinal de turma);
-  cache do banco de palavras (read-heavy) é bônus. `arq` é async-native e casa com
-  FastAPI; Celery é alternativa se quiser ecossistema mais maduro.
-- **Rive + Lottie.** Rive entrega animação interativa premium (virada de página e
-  revelação do passaporte, marcador da trilha) com runtime minúsculo a 60fps e
-  permite o animador editar direto — o que ataca o risco "arte no caminho crítico"
-  (seção 05). Lottie/Flutter-native cobrem one-shots simples (confete).
-- **Cloud Run (GCP), São Paulo.** Equipe pequena deve evitar VPS cru no início.
-  GCP tem leve vantagem por já hospedar o OCR (Google Cloud Vision) — OCR, API e
-  billing no mesmo lugar; Cloud Run escala a zero (bom p/ carga variável de escola).
-  Região `southamerica-east1` por residência de dados (crianças BR), o que já
-  nasce alinhado à decisão de LGPD/privacidade adiada (seção 10 do produto).
+- **Fila no Postgres, Redis adiado.** O apresentável não tem pipeline assíncrono
+  (redação estática, questões do banco base já prontas) — sem fila nem cache. No
+  MVP completo, a fila de jobs (geração lazy, OCR+análise, sinal de turma) roda
+  **dentro do Postgres** via `procrastinate` (`FOR UPDATE SKIP LOCKED`),
+  eliminando um serviço inteiro. Redis gerenciado tem mau custo/benefício em escala
+  pequena (Memorystore cobra ~US$35–50/mês ocioso); quando houver pressão real de
+  cache/throughput, **Upstash** (serverless, paga por uso) é a melhor opção. Adiar
+  até precisar.
+- **Animações: código Flutter + Lottie pronto, Rive adiado.** Como não há designer
+  e o fluxo se apoia em IA, o encaixe certo é animação por **código Dart** — que
+  Claude/GPT escrevem bem — com `flutter_animate` (declarativo, ideal p/ assistente)
+  e `confetti`. One-shots decorativos vêm prontos da **LottieFiles** (baixar, não
+  gerar). **Rive é mau encaixe para IA**: o formato `.riv` é autorado no editor
+  visual, LLM não gera — fica para quando houver designer/comissão. Isso também
+  alivia o risco "arte no caminho crítico" (seção 05).
+- **Compute Cloud Run; banco em Neon/Supabase; arquivos em R2.** O custo real em
+  escala pequena é o **banco gerenciado**, não o compute: Cloud SQL cobra mínimo
+  ocioso, enquanto **Neon/Supabase** escalam a zero com free tier (Supabase ainda
+  embute storage e auth — útil dado que auth está adiada). Compute no **Cloud Run**
+  (escala a zero, free tier) ou em PaaS mais simples (Render/Railway). Arquivos de
+  redação em **Cloudflare R2** (sem egress) ou Supabase Storage. Não há trava no
+  GCP: chamar o Google Vision é só uma API call de qualquer lugar. Região
+  `southamerica-east1` por residência de dados (crianças BR), alinhada à decisão de
+  LGPD/privacidade adiada (seção 10 do produto).
 
 ### Em aberto na stack
 
