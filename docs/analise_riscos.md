@@ -27,8 +27,8 @@ errado, não no que já está bom.
 
 - **Stack técnica (seção 09).** Maior decisão pendente — trava tudo. O MVP exige
   mobile (iOS+Android) **e** web. Sem decidir framework e backend não há como
-  estimar esforço, contratar ou dimensionar cronograma. (Em discussão — ver
-  seção 07 deste documento.)
+  estimar esforço, contratar ou dimensionar cronograma. **Resolvida** na discussão
+  de 29/05 — ver seção 07 deste documento.
 - **Cronograma — não existe.** Não há milestones, tamanho de equipe nem datas de
   build. A única referência temporal é o ciclo de venda (out/nov → fev) e
   "2 semanas folgado" entre a escola aceitar e implementar — mas isso é prazo de
@@ -159,11 +159,45 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 | **Banco de dados** | **PostgreSQL** | JSONB p/ payload de questão; pgvector disponível p/ dedup semântico. |
 | **Fila de jobs** | **Postgres-backed** (`procrastinate`) | Roda dentro do Postgres existente. Redis **adiado** (ver abaixo). |
 | **Cache** | **Adiado** | Sem pressão de cache no MVP. Upstash (serverless) quando precisar. |
-| **Animações** | **Flutter nativo** (`flutter_animate`, `confetti`) + **Lottie pronto** | IA escreve bem animação em Dart; one-shots vêm prontos da LottieFiles. Rive **adiado** (precisa designer). |
-| **Compute** | **Cloud Run (GCP)** | Escala a zero; ótimo custo/benefício. Render/Railway são alternativas mais simples. |
-| **Banco gerenciado** | **Neon** ou **Supabase** | Postgres serverless (scale-to-zero/free tier) — melhor custo/benefício que Cloud SQL no início. |
-| **Storage de arquivos** | **Cloudflare R2** ou Supabase Storage | Fotos/PDFs de redação. R2 sem taxa de egress. |
+| **Animações** | **Em aberto** | Requisito (animação boa) é firme desde o apresentável; ferramenta decidida via teste da peça-âncora (ver abaixo). |
+| **Banco gerenciado** | **Neon** | Postgres serverless puro (scale-to-zero/free tier). Preferido a Supabase para evitar lock-in (ver abaixo). |
+| **Compute** | **Cloud Run (GCP)** | Escala a zero; production-grade. Render/Railway são alternativas mais simples. |
+| **Storage de arquivos** | **Cloudflare R2** | API S3-compatível; sem taxa de egress. Fotos/PDFs de redação. |
 | **Região** | `southamerica-east1` (São Paulo) | Residência de dados (crianças BR) — alinhado à LGPD adiada. |
+
+### Princípio que protege de retrabalho: interface estável, provider variável
+
+A escolha de free tier **não cria uma "stack de demonstração" descartável.** É a
+**mesma stack**, com o *plano* trocado. As ferramentas expõem **interfaces-padrão**
+e o código fala com a interface, não com o provider:
+
+| Camada | Interface (não muda) | Demo (free) → Produção |
+|---|---|---|
+| Banco | protocolo **Postgres** | Neon free → Neon pago / Cloud SQL / RDS — troca a connection string |
+| Compute | container **Docker** | Cloud Run free → Cloud Run com `min-instances` / GKE — troca o deploy target |
+| Arquivos | **API S3** | R2 → R2 pago / S3 / GCS — troca endpoint + credencial |
+| Fila | Postgres (`procrastinate`) | continua no Postgres até bem longe |
+
+Consequências:
+
+- **Promover demo → produção é um config change** (connection string, env var,
+  plano de cobrança, ligar `min-instances` p/ matar cold start), **não uma
+  reescrita.** Não se implementa nada à toa.
+- Neon, Cloud Run e R2 **já são production-grade** — "ir para a stack definitiva"
+  na maioria dos casos é **subir de plano no mesmo provider**. O aluno usa o mesmo
+  serviço, no plano pago; nunca toca no free tier como tecnologia.
+- **O refactor doloroso mora no lock-in proprietário**, não no free tier. Por isso
+  ficamos em interfaces abertas (Postgres, Docker, S3) e **preferimos Neon a
+  Supabase**: Supabase por baixo é Postgres, mas sua graça é a camada proprietária
+  (auth, storage SDK, edge functions) — usá-la amarra e gera o retrabalho que se
+  quer evitar.
+- Única troca *real* possível no futuro: a fila (`procrastinate` → Celery/Redis).
+  Provavelmente desnecessária cedo e, escondendo o "enfileirar job" atrás de uma
+  função fina, fica contida em um arquivo.
+
+**Estratégia: free-tier-first sobre interfaces abertas até ~2 escolas vendidas;
+depois, subir de plano no mesmo provider.** $0 de custo variável na demo (o
+apresentável com redação estática nem chama OCR/LLM), código idêntico em produção.
 
 ### Racional
 
@@ -196,26 +230,44 @@ artefato necessário é um modelo de dados + desenho dos pipelines
   pequena (Memorystore cobra ~US$35–50/mês ocioso); quando houver pressão real de
   cache/throughput, **Upstash** (serverless, paga por uso) é a melhor opção. Adiar
   até precisar.
-- **Animações: código Flutter + Lottie pronto, Rive adiado.** Como não há designer
-  e o fluxo se apoia em IA, o encaixe certo é animação por **código Dart** — que
-  Claude/GPT escrevem bem — com `flutter_animate` (declarativo, ideal p/ assistente)
-  e `confetti`. One-shots decorativos vêm prontos da **LottieFiles** (baixar, não
-  gerar). **Rive é mau encaixe para IA**: o formato `.riv` é autorado no editor
-  visual, LLM não gera — fica para quando houver designer/comissão. Isso também
-  alivia o risco "arte no caminho crítico" (seção 05).
-- **Compute Cloud Run; banco em Neon/Supabase; arquivos em R2.** O custo real em
-  escala pequena é o **banco gerenciado**, não o compute: Cloud SQL cobra mínimo
-  ocioso, enquanto **Neon/Supabase** escalam a zero com free tier (Supabase ainda
-  embute storage e auth — útil dado que auth está adiada). Compute no **Cloud Run**
-  (escala a zero, free tier) ou em PaaS mais simples (Render/Railway). Arquivos de
-  redação em **Cloudflare R2** (sem egress) ou Supabase Storage. Não há trava no
-  GCP: chamar o Google Vision é só uma API call de qualquer lugar. Região
-  `southamerica-east1` por residência de dados (crianças BR), alinhada à decisão de
-  LGPD/privacidade adiada (seção 10 do produto).
+- **Animações: ferramenta em aberto, requisito firme.** A animação boa é necessária
+  **desde o apresentável** (é o que justifica a venda), então o *resultado* não se
+  adia — só a *ferramenta*. A tensão honesta: "premium" + "sem designer" + "sem
+  gastar" não fecham os três juntos. Opções: (a) **LottieFiles** (assets prontos,
+  grátis, mas genéricos); (b) **código Flutter** (`flutter_animate`, `confetti`) —
+  bom para movimento/transições e bem escrito por IA, fraco para personagem
+  ilustrado; (c) **Rive** — premium, mas a IA do Rive (MCP server, Early Access) só
+  faz *scaffolding de state machine* (a lógica), **não gera a arte**: ainda exige a
+  ilustração riggada por um humano no editor; (d) **freelancer** para as peças-âncora
+  ($$); (e) vídeo IA (Runway/Veo) — premium, mas é vídeo (pesado, não interativo).
+  **Decisão adiada via teste da peça-âncora**: prototipar a revelação do passaporte
+  por Lottie pronto vs. código Flutter; se "vender", fecha barato; se não, abre a
+  conversa de Rive+designer/freelancer.
+- **Compute Cloud Run; banco em Neon; arquivos em R2.** O custo real em escala
+  pequena é o **banco gerenciado**, não o compute: Cloud SQL cobra mínimo ocioso,
+  enquanto **Neon** escala a zero com free tier. Compute no **Cloud Run** (escala a
+  zero, production-grade) ou PaaS mais simples (Render/Railway). Arquivos de redação
+  em **Cloudflare R2** (API S3, sem egress). Não há trava no GCP: chamar o Google
+  Vision é só uma API call de qualquer lugar. Região `southamerica-east1` por
+  residência de dados (crianças BR), alinhada à decisão de LGPD/privacidade adiada
+  (seção 10 do produto). **Atenção a cold start** em serviços scale-to-zero: ligar
+  `min-instances=1` na hora de apresentar/produção.
 
-### Em aberto na stack
+### Em aberto na stack (pendências que sobraram)
 
-- Modelo de LLM para análise/geração — segue como decisão 1 da seção 10 do produto
-  (testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais).
-- Ferramenta de lematização — recomendação **spaCy** (`pt_core_news`), tirando-a do
-  limbo "pós-MVP" (ver seção 01 e 06 deste documento).
+- **Ferramenta de animação** — requisito firme, ferramenta a decidir pelo teste da
+  peça-âncora (acima).
+- **Modelo de LLM** para análise/geração — segue como decisão 1 da seção 10 do
+  produto (testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações
+  reais).
+- **Lematização** — recomendação **spaCy** (`pt_core_news`); falta confirmar e tirar
+  do limbo "pós-MVP" (ver seções 01 e 06).
+
+### Pendências resolvidas nesta discussão
+
+- ~~Stack técnica (era a maior pendente)~~ → resolvida: Flutter, FastAPI, Postgres
+  (Neon), Cloud Run, R2, fila no Postgres.
+- ~~Cache/Redis~~ → adiado; fila roda no Postgres.
+- ~~Web no MVP~~ → adiada para o MVP completo; apresentável é mobile-only.
+- ~~Risco de retrabalho na transição demo→produção~~ → mitigado pelo princípio
+  "interface estável, provider variável" + evitar lock-in proprietário.
