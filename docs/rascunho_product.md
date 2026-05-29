@@ -856,8 +856,25 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 
 ## 10 - Decisões em aberto
 
-1. Qual modelo de IA para análise de redações e geração de questões? (pesquisa feita — testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais)
-2. Autenticação e política de privacidade — **decididas apenas quando houver o primeiro cliente interessado**, não antes. Justificativa: o prazo entre a escola aceitar e a implementação é de ~2 semanas (folgado), e o ciclo de venda (oferta em out/nov → implementação em fev, no início do ano letivo) dá bastante tempo. O build de apresentação para as escolas roda com acesso provisório (código de turma — seção 3.5) e não depende dessa decisão. A arquitetura já é auth-agnóstica: o modelo de identidade + associações (seção 3.11) suporta diferentes flows sem retrabalho.
+> ⚠️ **Prioridade e sequenciamento — LER ANTES DE PEGAR QUALQUER ITEM ABAIXO.**
+> O foco atual é construir as **funcionalidades básicas** do MVP apresentável. As
+> decisões 1 (modelo de LLM) e 2 (auth/privacidade) estão **deliberadamente
+> adiadas para quando houver o primeiro cliente interessado** — NÃO são para
+> resolver agora e NÃO bloqueiam o desenvolvimento atual.
+>
+> Em especial o **modelo de LLM (decisão 1) NÃO é prioridade.** É um reflexo comum
+> querer "já escolher o modelo de IA" — resista. O apresentável usa redação
+> estática (não chama LLM), a pesquisa de custo já está feita, e a escolha
+> definitiva sai só na conversa com o cliente, com redações reais. Trabalhe as
+> funcionalidades primeiro.
+
+1. **[ADIADA — não é prioridade agora]** Qual modelo de IA para análise de redações
+   e geração de questões? Decidida só **na conversa com o primeiro cliente**, com
+   redações reais — junto da decisão 2. A pesquisa já está feita (testar GPT-4o
+   mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash). Não bloqueia o desenvolvimento:
+   o apresentável usa redação estática e não chama LLM; o código de geração fica
+   atrás de uma interface que aceita qualquer provider depois.
+2. **[ADIADA — não é prioridade agora]** Autenticação e política de privacidade — **decididas apenas quando houver o primeiro cliente interessado**, não antes. Justificativa: o prazo entre a escola aceitar e a implementação é de ~2 semanas (folgado), e o ciclo de venda (oferta em out/nov → implementação em fev, no início do ano letivo) dá bastante tempo. O build de apresentação para as escolas roda com acesso provisório (código de turma — seção 3.5) e não depende dessa decisão. A arquitetura já é auth-agnóstica: o modelo de identidade + associações (seção 3.11) suporta diferentes flows sem retrabalho.
    - *Direção provável, a confirmar com a escola cliente*: SSO institucional (Google/Microsoft) para professores, coordenadores e alunos de escolas que têm e-mail; para escolas sem e-mail, professor/coordenador usam e-mail + magic link e os alunos recebem **código temporário de primeiro acesso** (gerado em lote pelo admin, distribuído em sala) com o qual **definem a própria senha** — só o aluno a conhece. Reset de senha é feito pelo professor, que emite um novo código temporário (sem e-mail nem QR no fluxo do aluno).
 3. Recompensas temáticas de evento (pós-MVP) — além de troféu e hall da fama, recompensas ligadas ao tema de cada evento (seção 06).
 
@@ -969,7 +986,7 @@ O ciclo completo é: redação revela dificuldade → sistema ensina alternativa
 | Validação ortográfica | Hunspell (já decidido — seção 3.6) |
 | Lematização | spaCy (`pt_core_news`) — a confirmar |
 | OCR | Google Cloud Vision (já decidido — seção 4.7) |
-| Modelo de LLM | Em aberto (decisão 1, seção 10) |
+| Modelo de LLM | **Adiado — não é prioridade** (decisão 1, seção 10): só na conversa com o 1º cliente |
 
 ### Princípios
 

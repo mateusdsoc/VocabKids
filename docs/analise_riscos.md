@@ -256,12 +256,14 @@ apresentável com redação estática nem chama OCR/LLM), código idêntico em p
 ### Em aberto na stack (pendências que sobraram)
 
 - **Ferramenta de animação** — requisito firme, ferramenta a decidir pelo teste da
-  peça-âncora (acima).
-- **Modelo de LLM** para análise/geração — segue como decisão 1 da seção 10 do
-  produto (testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações
-  reais).
+  peça-âncora (acima). O dono vai testar manualmente.
+- **Modelo de LLM** — ⚠️ **ADIADO, não é prioridade agora.** Decidido só na conversa
+  com o 1º cliente (junto de auth), com redações reais. Foco atual é funcionalidade
+  básica; o apresentável usa redação estática e não chama LLM. Pesquisa já feita
+  (decisão 1, seção 10 do produto). Não bloqueia nada — manter atrás de uma
+  interface que aceita qualquer provider depois.
 - **Lematização** — recomendação **spaCy** (`pt_core_news`); falta confirmar e tirar
-  do limbo "pós-MVP" (ver seções 01 e 06).
+  do limbo "pós-MVP" (ver seções 01 e 06). **Próximo item a fechar.**
 
 ### Pendências resolvidas nesta discussão
 
