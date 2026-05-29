@@ -86,12 +86,12 @@ artefato necessário é um modelo de dados + desenho dos pipelines
   determinística (2 palavras novas, arranjo fixo). No "miss" a palavra é gerada
   assincronamente e "aparece depois". Falta a regra de fallback (provavelmente:
   puxar do banco base enquanto a personalizada não fica pronta — não está dito).
-- **Limiar de 10 reports é alto.** Para palavras pouco atribuídas, uma questão
-  ruim pode nunca atingir 10 reports. Considerar limiar relativo (% de quem
-  respondeu) ou sinal mais barato (ex.: alta taxa de erro na 1ª tentativa).
-- **Garantia de distrator é suposição, não garantia.** "A IA garante que nenhum
-  distrator é secretamente correto" é frágil para sinônimos, dependentes de
-  contexto. Vale verificação automática leve na geração, não só confiar no prompt.
+- ~~**Limiar de 10 reports é alto.**~~ ✅ **Resolvido** (29/05): limiar baixado para
+  **2** (reversível, pendente de revisão do admin) + **gatilho por taxa de erro**
+  independente de report + anti-abuso por veredito do admin (seção 3.6 do produto).
+- ~~**Garantia de distrator é suposição, não garantia.**~~ ✅ **Resolvido** (29/05):
+  adotada **verificação automática na geração** (2º passo da IA revê distratores
+  antes de publicar) no MVP completo (seção 3.6 do produto).
 
 ---
 
@@ -99,10 +99,10 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 
 | Risco | Por quê | Severidade |
 |---|---|---|
-| **LLM como motor único** de seleção + geração + correção de distrator, publicado direto sem revisão (3.3/3.6) | Ensinar errado para criança. Report é controle pós-publicação e só a partir de 10 reports. | Alto |
+| **LLM como motor único** de seleção + geração + correção de distrator (3.3/3.6) | Ensinar errado para criança. ✅ **Mitigado**: verificação na geração (preventiva) + report (limiar 2) + gatilho por taxa de erro. | Alto → Médio |
 | **OCR de caligrafia infantil** alimenta o diferencial central (redação→vocabulário) | OCR ruidoso → extração ruidosa → personalização degrada. Dependência pesada de entrada ruidosa. | Alto |
-| **Lematização sem ferramenta definida** | Crítico para o MVP, ferramenta certa marcada como pós-MVP. Sem isso o banco acumula quase-duplicatas. | Médio-alto |
-| **Sem plano de telemetria** | Quase todo limiar é "ajustável com dados reais" sem meio de coletá-los. | Médio |
+| ~~**Lematização sem ferramenta definida**~~ | ✅ **Resolvido**: spaCy confirmado (seção 3.3). | — |
+| **Sem plano de telemetria** | ✅ **Endereçado**: telemetria decidida (tabela de eventos no Postgres), construída na janela do 1º cliente; habilita calibração e o gatilho de QA. | Médio → Baixo |
 | **Auth adiada** | Build de apresentação roda com "código de turma" provisório; migração para o auth real do 1º cliente pode aparecer no início do ano letivo. | Médio (mitigado pela arquitetura agnóstica) |
 
 ---
@@ -133,12 +133,13 @@ artefato necessário é um modelo de dados + desenho dos pipelines
    compra sem construir a parte mais arriscada antes da venda. O pipeline real
    (redação→OCR→análise→atribuição) — de maior risco e maior valor — entra só no
    MVP completo, isolado para não afundar a data de apresentação.
-3. **Resolver lematização** (escolher spaCy ou equivalente; tirar do limbo).
-4. **Telemetria como requisito de MVP** — sem ela, nenhum "ajustaremos com dados"
-   acontece.
-5. **Endurecer o QA da IA** — verificação de distrator na geração + gatilho de
-   revisão por taxa de erro, não só 10 reports.
-6. **Corrigir a inconsistência da linha 785** ("regressão controlada").
+3. ~~**Resolver lematização**~~ ✅ spaCy confirmado (seção 3.3).
+4. ~~**Telemetria**~~ ✅ Decidida: tabela de eventos no Postgres, construída na janela
+   do 1º cliente (não no apresentável). Habilita calibração e o gatilho de QA.
+5. ~~**Endurecer o QA da IA**~~ ✅ Três camadas decididas: verificação na geração
+   (preventiva, completo) + report redesenhado (limiar 2 + anti-abuso) + gatilho por
+   taxa de erro (seção 3.6).
+6. ~~**Corrigir a inconsistência da linha 785**~~ ✅ Corrigida (rev. 13).
 
 ---
 
@@ -275,3 +276,9 @@ apresentável com redação estática nem chama OCR/LLM), código idêntico em p
   **spaCy** (`pt_core_news`) confirmado, só no MVP completo, usado como chave de
   indexação/dedup (nunca no texto da questão — a IA flexiona na geração); Hunspell
   valida existência, papel distinto. Coexistem no pipeline de entrada de palavra.
+- ~~QA da IA (distrator "garantido" no prompt; 10 reports é alto)~~ → resolvido: três
+  camadas (verificação na geração + report com limiar 2 e anti-abuso + gatilho por
+  taxa de erro). Seção 3.6 do produto.
+- ~~Telemetria (sem plano de coleta)~~ → decidida: tabela de eventos no Postgres,
+  construída na janela do 1º cliente (não no apresentável). Habilita calibração dos
+  limiares e o gatilho de QA por taxa de erro.

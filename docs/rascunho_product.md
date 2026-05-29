@@ -342,16 +342,21 @@ Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas que
 
 #### Publicação direta e report do aluno (MVP)
 
-No MVP as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia. O professor **não** revisa nem aprova questões — a qualidade no runtime é controlada depois da publicação, pelo report do aluno.
+No MVP as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia do professor. A qualidade é controlada por **três camadas** de QA: uma **preventiva** (verificação automática na geração) e duas **corretivas** (report do aluno e gatilho por taxa de erro).
 
-Quando uma questão parece errada (ex.: resposta incoerente com o enunciado, sinal de alucinação da IA), o aluno pode **reportá-la** escolhendo um **motivo predefinido** numa caixa de opções (ex.: "a resposta parece errada", "não entendi a palavra"). O report sobe para o **admin da plataforma** — não para o professor. Como o banco de questões é compartilhado entre escolas (seção 3.5), os reports de uma mesma questão **agregam entre todas as escolas**.
+**Camada preventiva — verificação automática na geração (MVP completo).** Depois que a IA gera a questão, um segundo passo barato (a mesma IA, com outro prompt) revê a questão antes de publicar: "algum distrator também é resposta válida nesta frase?". É uma chamada extra de centavos que pega alucinação/distrator ambíguo **antes** de o aluno ver — diferente do report e da taxa de erro, que agem só depois. Vale o custo num produto infantil, onde conteúdo errado é caro.
+
+**Camada corretiva 1 — report do aluno.** Quando uma questão parece errada (ex.: resposta incoerente com o enunciado, sinal de alucinação da IA), o aluno pode **reportá-la** escolhendo um **motivo predefinido** numa caixa de opções (ex.: "a resposta parece errada", "não entendi a palavra"). O report sobe para o **admin da plataforma** — não para o professor. Como o banco de questões é compartilhado entre escolas (seção 3.5), os reports de uma mesma questão **agregam entre todas as escolas**.
 
 Regras:
 
-- **Não isenta a questão**: reportar não pula nem anula a questão; o aluno responde normalmente. Evita usar o report para fugir de questão difícil.
+- **Não isenta a questão**: reportar não pula nem anula a questão; o aluno responde normalmente. Evita usar o report para fugir de questão difícil — e, com isso, o incentivo a abusar é baixo (reportar não dá vantagem).
 - **Não dá XP**: reportar não rende pontos, para não incentivar spam.
-- **Auto-ocultar em 10 reports**: ao acumular 10 reports, a questão **sai automaticamente de circulação** (deixa de ser atribuída) e fica pendente para o admin revisar junto com os reports. O admin decide corrigir, manter ou remover.
+- **Auto-ocultar em 2 reports**: ao acumular 2 reports, a questão **sai de circulação** (deixa de ser atribuída) e fica **pendente de revisão do admin**, junto dos reports. Não é deletada — é reversível. O admin decide corrigir, manter (republicar) ou remover. *O limiar 2 é inicial e ajustável*: com agregação entre escolas é agressivo de propósito (melhor ocultar a mais e o admin reativar), aceitável porque é reversível, o volume inicial é baixo e o admin dá conta. Conforme escalar, o limiar sobe e/ou o report passa a ser **pesado pela confiança do autor** (ver anti-abuso).
+- **Anti-abuso (anti-vandalismo)**: como reportar não dá vantagem ao aluno, o risco real não é trapaça e sim derrubar questão boa para os outros. Cada report guarda **quem reportou, qual questão, o motivo e o veredito do admin (válido/inválido)**. O aluno que acumula reports julgados inválidos tem seus reports **descontados** (param de contar para o auto-ocultar) e pode ser sinalizado ao professor — não é banido de reportar, só perde peso.
 - A ferramenta de report é apresentada uma vez ao aluno, no onboarding.
+
+**Camada corretiva 2 — gatilho por taxa de erro.** Independente de report, uma questão com taxa de erro anômala (ex.: alta proporção de erro na 1ª tentativa, ou discrepante das outras variações da mesma palavra) é marcada automaticamente para revisão do admin. Pega questão ruim mesmo quando ninguém reporta. *Depende da telemetria* (seção 07) para calcular as taxas.
 
 #### Validação de palavras inexistentes
 
@@ -896,7 +901,11 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Banco de palavras — geração inicial | Assinatura Claude, lotes, revisão humana (tarefa única) |
 | Banco de palavras — runtime | API com geração lazy |
 | Validação de palavras | Hunspell valida existência; qualidade por revisão humana (lote inicial) e report do aluno → admin (runtime) |
-| Validação de questões (runtime) | Publicação direta no MVP (sem revisão do professor); report do aluno com motivo predefinido → admin; 10 reports auto-ocultam a questão, pendente de revisão |
+| Validação de questões (runtime) | Publicação direta (sem revisão do professor); 3 camadas de QA: verificação automática na geração (preventiva, completo), report do aluno e gatilho por taxa de erro (corretivas) — seção 3.6 |
+| Report do aluno (redesenho) | Auto-ocultar em **2 reports** (inicial/ajustável), questão sai de circulação pendente de revisão do admin (reversível); cada report guarda autor+questão+motivo+veredito; anti-abuso desconta reports de quem acumula vereditos inválidos (seção 3.6) |
+| QA da IA — verificação na geração | Adotada no MVP completo: 2º passo da IA revê se algum distrator também é resposta válida antes de publicar (seção 3.6) |
+| QA da IA — taxa de erro | Gatilho automático de revisão por taxa de erro anômala, independente de report; depende da telemetria (seção 3.6) |
+| Telemetria | Adiada para a janela do 1º cliente (construída entre fechar a venda e a escola adaptar, como auth/LLM); tabela de eventos no Postgres; habilita calibração e o gatilho de QA por taxa de erro (seção 07) |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
 | Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
