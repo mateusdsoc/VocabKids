@@ -49,10 +49,9 @@ errado, não no que já está bom.
 - **Telemetria/analytics.** O documento repete "ajustável com dados reais"
   (limiar de 30% do sinal de turma, XP, dimensionamento da trilha, adaptação
   contínua) sem nenhum plano de instrumentação para *coletar* esses dados.
-- **Quem faz a lematização.** A seção 3.3 chama normalização de "crítico" e cita
-  "Hunspell ou um lematizador". Hunspell é corretor ortográfico, não lematizador;
-  a ferramenta que de fato lematiza (spaCy) está marcada como "não necessária no
-  MVP". Algo crítico depende de uma ferramenta classificada como pós-MVP.
+- ~~**Quem faz a lematização.**~~ ✅ **Resolvido** (29/05): spaCy (`pt_core_news`)
+  confirmado como lematizador, distinto do Hunspell (que só valida existência). Ver
+  "Pendências resolvidas" e seção 3.3 do produto.
 
 ---
 
@@ -262,8 +261,7 @@ apresentável com redação estática nem chama OCR/LLM), código idêntico em p
   básica; o apresentável usa redação estática e não chama LLM. Pesquisa já feita
   (decisão 1, seção 10 do produto). Não bloqueia nada — manter atrás de uma
   interface que aceita qualquer provider depois.
-- **Lematização** — recomendação **spaCy** (`pt_core_news`); falta confirmar e tirar
-  do limbo "pós-MVP" (ver seções 01 e 06). **Próximo item a fechar.**
+  (Lematização foi resolvida — ver "Pendências resolvidas" abaixo.)
 
 ### Pendências resolvidas nesta discussão
 
@@ -273,3 +271,7 @@ apresentável com redação estática nem chama OCR/LLM), código idêntico em p
 - ~~Web no MVP~~ → adiada para o MVP completo; apresentável é mobile-only.
 - ~~Risco de retrabalho na transição demo→produção~~ → mitigado pelo princípio
   "interface estável, provider variável" + evitar lock-in proprietário.
+- ~~Lematização (gap "crítico, mas ferramenta marcada como pós-MVP")~~ → resolvida:
+  **spaCy** (`pt_core_news`) confirmado, só no MVP completo, usado como chave de
+  indexação/dedup (nunca no texto da questão — a IA flexiona na geração); Hunspell
+  valida existência, papel distinto. Coexistem no pipeline de entrada de palavra.

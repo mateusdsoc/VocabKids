@@ -130,7 +130,9 @@ Cada palavra recebe no mínimo 2 variações de questão por nível (4 níveis n
 #### Concerns de implementação
 
 **1. Normalização (crítico)**
-Antes de consultar o banco, a palavra precisa ser reduzida à sua forma base ("correndo" → "correr", "relevantes" → "relevante"). Sem isso, o banco acumula quase-duplicatas que custam geração e confundem o sistema. Hunspell ou um lematizador resolve antes da consulta.
+Antes de consultar o banco, a palavra precisa ser reduzida à sua forma base ("correndo" → "correr", "relevantes" → "relevante"). Sem isso, o banco acumula quase-duplicatas que custam geração e confundem o sistema. A lematização é feita pelo **spaCy** (`pt_core_news`) — Hunspell **não** lematiza (só valida existência); são funções distintas que coexistem (ver 3.6 e seção 12).
+
+**Importante — o lema é chave, não texto.** A forma base existe só como **chave de indexação e deduplicação** no banco (como a palavra é guardada e encontrada). Ela **nunca** é o texto que o aluno vê. O enunciado e a resposta são escritos pela IA em português natural, com a flexão que a frase pedir: uma questão arquivada sob a chave `relevante` pode conter "relevantes" na frase ("As descobertas mais ___ mudaram a ciência" → "relevantes"). Por isso o spaCy ser de mão única (só reduz, não reconstrói flexões) não é limitação: reconstruir flexão é trabalho da IA na geração, não do lematizador. Nem spaCy nem Hunspell tocam no conteúdo da questão — atuam só na entrada, para achar a gaveta certa no banco.
 
 **2. Latência no "miss"**
 Quando uma palavra é nova, a IA precisa gerar as questões antes de atribuir ao aluno. Essa geração deve ser assíncrona: a palavra entra em uma fila, as questões são geradas em background e aparecem na trilha em seguida — sem bloquear a experiência do aluno.
@@ -949,6 +951,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Stack — animação | Ferramenta em aberto; resultado é requisito firme desde o apresentável; decisão via teste da peça-âncora (seção 12) |
 | Estratégia de infra | Interface estável, provider variável: demo→produção é troca de plano/config, não reescrita; evitar lock-in proprietário (seção 12) |
 | MVP fatiado | Apresentável (mobile + trilha/banco base/diagnóstico + redação estática) vs. completo (pipeline de redação + web); seção 08 |
+| Lematização | spaCy (`pt_core_news`), confirmado; só no MVP completo; roda quando palavra entra (análise de redação) para casar com o banco; lema é chave de indexação/dedup, nunca o texto exibido (a IA flexiona na geração); Hunspell valida existência, papel distinto (seções 3.3 e 12) |
 
 ---
 
@@ -984,7 +987,7 @@ O ciclo completo é: redação revela dificuldade → sistema ensina alternativa
 | Região | `southamerica-east1` (São Paulo) — residência de dados |
 | Animação | **Em aberto** (resultado é requisito firme; ver abaixo) |
 | Validação ortográfica | Hunspell (já decidido — seção 3.6) |
-| Lematização | spaCy (`pt_core_news`) — a confirmar |
+| Lematização | **spaCy** (`pt_core_news`) — confirmado; só no MVP completo; usado como chave de indexação/dedup, nunca no texto da questão (seção 3.3) |
 | OCR | Google Cloud Vision (já decidido — seção 4.7) |
 | Modelo de LLM | **Adiado — não é prioridade** (decisão 1, seção 10): só na conversa com o 1º cliente |
 
