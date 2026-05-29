@@ -2,7 +2,7 @@
 
 > Fonte da verdade atual do projeto. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >
-> Última atualização: 28 de maio de 2026 (rev. 12).
+> Última atualização: 29 de maio de 2026 (rev. 13).
 
 ---
 
@@ -776,13 +776,32 @@ O painel não deve ser desenhado antes da definição clara do MVP, mas a necess
 
 ## 08 - Escopo por fase
 
-### MVP
+### MVP fatiado: apresentável vs. completo
 
-- Plataforma: mobile (iOS e Android) e web;
+O MVP é construído em duas fatias, para não atrasar a venda com a parte mais
+arriscada:
+
+- **MVP apresentável** (para vender às primeiras escolas): app mobile (Flutter),
+  trilha + questões do banco base + diagnóstico + XP/recompensas. A **redação entra
+  de forma estática** — a UI do ciclo (tela de redação anotada com cores, dashboard
+  de correção) com dados mockados, **sem** OCR/LLM/pipeline rodando — presente para
+  justificar a atenção de compra (é o diferencial), mas sem construir o backend
+  arriscado antes da venda. Sem web. Custo variável ~$0 (free tier; não chama
+  OCR/LLM).
+- **MVP completo** (após fechar as primeiras escolas): pipeline real de redação
+  (OCR → análise → atribuição de palavras), web/dashboards (React/Next, codebase
+  separado) e a infraestrutura sobe de plano (ver seção 12).
+
+A lista de funcionalidades abaixo é o MVP completo. Stack e infraestrutura na
+seção 12; racional detalhado em `analise_riscos.md`.
+
+### MVP (completo)
+
+- Plataforma: mobile (iOS e Android); web (dashboards) no MVP completo;
 - App de questões de vocabulário (4 tipos fixos: reconhecimento, sinônimo, aplicação, avaliação);
 - Card de descoberta na primeira interação com cada palavra;
 - Questões geradas pela IA sob demanda (geração lazy), armazenadas permanentemente no banco por palavra;
-- Domínio de palavras com sequência fixa e regressão controlada;
+- Domínio de palavras com sequência fixa e loop até acertar (sem regressão — seção 3.4);
 - XP, níveis e trilha temática visual (progressão por XP, estrutura: cidade → ponto turístico → nó);
 - Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
 - Base inicial de 500 a 800 palavras;
@@ -825,7 +844,6 @@ Os itens abaixo apareceram em documentos antigos ou foram avaliados e descartado
 - Mascote específico já decidido;
 - Pricing fechado;
 - Lista fechada de escolas-alvo;
-- Stack técnica fechada;
 - Questões de sintaxe no MVP (sintaxe aparece apenas como feedback informativo na redação);
 - Módulo de livros no MVP (barreira de acesso confiável ao conteúdo das obras — ver seção 05);
 - Itens cosméticos de evento no MVP (dependem de camada de customização de perfil);
@@ -906,6 +924,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Papéis e permissões | Quatro papéis (aluno, professor, coordenador, admin); identidade + associações (papel + escopo); permissão = (papel, escopo, capacidade) (seção 3.11) |
 | Professor x coordenador | Mesmos dashboards, escopos diferentes: professor vê e configura as próprias turmas; coordenador vê a escola inteira mas é supervisão — não configura nem atribui (seção 3.11) |
 | Ofensiva / streak de dias | Fora do produto — não haverá sequência de dias ao estilo Duolingo; o combo por acertos seguidos (seção 3.7) é distinto e permanece (seção 09) |
+| Stack — app do aluno | Flutter (mobile-only no apresentável); UI 100% custom dispensa widget nativo, então o "muito Android" não se aplica (seção 12) |
+| Stack — web | React/Next, codebase separado, adiada para o MVP completo (seção 12) |
+| Stack — backend | Python + FastAPI — ecossistema de IA/NLP e carga I/O-bound (seção 12) |
+| Stack — banco de dados | PostgreSQL (via Neon serverless); fila de jobs no próprio Postgres (`procrastinate`), Redis adiado (seção 12) |
+| Stack — infra/hospedagem | Cloud Run (compute) + Neon (banco) + Cloudflare R2 (arquivos), região São Paulo; free-tier-first até ~2 escolas (seção 12) |
+| Stack — animação | Ferramenta em aberto; resultado é requisito firme desde o apresentável; decisão via teste da peça-âncora (seção 12) |
+| Estratégia de infra | Interface estável, provider variável: demo→produção é troca de plano/config, não reescrita; evitar lock-in proprietário (seção 12) |
+| MVP fatiado | Apresentável (mobile + trilha/banco base/diagnóstico + redação estática) vs. completo (pipeline de redação + web); seção 08 |
 
 ---
 
@@ -916,3 +942,56 @@ O VocabBR Kids não deve ser apenas um app de quiz.
 Ele deve ser um sistema que observa onde o aluno tem pobreza ou repetição de vocabulário, transforma isso em prática personalizada e acompanha a evolução até que novas palavras sejam realmente incorporadas ao repertório do aluno.
 
 O ciclo completo é: redação revela dificuldade → sistema ensina alternativas → aluno pratica → próxima redação mostra melhoria.
+
+---
+
+## 12 - Stack técnica e infraestrutura
+
+> Decisões de stack tomadas em 29/05/2026. O racional detalhado (trade-offs,
+> alternativas descartadas, custos) está em `analise_riscos.md`, seção 07. Esta
+> seção é o registro resumido na fonte da verdade.
+
+### Decisões
+
+| Camada | Decisão |
+|---|---|
+| App do aluno | **Flutter** (iOS + Android), mobile-only no apresentável |
+| Web (dashboards) | **React/Next**, codebase separado, no MVP completo |
+| Backend | **Python + FastAPI** |
+| Banco de dados | **PostgreSQL** (JSONB p/ payload de questão; pgvector disponível) |
+| Banco gerenciado | **Neon** (Postgres serverless) |
+| Fila de jobs | **Postgres** via `procrastinate` (Redis adiado) |
+| Cache | Adiado (Upstash quando houver pressão) |
+| Compute | **Cloud Run** (ou Render/Railway) |
+| Storage de arquivos | **Cloudflare R2** (API S3) |
+| Região | `southamerica-east1` (São Paulo) — residência de dados |
+| Animação | **Em aberto** (resultado é requisito firme; ver abaixo) |
+| Validação ortográfica | Hunspell (já decidido — seção 3.6) |
+| Lematização | spaCy (`pt_core_news`) — a confirmar |
+| OCR | Google Cloud Vision (já decidido — seção 4.7) |
+| Modelo de LLM | Em aberto (decisão 1, seção 10) |
+
+### Princípios
+
+- **Interface estável, provider variável.** A stack fala com interfaces-padrão
+  (protocolo Postgres, container Docker, API S3). Sair do free tier para produção é
+  **troca de plano/connection string**, não reescrita. Neon, Cloud Run e R2 já são
+  production-grade — escala-se subindo de plano no mesmo provider.
+- **Evitar lock-in proprietário.** É o que causa refactor doloroso — não o free
+  tier. Por isso Neon (Postgres puro) em vez de Supabase (camada proprietária de
+  auth/storage/edge).
+- **Free-tier-first até ~2 escolas vendidas.** Demo a custo variável ~$0; o
+  apresentável (redação estática) nem chama OCR/LLM. Ligar `min-instances=1` para
+  matar cold start ao apresentar/em produção.
+- **Stack auth-agnóstica.** Identidade + associações (seção 3.11) suporta o flow de
+  auth que o primeiro cliente exigir, sem retrabalho (decisão 2, seção 10).
+
+### Animação (ferramenta em aberto)
+
+A animação boa é requisito **desde o apresentável** (justifica a venda); só a
+ferramenta fica em aberto, pois "premium + sem designer + sem gastar" não fecham
+juntos. Decisão via **teste da peça-âncora**: prototipar a revelação do passaporte
+em LottieFiles (assets prontos) vs. código Flutter (`flutter_animate`); se "vender",
+fecha barato; senão, abre a conversa de Rive + designer/freelancer. (A IA do Rive
+gera apenas a *lógica* de state machine, não a arte — não desbloqueia o
+não-designer.)
