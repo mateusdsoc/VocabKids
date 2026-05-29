@@ -139,10 +139,64 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 
 ---
 
-## 07 - Discussão de stack (em andamento)
+## 07 - Stack técnica (direção definida)
 
-> Esta seção registra a discussão em curso. Não são decisões fechadas até
-> migrarem para `rascunho_product.md`.
+> Direção de stack acordada na discussão de 29/05/2026. Vira decisão fechada
+> quando migrar para `rascunho_product.md` (seção 09 lista "stack técnica fechada"
+> como fora do escopo atual — esta seção a resolve).
 
-Esta seção será preenchida conforme a discussão de stack evoluir (mobile,
-backend, animações, banco de dados, caching, hospedagem).
+### Resumo
+
+| Camada | Decisão | Observação |
+|---|---|---|
+| **App do aluno** | **Flutter** | Mobile-only no MVP apresentável. |
+| **Web (dashboards)** | **React/Next separado** | Adiado para o MVP completo. Não compartilha codebase com o app. |
+| **Backend** | **Python + FastAPI** | Escolha aberta de equipe; vence pelo ecossistema de IA/NLP e carga I/O-bound. |
+| **Banco de dados** | **PostgreSQL** | JSONB p/ payload de questão; pgvector disponível p/ dedup semântico. |
+| **Cache / fila** | **Redis** + **arq** | Redis como broker dos jobs assíncronos (e cache do banco de palavras). |
+| **Animações** | **Rive** + **Lottie/nativo** | Rive p/ passaporte, reveals e trilha; Lottie/nativo p/ one-shots (confete). |
+| **Hospedagem** | **Cloud Run (GCP)** | Região `southamerica-east1` (São Paulo). |
+
+### Racional
+
+- **Flutter (app do aluno).** A UI é 100% custom (trilha, passaporte, cards,
+  animações) — não usa widget nativo de plataforma. Nesse cenário o "muito
+  Android" do Flutter não se aplica: a renderização própria (Impeller) entrega
+  design premium idêntico em iOS e Android com ótima performance de animação. O
+  receio do "cheiro de Android" vale para apps que imitam o nativo comum, não para
+  um app gamificado de marca própria.
+- **Web como codebase separado, adiada.** A web do MVP completo são os dashboards
+  de educador/admin (data-heavy, tabelas, gráficos, redação anotada) — perfil
+  oposto ao app gamificado. React/Next é a ferramenta certa para essa surface;
+  forçar Flutter Web nos dashboards seria uma armadilha. Como a web não entra no
+  MVP apresentável, isso reforça o fatiamento (seção 06, recomendação 2): o
+  apresentável é só mobile.
+- **Python + FastAPI.** As partes difíceis do produto vivem no ecossistema Python
+  (orquestração de LLM, spaCy para lematização, Hunspell, glue de NLP, orquestração
+  de OCR). A carga é I/O-bound e de baixo QPS (escolas), então o ponto fraco do
+  Python (GIL/CPU-bound) não morde — o trabalho pesado é delegado a APIs externas e
+  libs nativas. Go/Java resolveriam um problema de throughput que o produto não tem.
+- **PostgreSQL.** Domínio fortemente relacional (usuário, associação, turma,
+  palavra, questão, atribuição, estado de domínio, redação, report). JSONB guarda o
+  payload flexível da questão gerada pela IA; pgvector fica disponível se houver
+  dedup semântico no banco de palavras.
+- **Redis + arq.** Ganha o lugar principalmente como broker da fila de jobs
+  (geração lazy no "miss", pipeline OCR+análise, recálculo do sinal de turma);
+  cache do banco de palavras (read-heavy) é bônus. `arq` é async-native e casa com
+  FastAPI; Celery é alternativa se quiser ecossistema mais maduro.
+- **Rive + Lottie.** Rive entrega animação interativa premium (virada de página e
+  revelação do passaporte, marcador da trilha) com runtime minúsculo a 60fps e
+  permite o animador editar direto — o que ataca o risco "arte no caminho crítico"
+  (seção 05). Lottie/Flutter-native cobrem one-shots simples (confete).
+- **Cloud Run (GCP), São Paulo.** Equipe pequena deve evitar VPS cru no início.
+  GCP tem leve vantagem por já hospedar o OCR (Google Cloud Vision) — OCR, API e
+  billing no mesmo lugar; Cloud Run escala a zero (bom p/ carga variável de escola).
+  Região `southamerica-east1` por residência de dados (crianças BR), o que já
+  nasce alinhado à decisão de LGPD/privacidade adiada (seção 10 do produto).
+
+### Em aberto na stack
+
+- Modelo de LLM para análise/geração — segue como decisão 1 da seção 10 do produto
+  (testar GPT-4o mini, Gemini 2.5 Flash-Lite e Gemini 2.5 Flash com redações reais).
+- Ferramenta de lematização — recomendação **spaCy** (`pt_core_news`), tirando-a do
+  limbo "pós-MVP" (ver seção 01 e 06 deste documento).
