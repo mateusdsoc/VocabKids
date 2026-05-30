@@ -127,6 +127,15 @@ artefato necessário é um modelo de dados + desenho dos pipelines
   (pipeline de redação, LGPD, auth, testes de carga). Mitigação: regra de corte —
   priorizar o que o aluno toca em fevereiro (prática + redação) sobre o adiável
   (dashboards ricos, eventos).
+- **Go-to-market do apresentável (✅ endereçado 29/05).** O comprador (coordenação/
+  escola) quer dados de evolução, mas o apresentável é mobile/aluno. Resolvido: o
+  apresentável inclui **dashboard e redação mockados** (telas estáticas com dados
+  fictícios) para a demo falar com quem assina o contrato (seção 08).
+- **Animação no caminho crítico do apresentável (🟠 aberto).** A animação "premium"
+  justifica a venda e é construída na janela Jun–Set, mas a ferramenta depende de um
+  teste manual do dono ainda não feito (seção 07/stack). Se o teste exigir
+  Rive+designer, é custo/tempo batendo na janela do apresentável. Priorizar o teste
+  da peça-âncora cedo.
 
 ---
 

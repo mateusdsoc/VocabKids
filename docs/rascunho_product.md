@@ -342,7 +342,7 @@ Se dois alunos errarem a mesma palavra no mesmo dia, ambos recebem as mesmas que
 
 #### Publicação direta e report do aluno (MVP)
 
-No MVP as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia do professor. A qualidade é controlada por **três camadas** de QA: uma **preventiva** (verificação automática na geração) e duas **corretivas** (report do aluno e gatilho por taxa de erro).
+No runtime (MVP completo), as questões geradas pela IA são **publicadas direto** para o aluno, sem revisão prévia do professor. (No apresentável as questões vêm do banco base, pré-gerado e revisado por humano — ver 3.5.) A qualidade é controlada por **três camadas** de QA: uma **preventiva** (verificação automática na geração) e duas **corretivas** (report do aluno e gatilho por taxa de erro).
 
 **Camada preventiva — verificação automática na geração (MVP completo).** Depois que a IA gera a questão, um segundo passo barato (a mesma IA, com outro prompt) revê a questão antes de publicar: "algum distrator também é resposta válida nesta frase?". É uma chamada extra de centavos que pega alucinação/distrator ambíguo **antes** de o aluno ver — diferente do report e da taxa de erro, que agem só depois. Vale o custo num produto infantil, onde conteúdo errado é caro.
 
@@ -777,7 +777,30 @@ O painel ainda não está especificado em detalhe, mas deve permitir que profess
 - dados vindos de redações (erros por dimensão, palavras repetidas, sugestões trabalhadas);
 - configuração das dimensões de análise de redação por turma.
 
-O painel não deve ser desenhado antes da definição clara do MVP, mas a necessidade dele deve permanecer registrada.
+O painel real (com dados) é uma entrega do **MVP completo**; no apresentável ele
+aparece **mockado/estático** para a demo de venda (seção 08).
+
+### Telemetria (registro de eventos)
+
+A telemetria é distinta de duas coisas com que se confunde:
+
+- **≠ painel** — o painel é a *visualização* para educadores; a telemetria é o *log
+  de eventos* por trás, que alimenta calibração e QA.
+- **≠ dados operacionais** — as respostas, tentativas e o estado de domínio do aluno
+  são lidos em tempo real pelo **motor adaptativo e pelo diagnóstico** e existem
+  **desde o apresentável**. A telemetria é a camada de **analytics agregada** em cima
+  desses dados; adiá-la não tira da adaptação os dados de que ela precisa.
+
+Eventos mínimos: sessão (início/fim, duração), questão (resposta, tentativa, tempo,
+acerto/erro), palavra (atribuída, dominada, origem), redação (enviada, palavras
+extraídas), report (autor, motivo, veredito do admin). Armazenados em **tabela de
+eventos no próprio Postgres** (sem ferramenta externa — melhor para LGPD com dados de
+criança). Habilita calibrar os limiares "ajustáveis com dados reais" (XP,
+dimensionamento da trilha, limiar do sinal de turma) e o **gatilho de QA por taxa de
+erro** (seção 3.6).
+
+**Quando entra:** adiada para a janela do 1º cliente (construída entre fechar a venda
+e a escola adaptar), **não** no apresentável (seção 08).
 
 ---
 
@@ -789,12 +812,19 @@ O MVP é construído em duas fatias, para não atrasar a venda com a parte mais
 arriscada:
 
 - **MVP apresentável** (para vender às primeiras escolas): app mobile (Flutter),
-  trilha + questões do banco base + diagnóstico + XP/recompensas. A **redação entra
-  de forma estática** — a UI do ciclo (tela de redação anotada com cores, dashboard
-  de correção) com dados mockados, **sem** OCR/LLM/pipeline rodando — presente para
-  justificar a atenção de compra (é o diferencial), mas sem construir o backend
-  arriscado antes da venda. Sem web. Custo variável ~$0 (free tier; não chama
-  OCR/LLM).
+  trilha + questões do banco base + diagnóstico + XP/recompensas. Três superfícies
+  entram **mockadas/estáticas** — presentes para a demo, sem backend:
+  - **Redação estática** — a UI do ciclo (tela de redação anotada com cores) com
+    dados fictícios, **sem** OCR/LLM/pipeline rodando; mostra o diferencial
+    pedagógico.
+  - **Dashboard estático (mockado)** — telas de acompanhamento com dados fictícios,
+    para a demo falar com **a coordenação/escola** (quem assina o contrato), não só
+    com o aluno. O dashboard real (com dados) vem no completo.
+  - **Report mockado** — a ferramenta de report aparece na UI (onboarding), sem
+    backend de tratamento ainda.
+
+  Sem web real (apenas telas mockadas); a web/dashboards reais vêm no completo. Custo
+  variável ~$0 (free tier; não chama OCR/LLM).
 - **MVP completo** (após fechar as primeiras escolas): pipeline real de redação
   (OCR → análise → atribuição de palavras), web/dashboards (React/Next, codebase
   separado) e a infraestrutura sobe de plano (ver seção 12).
@@ -809,7 +839,7 @@ o cronograma reflete essa realidade e se ancora no ano letivo (alunos em feverei
 
 | Janela | Fase | Entregas |
 |---|---|---|
-| **Jun–Set/26** | Construir o **apresentável** | App Flutter: trilha + banco base + diagnóstico + XP/recompensas + UI de redação estática |
+| **Jun–Set/26** | Construir o **apresentável** | App Flutter: trilha + banco base + diagnóstico + XP/recompensas + UI mockada de redação, dashboard e report |
 | **Set–Out/26** | **Reuniões de venda** | Demos para escolas; precificação, contratos, adesão para o ano letivo seguinte |
 | **Out/26–início Jan/27** | Construir o **completo** + pré-lançamento | Pipeline real de redação (OCR→análise→atribuição), telemetria, auth, LGPD/privacidade, testes de carga, ajustes de features |
 | **Início Jan/27** | **Implantação** | Onboarding das escolas; cadastro de turmas/alunos |
