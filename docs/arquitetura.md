@@ -176,19 +176,37 @@ escola ──< turma ──< associacao_turma >── associacao >── usuario
 
 ---
 
-### Questões em aberto para você revisar (Bloco 1)
+### Isolamento, multitenancy e leaderboards
 
-1. **PK: BIGINT identity vs UUID?** UUID ajuda se um dia houver geração de id no
-   cliente/offline ou merge entre ambientes; BIGINT é mais simples/leve. Recomendo
-   **BIGINT** salvo se você prevê sincronização offline forte.
-2. **`questao.opcoes` em JSONB vs tabela `questao_opcao`?** JSONB é mais simples e a
-   questão é sempre lida inteira; tabela normalizada facilita estatística por opção
-   (qual distrator engana mais). Recomendo **JSONB** no MVP (o gatilho de QA usa taxa
-   de erro da questão, não por opção).
-3. **Penalização de reporter: computada on-the-fly ou materializada** num campo tipo
-   `usuario.report_trust`? Recomendo computar no início e materializar só se a query
-   pesar.
-4. **`report_questao` e `redacao*` existem (vazias) no apresentável** para o mock, ou
-   ficam totalmente fora do schema da fatia A? Recomendo **existirem** (schema único;
-   a UI mockada não grava), evita migração dupla.
-5. **Falta alguma entidade** que você enxerga no produto e não está aqui?
+**"Isolado por escola" = isolamento lógico, não banco separado.** Um único
+PostgreSQL; as linhas de aluno são vinculadas a uma escola via `usuario → associacao
+→ escola`. "Isolado" significa que a escola A **não lê os dados de aluno da escola B**
+— imposto por escopo de query (e, opcionalmente, Row-Level Security do Postgres).
+
+**Leaderboards não violam o isolamento** porque cada um é uma agregação dentro de um
+escopo permitido:
+
+| Leaderboard | Escopo | Cruza escolas? |
+|---|---|---|
+| Top 3 da turma (seção 3.9) | uma turma (mesma escola) | Não |
+| Contribuintes da escola (eventos) | uma escola | Não |
+| Posição entre escolas (eventos) | **só a soma de XP** por escola | Sim, **só agregado** |
+
+O caso "entre escolas" só expõe o **agregado** (soma do XP da escola), nunca uma linha
+individual — coerente com a seção 3.9. Não exige tabela nova: o top-3 da turma é uma
+query sobre `aluno_progresso.xp_total` + `associacao_turma`. A regra "aluno vê só top 3
++ o próprio XP" é **autorização/apresentação**, não esquema. O **XP de evento** é
+economia separada (seção 3.9) e pós-MVP — entra numa tabela de participação própria.
+
+### Decisões do Bloco 1 (resolvidas 31/05)
+
+1. **PK:** `BIGINT GENERATED ALWAYS AS IDENTITY` (não UUID — sem sincronização offline
+   forte prevista).
+2. **`questao.opcoes`:** `JSONB` (questão lida sempre inteira; QA usa taxa de erro da
+   questão, não por opção).
+3. **Penalização de reporter:** computada on-the-fly a partir da taxa de vereditos
+   `invalido`; materializar em `usuario.report_trust` só se a query pesar.
+4. **Schema único:** as tabelas de redação/report **existem no apresentável** (a UI
+   mockada não grava nelas) — evita migração dupla entre as fatias A e C.
+5. **Entidades:** conjunto do Bloco 1 considerado completo para o MVP (sem lacuna
+   apontada na revisão). Leaderboard não exige entidade nova (acima).
