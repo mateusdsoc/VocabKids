@@ -113,14 +113,14 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 
 ### 5. Trilha e colecionáveis — **conteúdo (catálogo global)**
 
-Conteúdo, não dado de aluno. ~72 nós + 26 peças (seção 3.7/3.10), praticamente fixo.
+Conteúdo, não dado de aluno. ~80 nós + 28 peças (seção 3.7/3.10), praticamente fixo.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `cidade` | `id`, `nome`, `ordem` | MVP: BH, SP, RJ. | A |
-| `ponto_turistico` | `id`, `cidade_id→cidade`, `nome`, `ordem` | 6 por cidade. | A |
-| `trilha_no` | `id`, `ponto_turistico_id→ponto_turistico`, `ordem`, `xp_limiar` (~4.500) | 4 por ponto → 72 nós. | A |
-| `colecionavel` | `id`, `tipo` (`cartao_postal`\|`carimbo`\|`selo`), `referencia` (ponto/cidade/feito), `asset_ref` | Catálogo das 26 peças. | A |
+| `pais` | `id`, `nome`, `ordem` | MVP: Brasil, França, Japão. Egito engatilhado como reserva. | A |
+| `destino` | `id`, `pais_id→pais`, `nome`, `ordem` | Assimétrico por país: 5 (BR), 7 (FR), 8 (JP) — substitui o antigo `ponto_turistico`. | A |
+| `trilha_no` | `id`, `destino_id→destino`, `ordem`, `xp_limiar` (~4.500) | 4 por destino → 80 nós. | A |
+| `colecionavel` | `id`, `tipo` (`cartao_postal`\|`carimbo`\|`selo`), `referencia` (destino/país/feito), `asset_ref` | Catálogo das 28 peças. | A |
 
 ---
 
@@ -168,16 +168,16 @@ escola ──< turma ──< associacao_turma >── associacao >── usuario
    │                                          │                              │
    │                                     palavra ──< palavra_sinonimo        └─> trilha_no
    │                                          │                                    │
-   │                                       questao ──< report_questao        ponto_turistico
+   │                                       questao ──< report_questao        destino
    │                                          │                                    │
-   │                                  (compartilhado global)                    cidade
+   │                                  (compartilhado global)                    pais
    │
    └──< redacao_atribuicao ──< redacao ──< redacao_palavra
                                   │
                             redacao_analise        aluno_colecionavel >── colecionavel
 
    (global/compartilhado: palavra, palavra_sinonimo, questao, report_questao,
-    cidade, ponto_turistico, trilha_no, colecionavel)
+    pais, destino, trilha_no, colecionavel)
    (isolado por escola: tudo ligado a usuario/turma/redacao/evento)
 ```
 

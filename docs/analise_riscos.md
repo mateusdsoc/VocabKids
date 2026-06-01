@@ -111,12 +111,12 @@ artefato necessário é um modelo de dados + desenho dos pipelines
 
 - **Escopo de MVP grande demais para o rótulo "MVP" (seção 08).** Mobile + web,
   motor adaptativo completo, diagnóstico, pipeline de geração por IA, pipeline de
-  OCR + análise multidimensional com anotações coloridas, trilha de 72 nós,
+  OCR + análise multidimensional com anotações coloridas, trilha de 80 nós,
   passaporte com dois modos de animação, dashboards, papéis/permissões, combo de
   XP, meta semanal. O conjunto como "MVP" é um produto inteiro. ✅ **Mitigado** pelo
   fatiamento (apresentável vs. completo, seção 08): a venda só depende do
   apresentável.
-- **Arte no caminho crítico.** 26 peças (18 cartões-postais + 3 carimbos +
+- **Arte no caminho crítico.** 28 peças (20 cartões-postais + 3 carimbos +
   5 selos) + animações. O doc reconhece que "o custo real é arte". Dependência de
   ilustração externa é atraso clássico — e bloqueia o passaporte, requisito firme.
   (Ferramenta de animação em aberto; teste da peça-âncora — seção 07.)

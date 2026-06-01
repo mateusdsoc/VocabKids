@@ -245,7 +245,7 @@ Quando o aluno entra no app, faz uma avaliação diagnóstica curta (10 a 15 que
 A primeira experiência do aluno costura entrada, diagnóstico e a primeira palavra:
 
 1. **Entrada** — via código de turma (provisório, até a decisão de autenticação — seção 10).
-2. **Boas-vindas temáticas** — uma tela curta apresentando a viagem pelas cidades.
+2. **Boas-vindas temáticas** — uma tela curta apresentando a viagem pelos países.
 3. **Demonstração** — duas questões-demo roteirizadas: uma mostra como é **acertar** (XP, confete) e outra como é **errar** (feedback gentil, recuperação, sem punição). O objetivo é normalizar o erro antes de cobrar.
 4. **Diagnóstico** — a avaliação diagnóstica (acima), enquadrada como jogo e não como prova; posiciona o aluno na trilha.
 5. **Primeira palavra** — card de descoberta → nível 1 → primeiro XP, fechando o onboarding com uma vitória.
@@ -414,12 +414,12 @@ Regras da sequência:
 A trilha é organizada em três camadas, cada uma com sua recompensa de progressão (garantida — todo aluno ganha ao avançar):
 
 - **Nó**: menor unidade visual. O aluno completa um nó a cada 2–4 sessões (limiar de ~4.500 XP por nó). Completar um nó dá um feedback visual (confete), sem item colecionável.
-- **Ponto turístico**: agrupamento de nós dentro de um tema local. Completar um ponto turístico desbloqueia um **cartão-postal** colecionável da atração — encaixa no tema de viagem e vai para a coleção do aluno.
-- **Cidade**: conjunto de pontos turísticos. Completar uma cidade dá um **carimbo no passaporte** (ver seção 3.10).
+- **Destino**: agrupamento de nós dentro de um tema local. Completar um destino desbloqueia um **cartão-postal** colecionável do lugar — encaixa no tema de viagem e vai para a coleção do aluno.
+- **País**: conjunto de destinos. Completar um país dá um **carimbo no passaporte** (ver seção 3.10).
 
-As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. O MVP tem **3 cidades** (BH, São Paulo, Rio de Janeiro), cada uma com **6 pontos turísticos** e **4 nós por ponto** — 72 nós no total, dimensionados para ~1 ano letivo de uso típico (~10 palavras dominadas/semana). A definição visual fina de cada ponto turístico e cartão-postal é trabalho de arte, não de produto.
+As recompensas de trilha são um dos três baldes do sistema de recompensas (trilha, feitos e eventos), descrito na seção 3.10. O MVP tem **3 países** (Brasil, França, Japão) com estrutura **assimétrica de destinos** — Brasil (5 destinos, onboarding), França (7 destinos, intermediário) e Japão (8 destinos, aspiracional), cada destino com **4 nós** — **80 nós no total**, dimensionados para ~1 ano letivo de uso típico (~10 palavras dominadas/semana). A assimetria é deliberada: o país de entrada é menor para viciar rápido; o aspiracional é maior para recompensar quem chega lá. A definição visual fina de cada destino e cartão-postal é trabalho de arte, não de produto.
 
-Quando o aluno termina as 3 cidades, entra em **modo livre**: a prática continua normalmente (questões, XP, palavras dominadas), mas o mapa da trilha fica no último nó. Novas cidades serão adicionadas com base nos dados reais de uso do primeiro cliente.
+Quando o aluno termina os 3 países, entra em **modo livre**: a prática continua normalmente (questões, XP, palavras dominadas), mas o mapa da trilha fica no último nó. Um 4º país (Egito) está engatilhado como reserva, para entrar caso a demanda do primeiro cliente justifique; países adicionais virão com base nos dados reais de uso.
 
 A trilha é parte importante do produto, não apenas decoração. Ela deve ajudar o aluno a entender onde está, o que já completou e qual é o próximo passo.
 
@@ -434,7 +434,7 @@ A **home** reúne:
 - **Atalho de redação** — leva à área de redação (envio das redações atribuídas e dashboards de correção — da última e do ano).
 - **Acesso a eventos e leaderboards.**
 
-A **trilha** (seção) mostra o mapa, "você está aqui", o próximo nó/ponto turístico e permite continuar a sessão a partir dali.
+A **trilha** (seção) mostra o mapa, "você está aqui", o próximo nó/destino e permite continuar a sessão a partir dali.
 
 **Ao sair de uma sessão, o aluno aterrissa na trilha (mapa), não na home.** Isso reforça o senso de progresso ("avancei aqui") e puxa o aluno para a trilha naturalmente. Cada tela ganha um papel claro: a **home** é o que se vê ao *abrir* o app (o hub); a **trilha** é onde se *aterrissa depois de praticar*.
 
@@ -516,31 +516,31 @@ As recompensas se dividem em três baldes, cada um com uma lógica distinta. Man
 
 | Balde | Lógica | Recompensas |
 |---|---|---|
-| **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Ponto turístico: **cartão-postal** colecionável. Cidade: **carimbo no passaporte** |
+| **Trilha** | Garantida — todo aluno ganha ao avançar | Nó: feedback visual (confete). Destino: **cartão-postal** colecionável. País: **carimbo no passaporte** |
 | **Feitos** | Condicional individual | **Selos** no passaporte: primeira redação enviada; combo de 10 acertos seguidos; 25, 100 e 250 palavras dominadas (5 selos no total) |
 | **Eventos** | Competitivo — só para destaques | **Troféus** digitais (1º/2º/3º) e destaque no hall da fama |
 
-A taxonomia (os três baldes e o que entra em cada um) e o conjunto de colecionáveis estão **decididos**. A arte total do MVP é: **18 cartões-postais** (6 pontos turísticos × 3 cidades) + **3 carimbos** (1 por cidade) + **5 selos** = **26 peças**.
+A taxonomia (os três baldes e o que entra em cada um) e o conjunto de colecionáveis estão **decididos**. A arte total do MVP é: **20 cartões-postais** (5+7+8 destinos × 3 países, estrutura assimétrica) + **3 carimbos** (1 por país) + **5 selos** = **28 peças**.
 
 #### Passaporte
 
-Como o tema da trilha é turismo por cidades brasileiras, as recompensas colecionáveis seguem a metáfora de um **passaporte**. O passaporte é também o **perfil do aluno** — ao tocar no próprio avatar ou ícone de perfil, o aluno abre o passaporte, que reúne toda a coleção e o status pessoal em um só lugar. Não há tela separada de "achievements" ou "perfil": o passaporte cumpre esse papel. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
+Como o tema da trilha é viagem por países (Brasil, França, Japão), as recompensas colecionáveis seguem a metáfora de um **passaporte** — que fica literal: passaporte carimba países. O passaporte é também o **perfil do aluno** — ao tocar no próprio avatar ou ícone de perfil, o aluno abre o passaporte, que reúne toda a coleção e o status pessoal em um só lugar. Não há tela separada de "achievements" ou "perfil": o passaporte cumpre esse papel. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
 
 O passaporte opera em dois modos distintos:
 
 **Modo 1 — Conquista (animado, disparado uma vez):** ocorre logo após o resumo de sessão, quando há um item novo para revelar. O passaporte sobe em tela cheia, vira automaticamente até a página correta com uma animação de virada de página, o slot do item novo pulsa, o aluno toca para abrir e o item se revela e se encaixa no lugar. Após a revelação, o passaporte permanece aberto para exploração ou o aluno pode fechar. A animação de virada de página é reservada exclusivamente para esse momento de conquista — ela não aparece no Modo 2, o que preserva o impacto.
 
-**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte pelo perfil a qualquer hora, o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de cidades, seção de cartões-postais por cidade, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. Tocar num item já conquistado pode reproduzir uma versão curta da animação de revelação.
+**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte pelo perfil a qualquer hora, o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de países, seção de cartões-postais por país, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. Tocar num item já conquistado pode reproduzir uma versão curta da animação de revelação.
 
 Sobre armazenamento: a coleção do aluno é trivialmente pequena — até 26 flags booleanas por aluno (ganhou ou não cada item). Não representa preocupação de armazenamento em nenhuma escala relevante para o MVP.
 
-Sobre a complexidade técnica: a parte lógica é simples (verificar condição → marcar item como ganho → disparar animação). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado. O conjunto do MVP é de 26 peças (18 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível sem mexer no sistema.
+Sobre a complexidade técnica: a parte lógica é simples (verificar condição → marcar item como ganho → disparar animação). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado. O conjunto do MVP é de 28 peças (20 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível sem mexer no sistema.
 
 #### Revelação de recompensa
 
-A revelação usa uma animação genérica de **abrir com toque** — o aluno toca no item que pulsa e ele se abre antes de se encaixar no passaporte. A mesma animação é reutilizada para todos os 26 itens; só o asset de arte muda. A mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
+A revelação usa uma animação genérica de **abrir com toque** — o aluno toca no item que pulsa e ele se abre antes de se encaixar no passaporte. A mesma animação é reutilizada para todos os 28 itens; só o asset de arte muda. A mecânica de **raridade aleatória** dos baús (níveis sorteados tipo "mega"/"raro") **não** é adotada.
 
-- **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o ponto turístico X dá o cartão-postal de X). Sem aleatoriedade.
+- **Recompensa determinística, não sorteada** — cada feito dá uma recompensa específica e previsível (completar o destino X dá o cartão-postal de X). Sem aleatoriedade.
 - **Sem loot box** — recompensa aleatória ou por chance levanta questões éticas e regulatórias com público infantil; fica fora.
 - **Animação curta e não-bloqueante** — a revelação não pode travar o aluno; mesmo princípio das animações de sessão (seção 3.7).
 
@@ -863,7 +863,7 @@ funcionando) sobre o adiável (dashboards ricos, eventos).
 - Card de descoberta na primeira interação com cada palavra;
 - Questões geradas pela IA sob demanda (geração lazy), armazenadas permanentemente no banco por palavra;
 - Domínio de palavras com sequência fixa e loop até acertar (sem regressão — seção 3.4);
-- XP, níveis e trilha temática visual (progressão por XP, estrutura: cidade → ponto turístico → nó);
+- XP, níveis e trilha temática visual (progressão por XP, estrutura: país → destino → nó);
 - Vocabulário adaptativo com diagnóstico inicial e adaptação contínua;
 - Base inicial de 500 a 800 palavras;
 - Análise de redação multidimensional (vocabulário, acentuação, vírgulas, uso de palavras, coesão);
@@ -962,7 +962,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Telemetria | Adiada para a janela do 1º cliente (construída entre fechar a venda e a escola adaptar, como auth/LLM); tabela de eventos no Postgres; habilita calibração e o gatilho de QA por taxa de erro (seção 07) |
 | Montagem de distratores | IA gera questão completa — sem sistema de categorias semânticas |
 | Arquitetura de geração de questões | Geração lazy: consulta banco primeiro, IA gera só no miss |
-| Tema visual da trilha | Cidades brasileiras como destinos turísticos — MVP: BH, São Paulo, Rio de Janeiro |
+| Tema visual da trilha | Países como destinos turísticos — MVP: Brasil, França, Japão (estrutura assimétrica: 5/7/8 destinos); Egito engatilhado como reserva |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Sequência de autenticação e privacidade | Decididas só com o primeiro cliente interessado (ciclo de venda dá folga); arquitetura já auth-agnóstica via identidade + associações (seções 3.11 e 10) |
 | Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
@@ -978,14 +978,14 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Critério de sinal de turma | Palavra fraca/superutilizada em ≥30% da turma no período letivo (ajustável) |
 | Deduplicação de fontes | Palavra já na fila por redação pessoal ignora o sinal de turma; aparece uma vez, gancho pessoal |
 | Taxonomia de recompensas | Três baldes: trilha (cartão-postal/carimbo), feitos (selos) e eventos (troféus); seção 3.10 |
-| Recompensa de ponto turístico | Cartão-postal colecionável |
+| Recompensa de destino | Cartão-postal colecionável |
 | Recompensas de evento | Troféus (1º/2º/3º) + hall da fama; itens cosméticos fora do MVP |
 | Meta semanal do professor | Configurável em palavras dominadas/semana; default por ano; cumprir dá indicador visual na home, não um colecionável |
-| Dimensionamento da trilha | 3 cidades × 6 pontos turísticos × 4 nós = 72 nós; limiar ~4.500 XP por nó; aluno típico completa um nó a cada 2–4 sessões; calibrado para ~1 ano letivo a ~10 palavras/semana |
+| Dimensionamento da trilha | 3 países (5+7+8 destinos) × 4 nós = 80 nós; limiar ~4.500 XP por nó; aluno típico completa um nó a cada 2–4 sessões; calibrado para ~1 ano letivo a ~10 palavras/semana |
 | Selos de feitos (conjunto inicial) | 5 selos: primeira redação enviada, combo de 10 acertos seguidos, 25/100/250 palavras dominadas |
-| Arte total do MVP (colecionáveis) | 18 cartões-postais + 3 carimbos + 5 selos = 26 peças |
-| Passaporte e metáfora de colecionáveis | Confirmado como requisito firme do MVP; escala com os 26 itens definidos acima |
-| Trilha esgotada (aluno termina as 3 cidades) | Modo livre: prática continua sem avançar o mapa; novas cidades adicionadas com base nos dados reais do primeiro cliente |
+| Arte total do MVP (colecionáveis) | 20 cartões-postais + 3 carimbos + 5 selos = 28 peças |
+| Passaporte e metáfora de colecionáveis | Confirmado como requisito firme do MVP; escala com os 28 itens definidos acima |
+| Trilha esgotada (aluno termina os 3 países) | Modo livre: prática continua sem avançar o mapa; 4º país (Egito) engatilhado como reserva; países adicionais com base nos dados reais do primeiro cliente |
 | Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
 | Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
 | Passaporte como perfil do aluno | Passaporte é a tela de perfil — reúne coleção e status em um lugar só; dois modos: Conquista (animado, pós-sessão, com virada de página) e Exploração (scroll vertical, estático); virada de página reservada ao momento de conquista; itens bloqueados exibidos como silhuetas (seção 3.10) |
