@@ -43,6 +43,13 @@
 - FKs com `ON DELETE` explícito (definido por tabela; soft-delete onde fizer sentido).
 - Enums via tabelas de domínio ou `CHECK`/tipo enum do Postgres (a confirmar).
 
+**Nível de detalhe deste documento.** Este é o modelo **conceitual/lógico**: entidades,
+relacionamentos, decisões e os **campos que carregam significado de produto** (ex.:
+`palavra_gatilho`, `origem`, `estado`, `veredito`). **Não** lista toda coluna — a lista
+exaustiva (tipos, `NOT NULL`, índices, defaults) vive nas **migrations SQL** (código),
+que são a verdade real do banco. Critério para um campo entrar aqui: um revisor precisa
+dele para validar a lógica do produto.
+
 ---
 
 ### 1. Identidade e organização
@@ -65,7 +72,7 @@ agir" é exclusivo de `professor` nas suas turmas.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `palavra` | `id`, `lema` (unique), `definicao`, `nivel_dificuldade` (1–10), `audio_url` (nullable), `origem` (`banco_base`\|`redacao`) | Chave de busca/dedup é o **lema** (spaCy normaliza antes de inserir — seção 3.3). Global. | A |
+| `palavra` | `id`, `lema` (unique), `definicao`, `exemplo_uso`, `nivel_dificuldade` (1–10), `audio_url` (nullable), `origem` (`banco_base`\|`redacao`) | Chave de busca/dedup é o **lema** (spaCy normaliza antes de inserir — seção 3.3). `definicao` + `exemplo_uso` + `audio_url` são o conteúdo do **card de descoberta** (seção 3.2). Global. | A |
 | `palavra_sinonimo` | `palavra_id→palavra`, `texto` | 2–3 por palavra (seção 3.3). | A |
 | `questao` | `id`, `palavra_id→palavra`, `nivel` (1–4), `variacao` (`a`\|`b`…), `enunciado`, `opcoes` (JSONB), `resposta_correta`, `status` (`ativa`\|`oculta_report`\|`em_revisao`\|`removida`) | Mín. 2 variações por nível. Recurso do **banco**, não do aluno (seção 3.6). `opcoes` em JSONB (enunciado/distratores). Global. | A |
 | `report_questao` | `id`, `questao_id→questao`, `usuario_id→usuario` (reporter), `motivo` (enum), `veredito` (`pendente`\|`valido`\|`invalido`), `resolved_at` (nullable) | Agrega entre escolas (seção 3.6). Veredito do admin alimenta o anti-abuso. | C (mock em A) |
