@@ -2,8 +2,9 @@
 
 > Design técnico do produto. Construído em **blocos** para revisão incremental:
 >
-> - **Bloco 1 — Modelo de dados** (este documento, abaixo) ✅
-> - **Bloco 2 — Pipelines** (sessão/diagnóstico; redação→OCR→análise→geração→atribuição) ⏳
+> - **Bloco 1 — Modelo de dados** ✅
+> - **Bloco 2a — Pipelines do apresentável** (sessão + diagnóstico) ✅
+> - **Bloco 2b — Pipelines do completo** (redação→OCR→análise→geração→atribuição; QA; sinal de turma) ⏳
 > - **Bloco 3 — Estrutura do app e serviços** ⏳
 >
 > Fonte da verdade de produto: `rascunho_product.md`. Decisões de stack: seção 12 de lá.
@@ -217,3 +218,164 @@ economia separada (seção 3.9) e pós-MVP — entra numa tabela de participaç�
    mockada não grava nelas) — evita migração dupla entre as fatias A e C.
 5. **Entidades:** conjunto do Bloco 1 considerado completo para o MVP (sem lacuna
    apontada na revisão). Leaderboard não exige entidade nova (acima).
+
+---
+
+## Bloco 2a — Pipelines do apresentável (sessão + diagnóstico)
+
+Os fluxos de runtime da fatia A (fase Jun–Set). Tudo aqui usa **só o banco base**
+(seção 3.5): no apresentável não há redação pessoal nem sinal de turma — essas fontes
+entram no Bloco 2b. Estes fluxos leem/escrevem em `aluno_palavra`, `aluno_questao`,
+`aluno_progresso` (estado **operacional**, não telemetria — seção 07 do produto).
+
+### Visão geral
+
+```
+Onboarding (1x) ─→ Diagnóstico ─→ define nivel_dificuldade_atual
+                                         │
+        ┌────────────────────────────────┘
+        ▼
+   Loop de sessões ─→ montar_sessao() ─→ responder (XP/combo) ─→ resumo ─→ adaptação contínua
+```
+
+### Estado de uma palavra para o aluno (máquina de estados)
+
+Reflete `aluno_palavra.estado` (seção 3.4). Sem regressão; loop no nível até acertar.
+
+```
+descoberta ─(card visto)→ nivel_1 ─✓→ nivel_2 ─✓→ nivel_3 ─✓→ [aguarda N4 ~2 sessões] ─✓→ dominada
+   (errou em qualquer Nx: permanece em Nx; a outra variação volta ao fim da fila)
+```
+
+O **nível 4 não acontece na sessão de introdução** — fica agendado (ver "Adiamento do
+nível 4"). Por isso o estado pós-N3 é "nivel_3 com N4 pendente", não "dominada".
+
+### Composição da sessão — `montar_sessao(aluno)`
+
+Produz uma **fila ordenada** de ~10–12 slots (cards não contam como questão). Caminho
+feliz segue o exemplo da seção 3.4:
+
+```
+1. novas ← 2 palavras novas do banco base no nivel_dificuldade_atual do aluno
+           (ordem dentro do nível tem pouco impacto — seção 3.5)
+2. Para cada palavra nova p (cards agrupados no início, colados às 1ªs questões — 3.2):
+       fila += [CARD(p), Q(p, n1), Q(p, n2)]
+3. Para cada palavra nova p:
+       fila += [Q(p, n3)]           # N3 das duas vem depois dos blocos de card
+4. revisao ← selecionar_revisao(aluno)     # ~4 slots; ver abaixo
+   Para cada palavra r em revisao:
+       fila += [Q_revisao(r)]              # questão de revisão vem ANTES do N4 (3.4)
+       se r.n4_vencido: fila += [Q(r, n4)]
+5. Se faltam slots de revisão (aluno recém-diagnosticado, poucas palavras em progresso):
+       completar com mais palavras novas do banco base (3.4)
+```
+
+Resultado típico: `[Card p1, p1N1, p1N2, Card p2, p2N1, p2N2, p1N3, p2N3, +4 revisão]`.
+
+### Mecânica da fila — intercalação de erros (seção 3.4)
+
+A sessão é uma **fila de slots pendentes**. Regra ao responder:
+
+- **Acertou** → slot sai da fila; marca `aluno_questao.acertou`; se foi a 1ª variação
+  correta daquele nível, o nível avança (`aluno_palavra.estado`).
+- **Errou** → a **outra variação ainda não acertada** do mesmo nível vai para o **fim
+  da fila** (intercala). Nunca se repergunta variação já acertada (`aluno_questao`).
+- **Único slot pendente** → entra em **loop fixo imediato**, alternando as variações
+  não acertadas até acertar (não há com o que intercalar).
+
+Como tudo é múltipla escolha, o aluno sempre acaba acertando; o custo do erro é tempo
+(seção 3.4) — e zera o combo (abaixo).
+
+### Seleção de revisão — `selecionar_revisao(aluno)`
+
+Candidatas: palavras **em progresso** (introduzidas, não dominadas). Prioriza as com
+**N4 vencido** (ver adiamento). Para cada palavra, escolhe a questão de revisão por
+prioridade (seção 3.4):
+
+1. Variação não usada do **nível 2**;
+2. Se as duas do N2 esgotaram → variação não usada do **nível 3** (e vice-versa);
+3. Se N2 e N3 esgotaram → repete a errada do N2; errando, a do N3; alternando.
+
+**Nível 1 nunca** vira revisão (seção 3.4).
+
+### Adiamento do nível 4 (seção 3.4)
+
+Quando uma palavra passa o N3, seu N4 é **agendado para ~2 sessões à frente**. O N4
+vencido entra no bloco de revisão da sessão futura, precedido por uma questão de
+revisão da própria palavra. Mecânica proposta (ver ajustes ao modelo):
+
+- Ao completar o N3: `aluno_palavra.nivel4_agendado_para = aluno_progresso.sessoes_total + 2`.
+- `montar_sessao` considera "N4 vencido" quando `sessoes_total >= nivel4_agendado_para`.
+
+### XP e combo no momento da resposta (seção 3.7)
+
+Calculado a cada acerto e persistido em `aluno_progresso`:
+
+```
+xp_base = 100 (1ª tentativa) | 70 (2ª) | 50 (3ª+, piso)
+combo:   só acerto de 1ª tentativa incrementa; bônus = 18 + 2×posicao
+         zera ao errar, ao acertar só na 2ª, e a cada novo dia (combo_data)
+xp_questao = xp_base + (combo>0 ? bônus : 0)
+ao dominar palavra (passar N4): + 500 de bônus; palavras_dominadas += 1
+```
+
+`aluno_progresso.xp_total += xp_questao` → alimenta a barra do nó atual (`trilha_no.xp_limiar`).
+Ao cruzar o limiar do nó: avança `no_atual_id` e dispara recompensa (confete / cartão-postal
+ao fechar destino / carimbo ao fechar país — seção 3.10).
+
+### Diagnóstico inicial — algoritmo proposto (preenche gap da seção 3.5)
+
+> A seção 3.5 define "10–15 questões de níveis diferentes posicionam o aluno na escala
+> 1–10", mas não dá o algoritmo. **Proposta** (a validar — ver questões em aberto):
+
+Usa **questões de reconhecimento (tipo n1)** de palavras de `nivel_dificuldade`
+variado — testa-se a dificuldade do **conteúdo**, não o tipo pedagógico. Escada
+adaptativa, enquadrada como jogo (seção 3.5):
+
+```
+nivel ← default do ano escolar da turma (ex.: 7º ano → 3)
+repetir 10–15 vezes (ou até estabilizar):
+    apresentar questão de reconhecimento de palavra com nivel_dificuldade = nivel
+    acertou → nivel += 1   |   errou → nivel -= 1   (limites 1..10)
+posicao ← nivel onde a acurácia se estabiliza (~o ponto de virada acerto→erro)
+aluno_progresso.nivel_dificuldade_atual ← posicao
+```
+
+Converge mais rápido que um espalhamento fixo e cai bem nas 10–15 questões. As **duas
+demos roteirizadas** (acerto/erro) vêm **antes** do diagnóstico (seção 3.5).
+
+### Adaptação contínua (seção 3.5)
+
+Após cada sessão (ou janela de N respostas), ajusta `nivel_dificuldade_atual`:
+
+```
+acuracia_recente (1ª tentativa, janela móvel):
+   ≥ 90% → nivel_dificuldade_atual += 1   (acelera, palavras mais difíceis)
+   < 50% → não avança / consolida o nível atual (freia)
+   entre → mantém
+```
+
+Lido de `aluno_questao` recentes (janela móvel); sem novo campo obrigatório (pode-se
+materializar a acurácia se a query pesar).
+
+### Ajustes ao modelo de dados (Bloco 1) que o 2a implica
+
+| Tabela | Campo novo | Para quê |
+|---|---|---|
+| `aluno_progresso` | `nivel_dificuldade_atual` (1–10) | Saída do diagnóstico + adaptação contínua; guia a seleção de palavras novas. |
+| `aluno_progresso` | `sessoes_total` (int) | Contador para o agendamento do N4 e janela de adaptação. |
+| `aluno_palavra` | `nivel4_agendado_para` (int, nullable) | Sessão-alvo do N4 adiado. |
+
+São 3 campos leves; nenhuma entidade nova. (Atualizar as tabelas do Bloco 1 quando
+estes forem confirmados.)
+
+### Questões em aberto (Bloco 2a)
+
+1. **Diagnóstico — escada adaptativa vs. espalhamento fixo?** Proponho a escada
+   (acima). Confirma?
+2. **Janela da adaptação contínua** — por sessão ou por N respostas? Proponho avaliar
+   ao fim de cada sessão sobre as últimas ~20 respostas de 1ª tentativa.
+3. **"~2 sessões" do N4** — fixo em 2 ou configurável? Proponho fixo (2) no MVP,
+   ajustável depois com telemetria.
+4. **Tamanho exato da sessão** — ~12 com 4 de revisão (10 questões + 2 cards). Confirma
+   esse alvo ou prefere fixar em 12 questões "duras"?
