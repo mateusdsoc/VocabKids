@@ -232,6 +232,35 @@ O banco de palavras é organizado por nível de dificuldade em uma escala numér
 | 5–6 | preponderante, esplêndido, amplo, célere |
 | 7–8 | imprescindível, majestoso, abrangente, vertiginoso |
 
+#### Rubrica de dificuldade (como uma palavra ganha seu nível 1–10)
+
+A dificuldade é **atribuída na geração pela LLM** (seção 3.3) e **revisada por humano**
+no banco base (seção 3.10). Para que a pontuação seja consistente entre lotes — de que
+dependem o diagnóstico e a seleção de palavras —, a LLM segue uma rubrica com **um eixo
+principal e fatores de apoio**:
+
+**Eixo principal — distância do sinônimo comum.** Como o produto parte de palavras
+superutilizadas para ensinar alternativas (seção abaixo), a dificuldade mede o quão
+sofisticada é a alternativa em relação à palavra comum que ela substitui:
+
+| Faixa | Significado | Âncora |
+|---|---|---|
+| 1–2 | a própria palavra comum/superutilizada | importante, grande |
+| 3–4 | alternativa acessível, de uso cotidiano | relevante, vasto |
+| 5–6 | alternativa sofisticada, ainda corrente | preponderante, amplo |
+| 7–8 | alternativa culta/formal | imprescindível, abrangente |
+| 9–10 | rara/erudita (uso pontual no MVP) | — |
+
+**Fatores de apoio** (ajustam dentro da faixa): familiaridade/frequência da palavra
+(sinal de dificuldade — **não** de seleção, que o produto proíbe); registro/formalidade;
+grau de abstração; complexidade morfológica.
+
+**Processo:** LLM pontua dado a rubrica + os exemplos-âncora acima (few-shot) → revisão
+humana calibra no banco base → **telemetria recalibra** depois (taxa de erro por palavra
+revela palavras mal classificadas — seção 3.6/07). A rubrica não precisa ser perfeita de
+início: precisa ser **relativa e consistente**, e é um dos números "ajustáveis com dados
+reais".
+
 #### Diagnóstico inicial
 
 Quando o aluno entra no app, faz uma avaliação diagnóstica curta (10 a 15 questões de diferentes níveis). O sistema identifica onde ele está e posiciona na trilha de acordo.
@@ -952,6 +981,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Banco de palavras | Compartilhado entre escolas; dados de alunos isolados por escola |
 | Envio de redações | Feito pelo aluno (foto para manuscrita, PDF para digital) |
 | Banco de palavras — palavras-alvo | Alternativas às palavras superutilizadas, não listas de frequência |
+| Rubrica de dificuldade da palavra | LLM pontua 1–10 por rubrica (eixo: distância do sinônimo comum; fatores: frequência, registro, abstração, morfologia) + exemplos-âncora; revisão humana no banco base; telemetria recalibra (seção 3.5) |
 | Banco de palavras — geração inicial | Assinatura Claude, lotes, revisão humana (tarefa única) |
 | Banco de palavras — runtime | API com geração lazy |
 | Validação de palavras | Hunspell valida existência; qualidade por revisão humana (lote inicial) e report do aluno → admin (runtime) |

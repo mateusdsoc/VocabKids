@@ -91,7 +91,7 @@ para performance; ver questões).
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `aluno_palavra` | `id`, `usuario_id→usuario`, `palavra_id→palavra`, `estado` (`descoberta`\|`nivel_1..4`\|`dominada`), `origem` (`pessoal_redacao`\|`sinal_turma`\|`banco_base`), `palavra_gatilho` (nullable), `atribuida_em`, `dominada_em` (nullable) | Estado de domínio por aluno (seção 3.4). `palavra_gatilho` só em origem pessoal (seção 3.2). | A |
+| `aluno_palavra` | `id`, `usuario_id→usuario`, `palavra_id→palavra`, `estado` (`descoberta`\|`nivel_1..4`\|`dominada`), `origem` (`pessoal_redacao`\|`sinal_turma`\|`banco_base`), `palavra_gatilho` (nullable), `nivel4_agendado_para` (int, nullable), `atribuida_em`, `dominada_em` (nullable) | Estado de domínio por aluno (seção 3.4). `palavra_gatilho` só em origem pessoal (seção 3.2). `nivel4_agendado_para` = sessão-alvo do N4 adiado (Bloco 2a). | A |
 | `aluno_questao` | `usuario_id→usuario`, `questao_id→questao`, `tentativas`, `acertou` (bool), `acertou_primeira` (bool), `respondida_em` | Garante "nunca repergunta variação já acertada" (seção 3.4) e alimenta XP/combo. | A |
 
 A **composição da sessão** (12 questões, 2 palavras novas, intercalação de erros,
@@ -104,7 +104,7 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). Contador de dominadas para a home (seção 3.7). | A |
+| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date), `nivel_dificuldade_atual` (1–10), `sessoes_total` (int) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. | A |
 | `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 26 por aluno (passaporte, seção 3.10). Booleano (ganhou/não). | A |
 
 > **XP de evento** (seção 3.9) é uma economia separada e **pós-MVP** — não modelado
@@ -358,24 +358,20 @@ acuracia_recente (1ª tentativa, janela móvel):
 Lido de `aluno_questao` recentes (janela móvel); sem novo campo obrigatório (pode-se
 materializar a acurácia se a query pesar).
 
-### Ajustes ao modelo de dados (Bloco 1) que o 2a implica
+### Ajustes ao modelo de dados (Bloco 1) — já consolidados
 
-| Tabela | Campo novo | Para quê |
+Os 3 campos abaixo **já foram incorporados às tabelas do Bloco 1** (seções 3 e 4):
+
+| Tabela | Campo | Para quê |
 |---|---|---|
-| `aluno_progresso` | `nivel_dificuldade_atual` (1–10) | Saída do diagnóstico + adaptação contínua; guia a seleção de palavras novas. |
+| `aluno_progresso` | `nivel_dificuldade_atual` (1–10) | Saída do diagnóstico + adaptação contínua; guia a seleção de palavras novas. Depende da rubrica de dificuldade da palavra (seção 3.5 do produto). |
 | `aluno_progresso` | `sessoes_total` (int) | Contador para o agendamento do N4 e janela de adaptação. |
 | `aluno_palavra` | `nivel4_agendado_para` (int, nullable) | Sessão-alvo do N4 adiado. |
 
-São 3 campos leves; nenhuma entidade nova. (Atualizar as tabelas do Bloco 1 quando
-estes forem confirmados.)
+### Decisões do Bloco 2a (resolvidas 31/05)
 
-### Questões em aberto (Bloco 2a)
-
-1. **Diagnóstico — escada adaptativa vs. espalhamento fixo?** Proponho a escada
-   (acima). Confirma?
-2. **Janela da adaptação contínua** — por sessão ou por N respostas? Proponho avaliar
-   ao fim de cada sessão sobre as últimas ~20 respostas de 1ª tentativa.
-3. **"~2 sessões" do N4** — fixo em 2 ou configurável? Proponho fixo (2) no MVP,
-   ajustável depois com telemetria.
-4. **Tamanho exato da sessão** — ~12 com 4 de revisão (10 questões + 2 cards). Confirma
-   esse alvo ou prefere fixar em 12 questões "duras"?
+1. **Diagnóstico:** escada adaptativa (acima), não espalhamento fixo.
+2. **Janela da adaptação contínua:** avaliada ao fim de cada sessão, sobre as últimas
+   ~20 respostas de 1ª tentativa.
+3. **Adiamento do N4:** fixo em **2 sessões** no MVP; ajustável depois com telemetria.
+4. **Tamanho da sessão:** alvo **~12** (≈10 questões + 2 cards, com ~4 de revisão).
