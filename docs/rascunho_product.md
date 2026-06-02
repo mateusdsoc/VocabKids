@@ -283,10 +283,13 @@ A ferramenta de report (seção 3.6) é apresentada uma vez durante essas primei
 
 #### Adaptação contínua
 
-O sistema ajusta com base no desempenho:
+O sistema ajusta com base no desempenho, medindo a acurácia de 1ª tentativa **nas palavras novas do nível atual** (não na revisão, que infla o número):
 
-- Acertando muito (90%+) → acelera, oferece palavras mais difíceis
-- Errando muito (abaixo de 50%) → freia, consolida o nível atual
+- Acertando muito (90%+) → acelera, oferece palavras mais difíceis (sobe de nível);
+- Errando muito (abaixo de 50%) → **recua um nível**, consolidando em palavras mais acessíveis;
+- Entre os dois → mantém o nível.
+
+A adaptação **sobe e desce** (o diagnóstico é só um chute inicial conservador — a adaptação faz a precisão na 1ª semana). Move um nível por vez, com histerese para não oscilar. Os limiares são ajustáveis com dados reais. Detalhe algorítmico em `arquitetura.md` (Bloco 2a).
 
 #### Trilha independente do ano escolar
 

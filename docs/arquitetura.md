@@ -104,7 +104,7 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date), `nivel_dificuldade_atual` (1–10), `sessoes_total` (int) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. | A |
+| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date), `nivel_dificuldade_atual` (1–10), `sessoes_total` (int), `nivel_mudou_em_sessao` (int, nullable) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. `nivel_mudou_em_sessao` = cooldown da histerese da adaptação. | A |
 | `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 26 por aluno (passaporte, seção 3.10). Booleano (ganhou/não). | A |
 
 > **XP de evento** (seção 3.9) é uma economia separada e **pós-MVP** — não modelado
@@ -323,40 +323,61 @@ ao dominar palavra (passar N4): + 500 de bônus; palavras_dominadas += 1
 Ao cruzar o limiar do nó: avança `no_atual_id` e dispara recompensa (confete / cartão-postal
 ao fechar destino / carimbo ao fechar país — seção 3.10).
 
-### Diagnóstico inicial — algoritmo proposto (preenche gap da seção 3.5)
+### Filosofia: diagnóstico leve + adaptação forte (decidido 31/05)
 
-> A seção 3.5 define "10–15 questões de níveis diferentes posicionam o aluno na escala
-> 1–10", mas não dá o algoritmo. **Proposta** (a validar — ver questões em aberto):
+Com múltipla escolha (**25% de chance de chute**) e ~15 questões, é **impossível cravar**
+o nível no diagnóstico — o ruído domina. Então não tentamos: o **diagnóstico é um chute
+rápido e levemente conservador**, e a **adaptação contínua (que sobe E desce) faz a
+precisão real na 1ª semana**, onde há muito mais dados. Isso baixa a pressão sobre o
+diagnóstico e move o peso para a adaptação.
 
-Usa **questões de reconhecimento (tipo n1)** de palavras de `nivel_dificuldade`
-variado — testa-se a dificuldade do **conteúdo**, não o tipo pedagógico. Escada
-adaptativa, enquadrada como jogo (seção 3.5):
+### Diagnóstico inicial — escada grosso→fino com desconto de chute (preenche gap da 3.5)
 
-```
-nivel ← default do ano escolar da turma (ex.: 7º ano → 3)
-repetir 10–15 vezes (ou até estabilizar):
-    apresentar questão de reconhecimento de palavra com nivel_dificuldade = nivel
-    acertou → nivel += 1   |   errou → nivel -= 1   (limites 1..10)
-posicao ← nivel onde a acurácia se estabiliza (~o ponto de virada acerto→erro)
-aluno_progresso.nivel_dificuldade_atual ← posicao
-```
-
-Converge mais rápido que um espalhamento fixo e cai bem nas 10–15 questões. As **duas
-demos roteirizadas** (acerto/erro) vêm **antes** do diagnóstico (seção 3.5).
-
-### Adaptação contínua (seção 3.5)
-
-Após cada sessão (ou janela de N respostas), ajusta `nivel_dificuldade_atual`:
+Usa **questões de reconhecimento (tipo n1)** de palavras de `nivel_dificuldade` variado
+(testa a dificuldade do **conteúdo**). Enquadrado como jogo (3.5):
 
 ```
-acuracia_recente (1ª tentativa, janela móvel):
-   ≥ 90% → nivel_dificuldade_atual += 1   (acelera, palavras mais difíceis)
-   < 50% → não avança / consolida o nível atual (freia)
-   entre → mantém
+nivel ← default do ano da turma (ex.: 7º → 3);  passo ← 2   # fase GROSSA
+repetir (máx. 15 questões):
+    acertou questão(nivel)?
+        sim → nivel = min(10, nivel + passo)
+        não → teto ← nivel;  passo ← 1;  nivel = max(1, nivel − 1)   # vira fase FINA
+    parar quando "bracketado": passou consistente em L e falhou em L+1..L+2
+confirmação anti-chute: 2 questões no nível-teto candidato
+    passou nas 2 → ceiling = teto    |    senão → ceiling = teto − 1
+nivel_dificuldade_atual ← max(1, ceiling − 1)        # posicionamento CONSERVADOR
 ```
 
-Lido de `aluno_questao` recentes (janela móvel); sem novo campo obrigatório (pode-se
-materializar a acurácia se a query pesar).
+- **Grosso→fino** (±2 depois ±1): acha a faixa rápido sem desperdiçar o orçamento de 15
+  viajando; refina no fim.
+- **Desconto de chute**: 2 questões no nível-teto (1 acerto sozinho não promove); reduz
+  falso-positivo de ~25% → ~6%.
+- **Conservador** (`ceiling − 1`): primeiras sessões são vitória (onboarding, 3.5).
+- **Parada**: bracket estável ou 15 questões.
+- As **2 demos** (acerto/erro) vêm **antes** do diagnóstico (3.5).
+
+### Adaptação contínua — sobe E desce, sinal limpo, com histerese (3.5)
+
+Roda ao fim de cada sessão. É aqui que mora a precisão do placement.
+
+**Sinal limpo:** acurácia de **1ª tentativa só nas questões de palavras novas do nível
+atual** — não a janela misturada com revisão (revisão tem acurácia alta e inflaria o
+número, fazendo o aluno subir indevidamente). Janela móvel de ~10 questões de palavra
+nova.
+
+```
+acuracia_novas (1ª tentativa, janela móvel, palavras NOVAS do nível atual):
+   ≥ 90%  → nivel_dificuldade_atual += 1     (acelera)
+   ≤ 50%  → nivel_dificuldade_atual − 1       (recua — recupera placement alto demais)
+   entre  → mantém
+histerese: só move se o sinal se sustenta pela janela cheia; um nível por vez;
+           cooldown de 1 sessão após mover (nivel_mudou_em_sessao)
+limites 1..10; limiares/janela/cooldown são constantes CONFIGURÁVEIS (telemetria calibra)
+```
+
+A mudança de faixa é **segura** porque é desacoplada da trilha/XP (3.7): muda só quais
+palavras novas chegam, não o progresso visual. Lido de `aluno_questao` × `aluno_palavra`
+recentes.
 
 ### Ajustes ao modelo de dados (Bloco 1) — já consolidados
 
@@ -366,12 +387,19 @@ Os 3 campos abaixo **já foram incorporados às tabelas do Bloco 1** (seções 3
 |---|---|---|
 | `aluno_progresso` | `nivel_dificuldade_atual` (1–10) | Saída do diagnóstico + adaptação contínua; guia a seleção de palavras novas. Depende da rubrica de dificuldade da palavra (seção 3.5 do produto). |
 | `aluno_progresso` | `sessoes_total` (int) | Contador para o agendamento do N4 e janela de adaptação. |
+| `aluno_progresso` | `nivel_mudou_em_sessao` (int, nullable) | Sessão da última mudança de nível — para o cooldown da histerese da adaptação. |
 | `aluno_palavra` | `nivel4_agendado_para` (int, nullable) | Sessão-alvo do N4 adiado. |
 
 ### Decisões do Bloco 2a (resolvidas 31/05)
 
-1. **Diagnóstico:** escada adaptativa (acima), não espalhamento fixo.
-2. **Janela da adaptação contínua:** avaliada ao fim de cada sessão, sobre as últimas
-   ~20 respostas de 1ª tentativa.
+**Filosofia:** diagnóstico leve + adaptação forte (acima).
+
+1. **Diagnóstico:** escada **grosso→fino** (±2 depois ±1) + **desconto de chute** (2
+   questões no nível-teto) + **placement conservador** (`ceiling − 1`) + parada por
+   bracket ou 15 questões.
+2. **Adaptação contínua:** sinal = acurácia de 1ª tentativa **só nas palavras novas do
+   nível atual** (janela ~10); **sobe (≥90%) e desce (≤50%)**; **histerese** (sustentar
+   o sinal) + **cooldown de 1 sessão**; um nível por vez; limiares/janela/cooldown
+   configuráveis (telemetria calibra).
 3. **Adiamento do N4:** fixo em **2 sessões** no MVP; ajustável depois com telemetria.
 4. **Tamanho da sessão:** alvo **~12** (≈10 questões + 2 cards, com ~4 de revisão).
