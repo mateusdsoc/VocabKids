@@ -4,7 +4,7 @@
 >
 > - **Bloco 1 — Modelo de dados** ✅
 > - **Bloco 2a — Pipelines do apresentável** (sessão + diagnóstico) ✅
-> - **Bloco 2b — Pipelines do completo** (redação→OCR→análise→geração→atribuição; QA; sinal de turma) ⏳
+> - **Bloco 2b — Pipelines do completo** (redação→OCR→análise→geração→atribuição; QA; sinal de turma) ✅
 > - **Bloco 3 — Estrutura do app e serviços** ⏳
 >
 > Fonte da verdade de produto: `rascunho_product.md`. Decisões de stack: seção 12 de lá.
@@ -403,3 +403,206 @@ Os 3 campos abaixo **já foram incorporados às tabelas do Bloco 1** (seções 3
    configuráveis (telemetria calibra).
 3. **Adiamento do N4:** fixo em **2 sessões** no MVP; ajustável depois com telemetria.
 4. **Tamanho da sessão:** alvo **~12** (≈10 questões + 2 cards, com ~4 de revisão).
+
+---
+
+## Bloco 2b — Pipelines do completo (redação → trilha)
+
+Os fluxos de runtime da fatia **C** (fase Out/26–Jan/27, ver cronograma na seção 08 do
+produto). É aqui que entram as **fontes de palavra adiadas** no Bloco 2a: a **redação
+pessoal** (1ª prioridade) e o **sinal de turma** (2ª) — seção 3.5. O banco base (3ª)
+continua preenchendo os gaps exatamente como no Bloco 2a; este bloco só **alimenta** as
+mesmas tabelas de estado (`aluno_palavra`, `aluno_questao`) que a sessão já consome.
+
+Tudo aqui é **assíncrono e caro** (OCR, LLM): roda na fila `procrastinate` no Postgres
+(stack, seção 12), não no caminho síncrono do app. Escreve em `redacao*`, `palavra`/
+`questao` (banco global), `aluno_palavra`, `sinal_turma`, `report_questao`. Nenhuma
+tabela nova é necessária — o Bloco 1 já previu todas (decisão "schema único", item 4).
+
+### Visão geral
+
+```
+Professor ─→ redacao_atribuicao (tema, prazo, turma)
+Aluno ─→ envia (foto|PDF) ─→ redacao(status=enviada)
+                                    │
+                  ┌─────────────────┴── pipeline assíncrono (fila) ──────────────────┐
+                  ▼                                                                   │
+   1. INGESTÃO    OCR (manuscrita) | extração de texto (PDF) → limpeza → texto_extraido
+                  ▼
+   2. ANÁLISE     LLM multidimensional (preset_rigor da turma) → redacao_analise (JSONB)
+                  ▼
+   3. EXTRAÇÃO    palavras fracas/superutilizadas → Hunspell (válida?) → spaCy (lema)
+                  │                                          └─ inexistente → anotação ortográfica
+                  ▼                                              (NÃO vira questão — 3.6)
+   4. ATRIBUIÇÃO  para cada palavra fraca: LLM sugere alternativas → buscar_ou_gerar(lema)
+                  ▼                                                    → aluno_palavra
+   redacao(status=analisada)  +  redação anotada volta ao aluno (4.4)
+
+   (em paralelo, periódico)  job de sinal de turma → sinal_turma → atribui aos alunos
+```
+
+### 1. Ingestão — `extrair_texto(redacao)`
+
+Normaliza os dois formatos (4.6) num único `texto_extraido`:
+
+- **Manuscrita** (`formato=manuscrita`): foto no R2 → **OCR Google Cloud Vision**
+  (decidido, 4.7; preço/comparativo em `pesquisa_ferramentas.md`). Suporte PT-BR
+  confirmado.
+- **Digital** (`formato=digital`): PDF no R2 → extração de texto nativa; OCR de
+  fallback só se o PDF for imagem escaneada.
+- **Limpeza** (4.7): remove ruído de OCR (quebras espúrias, caracteres soltos) antes da
+  análise. Pré-processamento leve; **não** é o NLP pesado que o produto descartou do MVP
+  (seção 09).
+
+Falha de OCR/extração → `redacao.status=erro_ingestao`, sem consumir as etapas caras
+seguintes; reenfileirável.
+
+### 2. Análise multidimensional — `analisar(redacao)`
+
+Uma chamada de **LLM** (modelo **em aberto** — 4.8/seção 10, decidido com o 1º cliente)
+produz as anotações por dimensão (4.2): vocabulário, acentuação, vírgula/pontuação, uso
+adequado, coesão/estrutura. Resultado em `redacao_analise.anotacoes` (JSONB por dimensão
+— trechos + marcação para a tela anotada da seção 4.4).
+
+- **Rigor configurável** (4.3): lê `turma_config.preset_rigor` (default por ano se
+  null). Dimensões desativadas pelo professor **não** são analisadas/anotadas.
+- **Só vocabulário gera questão** no MVP (4.2/4.5); as demais dimensões são **feedback
+  informativo**. A arquitetura é extensível: sintaxe poderia gerar questão no futuro sem
+  reconstrução (3.8) — mas fora de escopo agora (seção 09).
+- O **piso é o preset da turma; o teto pode subir** para o nível individual do aluno
+  como bônus, nunca cobra além do preset (4.3) — alinha com `nivel_dificuldade_atual`.
+
+### 3. Extração e validação de palavras — `extrair_palavras(redacao_analise)`
+
+Da dimensão de vocabulário saem candidatas `fraca`|`superutilizada` (3.6/4.5):
+
+1. **Validação Hunspell** (3.6/4.7, decidido): palavra **inexistente no dicionário PT-BR**
+   é erro ortográfico → vira anotação na redação, **não** vocabulário fraco (não gera
+   questão). Evita gerar questão sobre lixo de OCR ou typo.
+2. **Lematização spaCy** (seção 3.3; lema como chave de indexação, decidido): grava
+   `redacao_palavra(texto, lema, tipo)`.
+
+A palavra extraída é a **palavra-problema** do aluno (ex.: "importante" superutilizada);
+ela não vira card. O que vira card/questão são as **alternativas** dela (passo 4).
+
+### 4. Atribuição à trilha — `buscar_ou_gerar_e_atribuir(palavra_problema, aluno)`
+
+Fecha o ciclo do produto (4.5). Para cada palavra-problema:
+
+```
+alternativas ← LLM sugere 2–4 sinônimos mais ricos (ex.: importante → relevante,
+               essencial, significativo)                               # seção 3.6
+para cada alternativa alt:
+    lema_alt ← spaCy(alt)
+    p ← palavra WHERE lema = lema_alt                                   # banco GLOBAL
+    se p existe e tem questões ativas:  reusar
+    senão:                              gerar_questoes(p)  # 4 níveis, ≥2 variações (3.3)
+                                        → QA preventiva (abaixo) → salvar no banco
+    atribuir: aluno_palavra(usuario, p, estado=descoberta,
+                            origem='pessoal_redacao',
+                            palavra_gatilho = palavra_problema.texto)    # gancho do card (3.2)
+```
+
+- **Banco compartilhado** (3.6/Bloco 1 §2): questões são recurso da palavra (global),
+  não do aluno. Dois alunos que erram a mesma palavra no mesmo dia reusam as mesmas
+  questões — sem duplicação.
+- **Geração lazy + permanente**: gera só quando falta; salva no banco para sempre.
+  `palavra.origem='redacao'` distingue do `banco_base`.
+- **`palavra_gatilho`** preenchido só aqui (origem pessoal) — habilita o card pessoal
+  "Você usou 'importante' várias vezes. Conheça uma alternativa:" (3.2).
+- **`redacao_palavra.virou_atribuicao=true`** ao concluir, para telemetria/idempotência.
+
+### Sinal de turma — `computar_sinal_turma(turma, periodo)` (fonte 2ª)
+
+Job **periódico** (não por envio individual), agrega o `redacao_palavra` da turma no
+período letivo (3.5):
+
+```
+para cada lema marcado fraca|superutilizada nas redações da turma:
+    pct ← alunos_distintos_com_o_lema / alunos_da_turma
+    se pct ≥ 30% (limiar inicial, configurável):           # 3.5
+        upsert sinal_turma(turma, palavra, periodo, pct)
+        para cada aluno da turma que NÃO dominou a palavra:
+            se já está na fila por redação pessoal: pular   # dedup, pessoal vence (3.5)
+            senão: aluno_palavra(..., origem='sinal_turma')  # peso/prioridade menor
+```
+
+- **Dedup** com a fonte pessoal: a palavra aparece uma vez só, com o gancho pessoal
+  quando houver (3.5).
+- O 30% é **inicial e ajustável** com telemetria; mesma natureza dos outros limiares
+  "ajustáveis com dados reais".
+
+### Precedência de fontes na sessão (muda o Bloco 2a?)
+
+Não muda a mecânica da sessão; muda **de onde vêm as "palavras novas"**. `montar_sessao`
+(Bloco 2a, passo 1) passa a puxar palavras novas por prioridade (3.5):
+
+```
+1ª  aluno_palavra origem='pessoal_redacao'   (mais recentes primeiro)
+2ª  aluno_palavra origem='sinal_turma'
+3ª  banco base no nivel_dificuldade_atual    (preenche o resto — exatamente o Bloco 2a)
+```
+
+A adaptação contínua (Bloco 2a) segue lendo **só palavras novas do nível atual** como
+sinal; palavras de redação/turma fora do nível entram como conteúdo, mas o ajuste de
+faixa continua governado pelo banco base no nível — evita que uma redação difícil
+empurre o placement.
+
+### QA da IA em 3 camadas (seção 3.6)
+
+A geração e a análise são automáticas e **publicadas direto** (sem revisão prévia do
+professor). Qualidade controlada por:
+
+| Camada | Quando | Mecanismo | Tabela |
+|---|---|---|---|
+| **Preventiva** | na geração (passo 4) | 2º passo barato da LLM ("algum distrator também é válido nesta frase?") barra distrator ambíguo antes de publicar | — (descarta/regenera) |
+| **Corretiva 1 — report** | em uso | aluno reporta com motivo predefinido → admin (não professor); agrega entre escolas | `report_questao` |
+| **Corretiva 2 — taxa de erro** | em uso | questão com erro anômalo (1ª tentativa) ou discrepante das outras variações → revisão automática | depende de `evento` |
+
+- **Auto-ocultar** (regra do Bloco 1 §2, decidida): `questao.status→oculta_report` aos
+  **2 reports que contam**; reversível pelo admin (corrigir/republicar/remover).
+- **Anti-abuso**: report não dá XP nem isenta a questão (incentivo a abusar é baixo);
+  autor com vereditos `invalido` tem reports **descontados** — penalização **computada**
+  da taxa, não flag fixa (Bloco 1, decisão 3).
+- **Camada 2 depende da telemetria** (`evento`, seção 07): por isso entra na **mesma
+  janela** Out–Jan, não antes.
+
+### Idempotência, custo e falhas
+
+- Cada etapa é uma **task da fila** com retry/backoff; `redacao.status` é a máquina de
+  estados (`enviada→…→analisada`|`erro_*`). Reprocessar é seguro: extração checa
+  `virou_atribuicao`; sinal de turma é `upsert` por `(turma, palavra, periodo)`.
+- **Custo** (seção 08): OCR ~$1,50/1.000 págs (1.000/mês grátis); a verificação
+  preventiva é "centavos" e vale num produto infantil (3.6). Geração de questões é
+  **lazy** e **amortizada** pelo banco compartilhado — cai conforme o banco enche.
+- **Modelo de LLM** (OCR já decidido; LLM de análise/geração **não**) fica para a janela
+  do 1º cliente (4.8/seção 10) — escolha de provedor atrás de uma interface estável
+  (princípio "interface-estável/provider-variável", seção 12), sem impacto no esquema.
+
+### Decisões do Bloco 2b
+
+1. **Ingestão única:** OCR (Vision) e extração de PDF convergem para `texto_extraido`;
+   limpeza leve, sem NLP pesado (descartado, seção 09).
+2. **Análise:** uma chamada de LLM por redação respeitando `preset_rigor`; só
+   vocabulário gera questão no MVP (demais dimensões = feedback).
+3. **Extração:** Hunspell barra inexistentes (vira ortografia); spaCy lematiza; lema é a
+   chave de busca/dedup no banco global.
+4. **Atribuição:** `buscar_ou_gerar` reusa o banco compartilhado; gera lazy + permanente;
+   `palavra_gatilho` e `origem='pessoal_redacao'` habilitam o card pessoal.
+5. **Sinal de turma:** job periódico, limiar 30% configurável; dedup com a fonte pessoal
+   (pessoal vence); origem/prioridade menor.
+6. **QA:** 3 camadas (preventiva na geração + report + taxa de erro); auto-ocultar em 2;
+   anti-abuso computado. Camada de taxa de erro depende da telemetria (mesma janela).
+7. **Assíncrono:** tudo na fila `procrastinate`, idempotente, dirigido por
+   `redacao.status`.
+
+### Questões em aberto do Bloco 2b
+
+- **Pré-processamento antes da LLM** (LanguageTool): avaliar se vale, com redações reais
+  (4.8). Decisão por qualidade/custo, não por prazo.
+- **Modelo de LLM** de análise/geração: adiado para o 1º cliente (seção 10) — não
+  bloqueia o design.
+- **Período do sinal de turma**: "período letivo atual" precisa de uma definição
+  operacional (bimestre? ano? janela móvel?) ao implementar `turma_config`.
+- **Granularidade do reprocesso** quando o professor muda `preset_rigor` depois de
+  redações já analisadas (reanalisar o histórico ou só dali pra frente?).
