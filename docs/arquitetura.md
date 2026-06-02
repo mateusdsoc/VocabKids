@@ -105,7 +105,7 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
 | `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date), `nivel_dificuldade_atual` (1–10), `sessoes_total` (int), `nivel_mudou_em_sessao` (int, nullable) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. `nivel_mudou_em_sessao` = cooldown da histerese da adaptação. | A |
-| `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 26 por aluno (passaporte, seção 3.10). Booleano (ganhou/não). | A |
+| `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 28 por aluno (passaporte: 20 cartões + 3 carimbos + 5 selos — seção 3.10 / `referencia_arte.md`). Booleano (ganhou/não). | A |
 
 > **XP de evento** (seção 3.9) é uma economia separada e **pós-MVP** — não modelado
 > aqui; entra junto de `evento_competicao`/`participacao` quando eventos entrarem.
