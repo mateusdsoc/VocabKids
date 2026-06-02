@@ -5,7 +5,7 @@
 > - **Bloco 1 — Modelo de dados** ✅
 > - **Bloco 2a — Pipelines do apresentável** (sessão + diagnóstico) ✅
 > - **Bloco 2b — Pipelines do completo** (redação→OCR→análise→geração→atribuição; QA; sinal de turma) ✅
-> - **Bloco 3 — Estrutura do app e serviços** ⏳
+> - **Bloco 3 — Estrutura do app e serviços** ✅
 >
 > Fonte da verdade de produto: `rascunho_product.md`. Decisões de stack: seção 12 de lá.
 > Racional de riscos: `analise_riscos.md`.
@@ -606,3 +606,196 @@ professor). Qualidade controlada por:
   operacional (bimestre? ano? janela móvel?) ao implementar `turma_config`.
 - **Granularidade do reprocesso** quando o professor muda `preset_rigor` depois de
   redações já analisadas (reanalisar o histórico ou só dali pra frente?).
+
+---
+
+## Bloco 3 — Estrutura do app e serviços
+
+Onde os Blocos 1 (dados), 2a e 2b (runtime) viram **componentes, serviços, API e app**.
+Este bloco é a ponte para o código: descreve a topologia, como o backend FastAPI se
+organiza, a superfície de API do apresentável e a estrutura do app Flutter. Continua
+**marcado por fase** (**A** = apresentável, Jun–Set; **C** = completo, Out–Jan) e fiel à
+stack já decidida (seção 12 do produto): Flutter, FastAPI, PostgreSQL/Neon, fila
+`procrastinate`, R2, Cloud Run, região São Paulo.
+
+### Topologia de componentes
+
+```
+┌──────────────┐        HTTPS / REST+JSON        ┌───────────────────────────┐
+│  App Flutter │ ───────────────────────────────▶│  API FastAPI (Cloud Run)  │
+│  (iOS/Android│◀─────────────────────────────── │  rotas → serviços → repo  │
+│   mobile, A) │   estado autoritativo do server │                           │
+└──────────────┘                                 └─────────┬─────────────────┘
+                                                           │ SQL (asyncpg)
+   ┌────────────── fatia C (completo) ───────────┐         ▼
+   │  Worker procrastinate (Cloud Run, C)        │   ┌───────────────┐
+   │  OCR · análise LLM · geração · sinal turma  │──▶│ PostgreSQL    │
+   │  enfileira/consome a mesma fila no Postgres │◀──│ (Neon)        │
+   └───────────────┬─────────────────────────────┘   │ + fila jobs   │
+                   │ OCR/LLM (provedores externos, C) └──────┬────────┘
+                   ▼                                         │ arquivos
+        Google Vision · LLM (em aberto)                      ▼
+                                                      Cloudflare R2 (redações, C)
+
+   Web React/Next (dashboards) — codebase SEPARADO, fatia C; fala a MESMA API.
+```
+
+Um único codebase de backend serve as duas fatias; a fila/worker e o R2 só entram em
+**C**. No **apresentável** o backend é essencialmente **síncrono** (não chama OCR/LLM em
+runtime — o banco base é pré-gerado e revisado, seção 3.5).
+
+### Princípio: cliente fino, servidor autoritativo
+
+O app **renderiza e captura**; toda a regra mora no servidor. Motivos:
+
+- **Anti-trapaça / integridade do XP e combo** (seção 3.7): o XP é calculado e persistido
+  no backend a cada resposta — o cliente nunca informa pontuação.
+- **Lógica adaptativa e de sessão** (Bloco 2a) lê estado cruzado (`aluno_questao` ×
+  `aluno_palavra` × `aluno_progresso`) que vive no banco; manter no servidor evita
+  divergência e duplicação da regra no Dart.
+- **Sem offline forte** (decisão de PK `BIGINT`, Bloco 1): não há sincronização offline
+  prevista; o app assume conectividade. Latência é mascarada com animações
+  não-bloqueantes (seção 3.7), não com autoridade no cliente.
+
+### Backend FastAPI — camadas e módulos
+
+Três camadas, dependência só para baixo:
+
+```
+rotas (API)      validação de entrada (Pydantic), auth/escopo, serialização
+   ▼
+serviços (domínio)  a lógica dos Blocos 2a/2b; sem SQL cru nem detalhe de HTTP
+   ▼
+repositórios (dados) acesso ao Postgres (asyncpg/SQLAlchemy core); 1 lugar por agregado
+```
+
+Organização **por domínio** (não por camada técnica), espelhando o Bloco 1:
+
+| Módulo | Cobre | Fase |
+|---|---|---|
+| `identidade` | `usuario`, `associacao`, `escola`, `turma`; entrada por `codigo_turma`; resolução papel/escopo | A |
+| `vocabulario` | `palavra`, `palavra_sinonimo`, `questao` (banco global, leitura no apresentável) | A |
+| `aprendizado` | `aluno_palavra`, `aluno_questao` — máquina de estados da palavra (Bloco 2a) | A |
+| `sessao` | `montar_sessao`, fila/intercalação, `responder`, resumo (Bloco 2a) | A |
+| `diagnostico` | escada grosso→fino + desconto de chute (Bloco 2a) | A |
+| `adaptacao` | sinal limpo + histerese; roda no fim da sessão (Bloco 2a) | A |
+| `progressao` | XP/combo, `aluno_progresso`, avanço de `trilha_no`, recompensas | A |
+| `trilha` | catálogo `pais/destino/trilha_no/colecionavel`; passaporte (`aluno_colecionavel`) | A |
+| `redacao` | atribuição/envio + orquestração do pipeline (Bloco 2b) | C (mock em A) |
+| `report` | `report_questao`, auto-ocultar, anti-abuso (Bloco 2b/QA) | C (mock em A) |
+| `telemetria` | `sessao`/`evento` (analytics agregada, seção 07) | C |
+
+> No apresentável, `redacao`/`report` existem como **rotas mockadas** (devolvem dados
+> fixos) — a tela é real, o backend não grava (decisão "schema único", Bloco 1).
+
+### Fronteira síncrono × assíncrono
+
+- **Síncrono (request/response):** tudo do apresentável — montar sessão, responder,
+  progresso, trilha, passaporte, diagnóstico. Operações curtas sobre o estado
+  operacional. É o caminho que existe em **A**.
+- **Assíncrono (`procrastinate` no Postgres):** o pipeline de redação do Bloco 2b
+  (OCR→análise→extração→atribuição) e o job periódico de **sinal de turma**. Roda num
+  **worker separado** (processo Cloud Run distinto da API, mesma imagem/codebase),
+  dirigido por `redacao.status`, com retry/backoff e idempotência. Entra em **C**.
+- Sem Redis: a fila é o próprio Postgres (seção 12). Cache adiado.
+
+### Superfície de API (apresentável)
+
+REST/JSON, **auth-agnóstica** (seção 3.11): no apresentável a sessão de acesso nasce do
+`codigo_turma`; o flow de auth real é plugado depois sem mexer nas rotas. Esboço dos
+recursos de **A** (não exaustivo; versão sob `/v1`):
+
+| Método | Rota | Faz | Serviço |
+|---|---|---|---|
+| `POST` | `/v1/acesso/turma` | entra por `codigo_turma` → sessão do aluno | identidade |
+| `GET` | `/v1/me` | perfil + `aluno_progresso` (XP, nó, palavras dominadas) | progressao |
+| `POST` | `/v1/onboarding/diagnostico` | roda/avança o diagnóstico → `nivel_dificuldade_atual` | diagnostico |
+| `POST` | `/v1/sessoes` | monta e abre uma sessão (fila de slots) | sessao |
+| `GET` | `/v1/sessoes/{id}/proximo` | próximo slot pendente (card ou questão) | sessao |
+| `POST` | `/v1/sessoes/{id}/respostas` | registra resposta → XP/combo, avanço de estado, intercalação | sessao+progressao |
+| `POST` | `/v1/sessoes/{id}/fim` | fecha sessão → resumo + roda adaptação | sessao+adaptacao |
+| `GET` | `/v1/trilha` | mapa: nó atual, destinos, "você está aqui" | trilha |
+| `GET` | `/v1/passaporte` | coleção (até 28), modos Conquista/Exploração | trilha |
+| `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
+| `GET` | `/v1/redacoes` · `/v1/dashboard` | telas mockadas/estáticas (A) | redacao |
+
+A montagem da sessão é **server-side**: o cliente recebe slots um a um (ou um lote) e
+**nunca** a resposta correta antecipada. "Próximo slot" reflete a fila com intercalação
+de erros (Bloco 2a).
+
+### App Flutter — organização e telas
+
+Organização **feature-first** (uma pasta por feature, espelhando os módulos), com camadas
+`ui / state / data(api client)`. Gerência de estado a definir (ver questões) — o app é
+fino, então o peso é baixo. Telas mapeadas ao produto (seção 3.7/3.10):
+
+| Tela | Papel | Fonte |
+|---|---|---|
+| **Home-hub** | hub ao abrir: status, "Continuar", atalhos | 3.7 |
+| **Sessão** | card de descoberta + questões; barra de progresso fina | 3.2/3.4 |
+| **Resumo de sessão** | XP ganho + progressão das palavras (sem % nem tempo) | 3.7 |
+| **Trilha (mapa)** | aterrissagem pós-sessão; "você está aqui" | 3.7 |
+| **Passaporte** | perfil + coleção; Conquista (animado) / Exploração (estático) | 3.10 / `referencia_arte.md` |
+| **Onboarding** | código de turma → boas-vindas → 2 demos → diagnóstico → 1ª palavra | 3.5 |
+| **Redação / Dashboard / Report** | **mockadas/estáticas** no apresentável | seção 08 |
+
+A animação (passaporte, confete de nó) segue `referencia_arte.md`; ferramenta em aberto
+(teste da peça-âncora) **não bloqueia** a estrutura — é camada de movimento sobre telas
+que já existem.
+
+### Identidade, escopo e isolamento na prática
+
+- **Resolução de permissão** (seção 3.11) é uma **dependency** da rota: a partir de
+  `usuario → associacao → (escola, papel)` resolve `(papel, escopo, capacidade)`. Não é
+  tabela (Bloco 1).
+- **Isolamento por escola** é imposto no **repositório**: toda query de dado de aluno
+  recebe o escopo de escola e filtra por ele (`usuario→associacao→escola`). Opcionalmente
+  reforçado por **RLS** do Postgres (Bloco 1). O banco global (`palavra/questao/...`) não
+  é escopado.
+- **Leaderboards** são agregações dentro do escopo permitido (Bloco 1) — endpoints de
+  leitura, sem entidade nova; pós-MVP para o XP de evento.
+
+### Configuração por fase e ambientes
+
+- **Fatia A vs C** por configuração, não por fork: `redacao`/`report` mockados e worker
+  desligado em A; em C ligam-se o worker, o R2 e os provedores externos. Mesmo schema
+  (decisão "schema único", Bloco 1).
+- **Deploy:** dois serviços Cloud Run da **mesma imagem** — `api` (web server) e `worker`
+  (procrastinate, só C). Banco no Neon; arquivos no R2; tudo em São Paulo.
+- **Config por ambiente** (interface-estável/provider-variável, seção 12): connection
+  string, buckets e chaves de provedor vêm de env; demo→produção é troca de plano, não
+  reescrita. `min-instances=1` para matar cold start ao apresentar.
+- **Conteúdo/seed (A):** trilha (`pais/destino/trilha_no`), 28 colecionáveis e o **banco
+  base** (500–800 palavras + questões pré-geradas e revisadas — seção 3.5/3.10) entram por
+  **migrations/seed**, não por runtime. A geração+revisão do banco base é um processo
+  **offline de conteúdo** (admin), distinto do pipeline lazy do Bloco 2b.
+
+### Decisões do Bloco 3
+
+1. **Cliente fino, servidor autoritativo:** XP/combo, regra de sessão e adaptação no
+   backend; o app renderiza e captura. Sem offline forte.
+2. **Backend em camadas (rotas→serviços→repositórios), modularizado por domínio** espelhando
+   o Bloco 1; um codebase para as duas fatias.
+3. **Síncrono no apresentável; assíncrono (worker `procrastinate`) só no completo** para o
+   pipeline de redação e o sinal de turma.
+4. **API REST/JSON sob `/v1`, auth-agnóstica** (entrada por `codigo_turma`); sessão
+   montada no servidor, sem vazar resposta correta.
+5. **App Flutter feature-first, mobile-only (A)**; telas mockadas para redação/dashboard/
+   report; animação como camada sobre telas prontas.
+6. **Isolamento por escola no repositório** (escopo em toda query de aluno), RLS opcional;
+   permissão resolvida como dependency, não tabela.
+7. **Fase por configuração** (worker/R2/provedores ligam em C), mesmo schema; banco
+   base/trilha/colecionáveis via seed.
+
+### Questões em aberto do Bloco 3
+
+- **Gerência de estado no Flutter** (Riverpod × Bloc × outro): decidir no início do app;
+  baixo risco por ser cliente fino.
+- **ORM × SQL** no backend (SQLAlchemy core/ORM × asyncpg + queries à mão): definir ao
+  abrir o repositório; o Bloco 1 é a verdade do schema de qualquer forma.
+- **Lote × slot-a-slot** na entrega da sessão (uma chamada com a fila inteira × `/proximo`
+  por slot): afeta latência percebida e o ponto de cálculo da intercalação.
+- **RLS agora ou depois:** ligar Row-Level Security desde já ou só escopo em código no
+  apresentável, deixando RLS para a janela de LGPD (Out–Jan).
+- **Versionamento/erro da API:** convenção de erros e evolução de `/v1` (formato de erro,
+  paginação) — detalhe de implementação, sem decisão de produto pendente.
