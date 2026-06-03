@@ -57,3 +57,13 @@ class RespostaOut(BaseModel):
     xp_total: int
     estado_palavra: str
     dominou: bool
+
+
+class ResumoOut(BaseModel):
+    xp_ganho: int            # XP ganho nesta sessão
+    xp_total: int
+    palavras_dominadas: int
+    nivel_anterior: int
+    nivel_atual: int         # pode ter mudado pela adaptação
+    nivel_mudou: bool
+    sessoes_total: int

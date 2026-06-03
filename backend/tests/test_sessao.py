@@ -1,6 +1,6 @@
 """Composição da sessão (montar_sessao, Bloco 2a)."""
 import pytest
-from sqlalchemy import insert
+from sqlalchemy import func, insert, select, update
 
 from app import schema
 from app.db import engine
@@ -27,8 +27,6 @@ async def _em_progresso(usuario_id, palavra_id, estado, nivel4=None):
 
 
 async def _resposta_correta(questao_id) -> str:
-    from sqlalchemy import select
-
     async with engine.begin() as conn:
         return (
             await conn.execute(
@@ -37,6 +35,46 @@ async def _resposta_correta(questao_id) -> str:
                 )
             )
         ).scalar_one()
+
+
+async def _definir_nivel(usuario_id, nivel):
+    async with engine.begin() as conn:
+        await conn.execute(
+            update(schema.aluno_progresso)
+            .where(schema.aluno_progresso.c.usuario_id == usuario_id)
+            .values(nivel_dificuldade_atual=nivel)
+        )
+
+
+async def _semear_respostas_no_nivel(usuario_id, nivel, acertos, total):
+    """Insere `total` respostas de questões de palavras nesse nível; `acertos`
+    delas como acerto de 1ª tentativa — alimenta o sinal da adaptação."""
+    async with engine.begin() as conn:
+        ids = (
+            await conn.execute(
+                select(schema.questao.c.id)
+                .select_from(
+                    schema.questao.join(
+                        schema.palavra,
+                        schema.palavra.c.id == schema.questao.c.palavra_id,
+                    )
+                )
+                .where(schema.palavra.c.nivel_dificuldade == nivel)
+                .limit(total)
+            )
+        ).scalars().all()
+        for i, qid in enumerate(ids):
+            ok = i < acertos
+            await conn.execute(
+                insert(schema.aluno_questao).values(
+                    usuario_id=usuario_id,
+                    questao_id=qid,
+                    tentativas=1,
+                    acertou=ok,
+                    acertou_primeira=ok,
+                    respondida_em=func.now(),
+                )
+            )
 
 
 def _primeira_questao(slots, nivel):
@@ -271,3 +309,82 @@ async def test_passar_o_n4_domina_a_palavra(client, aluno):
     assert b["dominou"] is True
     assert b["estado_palavra"] == "dominada"
     assert b["xp_ganho"] >= 600  # 100 + combo + 500 de domínio
+
+
+# ───────────────────────────────── fim ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_fim_requer_auth(client):
+    r = await client.post("/v1/sessoes/1/fim")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_fim_resume_e_encerra(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    await client.post(
+        f"/v1/sessoes/{sid}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+
+    r = await client.post(f"/v1/sessoes/{sid}/fim", headers=h)
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["xp_ganho"] == 120          # XP atribuído à sessão
+    assert b["sessoes_total"] == 1
+    assert b["nivel_mudou"] is False     # sem janela de sinal ainda
+
+    # encerrar de novo → 409
+    de_novo = await client.post(f"/v1/sessoes/{sid}/fim", headers=h)
+    assert de_novo.status_code == 409
+    assert de_novo.json()["error"]["code"] == "sessao_encerrada"
+
+
+@pytest.mark.asyncio
+async def test_adaptacao_sobe_nivel_com_acuracia_alta(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 2)
+    await _semear_respostas_no_nivel(aluno["usuario_id"], nivel=2, acertos=10, total=10)
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_anterior"] == 2
+    assert b["nivel_atual"] == 3
+    assert b["nivel_mudou"] is True
+
+
+@pytest.mark.asyncio
+async def test_adaptacao_desce_nivel_com_acuracia_baixa(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 2)
+    await _semear_respostas_no_nivel(aluno["usuario_id"], nivel=2, acertos=0, total=10)
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_atual"] == 1
+    assert b["nivel_mudou"] is True
+
+
+@pytest.mark.asyncio
+async def test_adaptacao_nao_move_com_janela_incompleta(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 2)
+    await _semear_respostas_no_nivel(aluno["usuario_id"], nivel=2, acertos=5, total=5)
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_mudou"] is False
+    assert b["nivel_atual"] == 2  # histerese: janela < 10 não move

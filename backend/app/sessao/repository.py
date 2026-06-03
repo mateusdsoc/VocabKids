@@ -165,9 +165,19 @@ async def buscar_sessao(conn: AsyncConnection, sessao_id: int) -> Row | None:
     s = schema.sessao
     return (
         await conn.execute(
-            select(s.c.usuario_id, s.c.finalizada_em).where(s.c.id == sessao_id)
+            select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho).where(
+                s.c.id == sessao_id
+            )
         )
     ).first()
+
+
+async def somar_xp_sessao(conn: AsyncConnection, sessao_id: int, xp: int) -> None:
+    """Atribui XP à sessão aberta (fonte do `xp_ganho` no resumo do fim)."""
+    s = schema.sessao
+    await conn.execute(
+        update(s).where(s.c.id == sessao_id).values(xp_ganho=s.c.xp_ganho + xp)
+    )
 
 
 async def buscar_questao(conn: AsyncConnection, questao_id: int) -> Row | None:
@@ -293,4 +303,74 @@ async def aplicar_pontuacao(
             combo_data=combo_data,
             palavras_dominadas=palavras_dominadas,
         )
+    )
+
+
+# ───────────────────────────────── fim ─────────────────────────────────
+
+
+async def ler_progresso_fim(conn: AsyncConnection, usuario_id: int) -> Row | None:
+    p = schema.aluno_progresso
+    return (
+        await conn.execute(
+            select(
+                p.c.nivel_dificuldade_atual,
+                p.c.nivel_mudou_em_sessao,
+                p.c.xp_total,
+                p.c.palavras_dominadas,
+            ).where(p.c.usuario_id == usuario_id)
+        )
+    ).first()
+
+
+async def incrementar_sessoes_total(conn: AsyncConnection, usuario_id: int) -> int:
+    p = schema.aluno_progresso
+    return (
+        await conn.execute(
+            update(p)
+            .where(p.c.usuario_id == usuario_id)
+            .values(sessoes_total=p.c.sessoes_total + 1)
+            .returning(p.c.sessoes_total)
+        )
+    ).scalar_one()
+
+
+async def finalizar_sessao(conn: AsyncConnection, sessao_id: int) -> None:
+    s = schema.sessao
+    await conn.execute(
+        update(s).where(s.c.id == sessao_id).values(finalizada_em=func.now())
+    )
+
+
+async def ler_acertos_primeira_no_nivel(
+    conn: AsyncConnection, usuario_id: int, nivel: int, janela: int
+) -> list[bool]:
+    """Janela móvel: `acertou_primeira` das últimas questões respondidas de
+    palavras no nível dado (mais recentes primeiro). Sinal da adaptação."""
+    aq, q, p = schema.aluno_questao, schema.questao, schema.palavra
+    juncao = aq.join(q, q.c.id == aq.c.questao_id).join(
+        p, p.c.id == q.c.palavra_id
+    )
+    stmt = (
+        select(aq.c.acertou_primeira)
+        .select_from(juncao)
+        .where(
+            aq.c.usuario_id == usuario_id,
+            p.c.nivel_dificuldade == nivel,
+            aq.c.respondida_em.isnot(None),
+        )
+        .order_by(aq.c.respondida_em.desc())
+        .limit(janela)
+    )
+    return list((await conn.execute(stmt)).scalars().all())
+
+
+async def atualizar_nivel(
+    conn: AsyncConnection, usuario_id: int, novo_nivel: int, sessao: int
+) -> None:
+    p = schema.aluno_progresso
+    await conn.execute(
+        update(p)
+        .where(p.c.usuario_id == usuario_id)
+        .values(nivel_dificuldade_atual=novo_nivel, nivel_mudou_em_sessao=sessao)
     )

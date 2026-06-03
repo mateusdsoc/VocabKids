@@ -16,6 +16,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.adaptacao import regras as adaptacao
 from app.errors import ApiError
 from app.progressao import xp as xp_regras
 from app.sessao import repository as repo
@@ -237,6 +238,8 @@ async def responder(
     await repo.registrar_aluno_questao(
         conn, usuario_id, questao_id, tentativa, correto, primeira
     )
+    if xp_ganho:
+        await repo.somar_xp_sessao(conn, sessao_id, xp_ganho)
     if novo_estado != estado:
         await repo.avancar_aluno_palavra(
             conn, usuario_id, questao.palavra_id, novo_estado, nivel4_agendado, dominou
@@ -254,4 +257,54 @@ async def responder(
         "xp_total": xp_total,
         "estado_palavra": novo_estado,
         "dominou": dominou,
+    }
+
+
+async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> dict:
+    """Fecha a sessão: resumo + incrementa sessoes_total + roda a adaptação.
+
+    A adaptação lê o sinal limpo (acurácia de 1ª tentativa no nível atual, janela
+    móvel) e move o nível em ±1 com histerese e cooldown (Bloco 2a).
+    """
+    sessao = await repo.buscar_sessao(conn, sessao_id)
+    if sessao is None:
+        raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
+    if sessao.usuario_id != usuario_id:
+        raise ApiError(403, "sem_permissao", "Sessão de outro usuário.")
+    if sessao.finalizada_em is not None:
+        raise ApiError(409, "sessao_encerrada", "Sessão já encerrada.")
+
+    progresso = await repo.ler_progresso_fim(conn, usuario_id)
+    nivel_anterior = progresso.nivel_dificuldade_atual
+
+    sessoes_total = await repo.incrementar_sessoes_total(conn, usuario_id)
+    await repo.finalizar_sessao(conn, sessao_id)
+
+    # Adaptação contínua.
+    janela = await repo.ler_acertos_primeira_no_nivel(
+        conn, usuario_id, nivel_anterior, adaptacao.JANELA
+    )
+    amostra = len(janela)
+    acuracia = (sum(1 for ok in janela if ok) / amostra) if amostra else None
+    pode_mover = (
+        progresso.nivel_mudou_em_sessao is None
+        or (sessoes_total - progresso.nivel_mudou_em_sessao) > adaptacao.COOLDOWN_SESSOES
+    )
+    novo_nivel, mudou = adaptacao.decidir(
+        acuracia=acuracia,
+        amostra=amostra,
+        nivel_atual=nivel_anterior,
+        pode_mover=pode_mover,
+    )
+    if mudou:
+        await repo.atualizar_nivel(conn, usuario_id, novo_nivel, sessoes_total)
+
+    return {
+        "xp_ganho": sessao.xp_ganho,
+        "xp_total": progresso.xp_total,
+        "palavras_dominadas": progresso.palavras_dominadas,
+        "nivel_anterior": nivel_anterior,
+        "nivel_atual": novo_nivel,
+        "nivel_mudou": mudou,
+        "sessoes_total": sessoes_total,
     }

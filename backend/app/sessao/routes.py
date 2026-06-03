@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.api.deps import get_conn
 from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
 from app.sessao import service
-from app.sessao.schemas import RespostaIn, RespostaOut, SessaoOut
+from app.sessao.schemas import RespostaIn, RespostaOut, ResumoOut, SessaoOut
 
 router = APIRouter(tags=["sessao"])
 
@@ -39,3 +39,16 @@ async def responder(
     return await service.responder(
         conn, usuario.id, sessao_id, body.questao_id, body.opcao
     )
+
+
+@router.post(
+    "/sessoes/{sessao_id}/fim",
+    response_model=ResumoOut,
+    summary="Fecha a sessão: resumo + adaptação contínua de nível",
+)
+async def finalizar(
+    sessao_id: int,
+    usuario: Annotated[UsuarioAutenticado, Depends(get_usuario_atual)],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    return await service.finalizar(conn, usuario.id, sessao_id)
