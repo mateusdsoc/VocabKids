@@ -9,6 +9,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
+from app.trilha.schemas import RecompensaOut
+
 
 class CardPalavra(BaseModel):
     id: int
@@ -57,6 +59,7 @@ class RespostaOut(BaseModel):
     xp_total: int
     estado_palavra: str
     dominou: bool
+    recompensas: list[RecompensaOut] = []  # cartão/carimbo/selo ganhos nesta resposta
 
 
 class ResumoOut(BaseModel):
