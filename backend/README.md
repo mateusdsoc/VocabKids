@@ -17,6 +17,7 @@ backend/
     schema.py        # Bloco 1 — 25 tabelas (SQLAlchemy Core), fonte única do schema
     errors.py        # convenção de erro única (Bloco 3, decisão #5)
     seed.py          # seed mínimo da fatia A (escola + turma); `python -m app.seed`
+    seed_vocabulario.py  # seed do banco base (palavras + sinônimos + questões)
     main.py          # app FastAPI: /health + handlers de erro + router /v1
     api/
       deps.py        # dependências compartilhadas (conexão transacional por request)
@@ -27,6 +28,9 @@ backend/
       repository.py  # SQLAlchemy Core (1 lugar para o SQL do agregado)
       schemas.py     # contratos de entrada/saída (Pydantic)
       auth.py        # token PROVISÓRIO da fatia A (auth real é plugada depois)
+    vocabulario/     # domínio: leitura do banco global (card de descoberta)
+      routes.py      # GET /v1/palavras (cursor), GET /v1/palavras/{id}
+      service.py · repository.py · schemas.py
   tests/             # pytest + httpx (ASGI), contra um Postgres de teste
   alembic/           # migrations (env.py aponta para app.schema:metadata)
   alembic.ini
@@ -55,6 +59,7 @@ cp .env.example .env            # ajuste a DATABASE_URL se necessário
 
 alembic upgrade head            # cria as tabelas do Bloco 1
 python -m app.seed              # cria a turma de demo (código DEMO7A) — idempotente
+python -m app.seed_vocabulario  # popula o banco base (8 palavras, 64 questões) — idempotente
 uvicorn app.main:app --reload   # sobe a API
 curl localhost:8000/health      # -> {"status":"ok"}
 ```
@@ -70,7 +75,15 @@ curl -s -X POST localhost:8000/v1/acesso/turma \
 
 # perfil + progresso do aluno autenticado
 curl -s localhost:8000/v1/me -H 'Authorization: Bearer prov_1'
+
+# banco de vocabulário (atrás da sessão; paginação por cursor)
+curl -s 'localhost:8000/v1/palavras?limit=3' -H 'Authorization: Bearer prov_1'
+curl -s localhost:8000/v1/palavras/4 -H 'Authorization: Bearer prov_1'   # card de "relevante"
 ```
+
+> O `/v1/palavras` devolve só o conteúdo do **card** (palavra, definição, exemplo,
+> sinônimos). As **questões e respostas não saem por aqui** — serão servidas pela
+> sessão, server-side, sem vazar a resposta correta (Bloco 3, cliente fino).
 
 Erros saem no formato único (Bloco 3, decisão #5):
 `{ "error": { "code": <snake_case>, "message": <legível>, "details": {} } }`.

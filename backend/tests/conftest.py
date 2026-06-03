@@ -50,3 +50,15 @@ async def client():
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def auth_headers(client):
+    """Semeia a turma de demo, entra como aluno e devolve o header de sessão."""
+    from app.seed import seed
+
+    s = await seed()
+    r = await client.post(
+        "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
+    )
+    return {"Authorization": f"Bearer {r.json()['token']}"}
