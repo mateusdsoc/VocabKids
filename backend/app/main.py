@@ -6,9 +6,13 @@ domínio (identidade, sessão, trilha…) entram aqui à medida que forem implem
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app.api.v1 import api_router
 from app.db import engine
+from app.errors import register_error_handlers
 
 app = FastAPI(title="VocabBR Kids API", version="0.1.0")
+register_error_handlers(app)
+app.include_router(api_router)
 
 
 @app.get("/health")
