@@ -12,11 +12,24 @@ variação já acertada e nunca usando o N1 como revisão (3.4).
 import math
 import random
 from collections import defaultdict
+from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.errors import ApiError
+from app.progressao import xp as xp_regras
 from app.sessao import repository as repo
+
+# Nível em que o aluno está "trabalhando" por estado (descoberta colapsa no N1:
+# acertar o N1 já leva a nivel_2, sem evento separado de "card visto").
+_NIVEL_DE_TRABALHO = {
+    "descoberta": 1,
+    "nivel_1": 1,
+    "nivel_2": 2,
+    "nivel_3": 3,
+    "nivel_4": 4,
+}
+_PROXIMO_ESTADO = {1: "nivel_2", 2: "nivel_3", 3: "nivel_4", 4: "dominada"}
 
 NOVAS_BASE = 2          # palavras novas no caminho feliz
 REVISAO_ALVO = 4        # slots de revisão almejados
@@ -147,3 +160,98 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
     await repo.introduzir_palavras(conn, usuario_id, novas_ids)
 
     return {"sessao_id": sessao_id, "slots": slots}
+
+
+async def responder(
+    conn: AsyncConnection,
+    usuario_id: int,
+    sessao_id: int,
+    questao_id: int,
+    opcao: str,
+) -> dict:
+    """Corrige uma resposta no servidor: XP/combo, avanço de estado, domínio.
+
+    A correção é server-side (integridade do XP, cliente fino). A intercalação de
+    erro é reordenada no cliente (decisão #3) — aqui só registramos e devolvemos o
+    feedback, incluindo a resposta correta (revelada só APÓS responder).
+    """
+    sessao = await repo.buscar_sessao(conn, sessao_id)
+    if sessao is None:
+        raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
+    if sessao.usuario_id != usuario_id:
+        raise ApiError(403, "sem_permissao", "Sessão de outro usuário.")
+    if sessao.finalizada_em is not None:
+        raise ApiError(409, "sessao_encerrada", "Sessão já encerrada.")
+
+    questao = await repo.buscar_questao(conn, questao_id)
+    if questao is None:
+        raise ApiError(404, "questao_nao_encontrada", "Questão não encontrada.")
+    if questao.status != "ativa":
+        raise ApiError(409, "questao_indisponivel", "Questão indisponível.")
+    if opcao not in questao.opcoes:
+        raise ApiError(400, "opcao_invalida", "Opção não pertence à questão.")
+
+    aluno_palavra = await repo.ler_aluno_palavra(conn, usuario_id, questao.palavra_id)
+    if aluno_palavra is None:
+        raise ApiError(409, "palavra_nao_atribuida", "Palavra não atribuída ao aluno.")
+
+    anterior = await repo.ler_aluno_questao(conn, usuario_id, questao_id)
+    if anterior is not None and anterior.acertou:
+        # Nunca se repergunta uma variação já acertada (3.4).
+        raise ApiError(409, "questao_ja_respondida", "Questão já acertada.")
+
+    tentativa = (anterior.tentativas if anterior else 0) + 1
+    correto = opcao == questao.resposta_correta
+    primeira = correto and tentativa == 1
+
+    progresso = await repo.ler_pontuacao(conn, usuario_id)
+    pontos = xp_regras.pontuar(
+        correto=correto,
+        tentativa=tentativa,
+        combo_atual=progresso.combo_atual,
+        combo_data=progresso.combo_data,
+        hoje=date.today(),
+    )
+
+    # Avanço de estado: só no acerto e só quando a questão é do nível em trabalho.
+    estado = aluno_palavra.estado
+    novo_estado = estado
+    nivel4_agendado = aluno_palavra.nivel4_agendado_para
+    dominou = False
+    xp_dominio = 0
+    nivel_trabalho = _NIVEL_DE_TRABALHO.get(estado)
+    if correto and nivel_trabalho is not None and questao.nivel == nivel_trabalho:
+        novo_estado = _PROXIMO_ESTADO[nivel_trabalho]
+        if nivel_trabalho == 3:
+            # N4 adiado ~2 sessões (vence numa sessão futura).
+            nivel4_agendado = progresso.sessoes_total + 2
+        elif nivel_trabalho == 4:
+            dominou = True
+            xp_dominio = xp_regras.BONUS_DOMINIO
+
+    xp_ganho = pontos.xp + xp_dominio
+    xp_total = progresso.xp_total + xp_ganho
+    palavras_dominadas = progresso.palavras_dominadas + (1 if dominou else 0)
+
+    # Persistência.
+    await repo.registrar_aluno_questao(
+        conn, usuario_id, questao_id, tentativa, correto, primeira
+    )
+    if novo_estado != estado:
+        await repo.avancar_aluno_palavra(
+            conn, usuario_id, questao.palavra_id, novo_estado, nivel4_agendado, dominou
+        )
+    await repo.aplicar_pontuacao(
+        conn, usuario_id, xp_total, pontos.combo, pontos.combo_data, palavras_dominadas
+    )
+
+    return {
+        "correto": correto,
+        "resposta_correta": questao.resposta_correta,
+        "tentativas": tentativa,
+        "xp_ganho": xp_ganho,
+        "combo_atual": pontos.combo,
+        "xp_total": xp_total,
+        "estado_palavra": novo_estado,
+        "dominou": dominou,
+    }

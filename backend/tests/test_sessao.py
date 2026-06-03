@@ -26,6 +26,23 @@ async def _em_progresso(usuario_id, palavra_id, estado, nivel4=None):
         )
 
 
+async def _resposta_correta(questao_id) -> str:
+    from sqlalchemy import select
+
+    async with engine.begin() as conn:
+        return (
+            await conn.execute(
+                select(schema.questao.c.resposta_correta).where(
+                    schema.questao.c.id == questao_id
+                )
+            )
+        ).scalar_one()
+
+
+def _primeira_questao(slots, nivel):
+    return next(s for s in _questoes(slots) if s["nivel"] == nivel)
+
+
 def _cards(slots):
     return [s for s in slots if s["tipo"] == "card"]
 
@@ -110,3 +127,147 @@ async def test_n4_vencido_entra_na_revisao(client, aluno):
     slots = (await client.post("/v1/sessoes", headers=aluno["headers"])).json()["slots"]
     niveis = {s["nivel"] for s in _questoes(slots) if s["is_revisao"] and s["palavra_id"] == alvo}
     assert 4 in niveis  # o N4 vencido foi incluído
+
+
+# ─────────────────────────────── responder ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_responder_requer_auth(client):
+    r = await client.post("/v1/sessoes/1/respostas", json={"questao_id": 1, "opcao": "x"})
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_responder_sessao_inexistente(client, aluno):
+    await seed_vocabulario()
+    r = await client.post(
+        "/v1/sessoes/999/respostas",
+        headers=aluno["headers"],
+        json={"questao_id": 1, "opcao": "x"},
+    )
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "sessao_nao_encontrada"
+
+
+@pytest.mark.asyncio
+async def test_acerto_de_primeira_da_xp_e_avanca_estado(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+
+    r = await client.post(
+        f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["correto"] is True
+    assert b["xp_ganho"] == 120          # 100 + bônus de combo (18 + 2×1)
+    assert b["combo_atual"] == 1
+    assert b["xp_total"] == 120
+    assert b["estado_palavra"] == "nivel_2"  # descoberta → passou N1 → nivel_2
+    assert b["dominou"] is False
+
+
+@pytest.mark.asyncio
+async def test_erro_zera_combo_nao_avanca_e_xp_zero(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    errada = next(o for o in q1["opcoes"] if o != correta)
+
+    r = await client.post(
+        f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": errada},
+    )
+    b = r.json()
+    assert b["correto"] is False
+    assert b["xp_ganho"] == 0
+    assert b["combo_atual"] == 0
+    assert b["estado_palavra"] == "descoberta"  # não avançou
+    assert b["resposta_correta"] == correta     # feedback revela a correta
+
+
+@pytest.mark.asyncio
+async def test_acerto_na_segunda_tentativa_vale_70(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    errada = next(o for o in q1["opcoes"] if o != correta)
+
+    await client.post(
+        f"/v1/sessoes/{sid}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": errada},
+    )
+    r = await client.post(
+        f"/v1/sessoes/{sid}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+    b = r.json()
+    assert b["correto"] is True
+    assert b["tentativas"] == 2
+    assert b["xp_ganho"] == 70   # 2ª tentativa, sem combo
+    assert b["combo_atual"] == 0
+    assert b["estado_palavra"] == "nivel_2"  # passar o nível independe de tentativas
+
+
+@pytest.mark.asyncio
+async def test_nao_repergunta_variacao_ja_acertada(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+
+    primeira = await client.post(
+        f"/v1/sessoes/{sid}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+    assert primeira.status_code == 200
+    repetida = await client.post(
+        f"/v1/sessoes/{sid}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+    assert repetida.status_code == 409
+    assert repetida.json()["error"]["code"] == "questao_ja_respondida"
+
+
+@pytest.mark.asyncio
+async def test_passar_o_n4_domina_a_palavra(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    mapa = await _mapa_palavras(client, h)
+    alvo = mapa["belo"]
+    await _em_progresso(aluno["usuario_id"], alvo, estado="nivel_4", nivel4=0)
+
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    n4 = next(
+        s for s in _questoes(sessao["slots"])
+        if s["palavra_id"] == alvo and s["nivel"] == 4
+    )
+    correta = await _resposta_correta(n4["questao_id"])
+
+    r = await client.post(
+        f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": n4["questao_id"], "opcao": correta},
+    )
+    b = r.json()
+    assert b["dominou"] is True
+    assert b["estado_palavra"] == "dominada"
+    assert b["xp_ganho"] >= 600  # 100 + combo + 500 de domínio

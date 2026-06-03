@@ -41,3 +41,19 @@ Slot = Annotated[Union[CardSlot, QuestaoSlot], Field(discriminator="tipo")]
 class SessaoOut(BaseModel):
     sessao_id: int
     slots: list[Slot]
+
+
+class RespostaIn(BaseModel):
+    questao_id: int
+    opcao: str  # texto da opção escolhida (uma das `opcoes` entregues)
+
+
+class RespostaOut(BaseModel):
+    correto: bool
+    resposta_correta: str   # revelada só APÓS responder (feedback), nunca na fila
+    tentativas: int
+    xp_ganho: int
+    combo_atual: int
+    xp_total: int
+    estado_palavra: str
+    dominou: bool
