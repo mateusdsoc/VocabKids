@@ -5,6 +5,7 @@ domínio (identidade, sessão, trilha…) entram aqui à medida que forem implem
 """
 from fastapi import FastAPI
 from sqlalchemy import text
+from starlette.requests import Request
 
 from app.api.v1 import api_router
 from app.db import engine
@@ -15,9 +16,31 @@ register_error_handlers(app)
 app.include_router(api_router)
 
 
-@app.get("/health")
-async def health():
-    """Liveness + checagem de conexão com o banco."""
+@app.middleware("http")
+async def db_transacao(request: Request, call_next):
+    """Transação por request, commitada ANTES de a resposta sair.
+
+    Centraliza o ciclo de vida da conexão (lida pelos handlers via `get_conn`):
+    commit no sucesso (status < 400), rollback em erro. Evita a corrida do
+    teardown de dependência `yield`, que comita depois da resposta.
+    """
     async with engine.connect() as conn:
-        await conn.execute(text("SELECT 1"))
+        request.state.conn = conn
+        transacao = await conn.begin()
+        try:
+            response = await call_next(request)
+        except Exception:
+            await transacao.rollback()
+            raise
+        if response.status_code < 400:
+            await transacao.commit()
+        else:
+            await transacao.rollback()
+        return response
+
+
+@app.get("/health")
+async def health(request: Request):
+    """Liveness + checagem de conexão com o banco."""
+    await request.state.conn.execute(text("SELECT 1"))
     return {"status": "ok"}
