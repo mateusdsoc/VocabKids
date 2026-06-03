@@ -719,9 +719,10 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
 | `GET` | `/v1/redacoes` · `/v1/dashboard` | telas mockadas/estáticas (A) | redacao |
 
-A montagem da sessão é **server-side**: o cliente recebe slots um a um (ou um lote) e
-**nunca** a resposta correta antecipada. "Próximo slot" reflete a fila com intercalação
-de erros (Bloco 2a).
+A montagem da sessão é **server-side** e a entrega é **híbrida** (decisão #3 ao fim do
+bloco): o cliente recebe a **fila planejada em lote** (renderiza + *prefetch*), mas
+**nunca** a resposta correta antecipada; cada resposta é corrigida no servidor, e a
+**intercalação de erro** (Bloco 2a) é reordenada no cliente e reconciliada no servidor.
 
 ### App Flutter — organização e telas
 
@@ -787,15 +788,42 @@ que já existem.
 7. **Fase por configuração** (worker/R2/provedores ligam em C), mesmo schema; banco
    base/trilha/colecionáveis via seed.
 
-### Questões em aberto do Bloco 3
+### Decisões de implementação (resolvidas 03/06)
 
-- **Gerência de estado no Flutter** (Riverpod × Bloc × outro): decidir no início do app;
-  baixo risco por ser cliente fino.
-- **ORM × SQL** no backend (SQLAlchemy core/ORM × asyncpg + queries à mão): definir ao
-  abrir o repositório; o Bloco 1 é a verdade do schema de qualquer forma.
-- **Lote × slot-a-slot** na entrega da sessão (uma chamada com a fila inteira × `/proximo`
-  por slot): afeta latência percebida e o ponto de cálculo da intercalação.
-- **RLS agora ou depois:** ligar Row-Level Security desde já ou só escopo em código no
-  apresentável, deixando RLS para a janela de LGPD (Out–Jan).
-- **Versionamento/erro da API:** convenção de erros e evolução de `/v1` (formato de erro,
-  paginação) — detalhe de implementação, sem decisão de produto pendente.
+Eram as "questões em aberto" do Bloco 3 — fechadas. Todas **locais e reversíveis**: cada
+uma destrava a fatia de código a que pertence (ver tabela ao fim), nenhuma trava o
+scaffold nem as migrations do Bloco 1.
+
+1. **Estado no Flutter: Riverpod.** Padrão atual da comunidade, pouco boilerplate;
+   suficiente porque o app é cliente fino (quase todo estado vem do servidor). Estado
+   gerencia o *dado e seu fluxo*, não o layout das telas.
+2. **Acesso a dados: SQLAlchemy Core + Alembic**, com queries explícitas (sem ORM
+   pesado). Migrations versionadas; controle do SQL para as seleções não-triviais do
+   Bloco 2a (intercalação, janela de adaptação). O schema do Bloco 1 é a verdade.
+3. **Entrega da sessão: híbrida** (não slot-a-slot puro nem lote ingênuo). O servidor
+   manda a **fila planejada em lote** no início (app renderiza tudo + *prefetch* de
+   cards/imagens → snappy, no espírito do Duolingo); a **correção continua no servidor**
+   a cada resposta (integridade do XP, não vaza a resposta certa); a **intercalação de
+   erro**, por ser determinística, é **reordenada no cliente** e reconciliada no servidor
+   (ordem não é dado sensível; só pontuação é). Não afeta a stack — é forma de API + lógica
+   de app.
+4. **Isolamento: escopo em código agora, RLS adiado** para a janela de LGPD (Out–Jan).
+   O escopo por escola no repositório já isola; RLS é reforço defensivo, melhor decidido
+   com dados reais de criança.
+5. **Convenção de API/erro.** Corpo de erro padronizado
+   `{ "error": { "code": <snake_case>, "message": <legível>, "details": {} } }` — o app
+   ramifica pelo `code`. Status HTTP com semântica padrão (`400/401/403/404/409/422/429/500`;
+   `422` é o default do FastAPI, embrulhado no formato). **Paginação por cursor**
+   (`?cursor=&limit=` → `{items, next_cursor}`). **`/v1`** no path; sobe de versão só em
+   breaking change (adicionar campo é compatível).
+
+**Ordem em que cada decisão é exercida no código:**
+
+| Etapa | Decisão que precisa estar fechada |
+|---|---|
+| Setup + scaffold + **migrations do Bloco 1** | nenhuma |
+| Primeiro repositório / data layer | #2 |
+| Primeira rota | #5 |
+| Endpoint de sessão | #3 |
+| Primeira tela Flutter | #1 |
+| Endurecer isolamento | #4 (adiável p/ Out–Jan) |
