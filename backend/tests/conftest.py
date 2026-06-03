@@ -53,12 +53,21 @@ async def client():
 
 
 @pytest_asyncio.fixture
-async def auth_headers(client):
-    """Semeia a turma de demo, entra como aluno e devolve o header de sessão."""
+async def aluno(client):
+    """Semeia a turma de demo, entra como aluno e devolve headers + usuario_id."""
     from app.seed import seed
 
     s = await seed()
     r = await client.post(
         "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
     )
-    return {"Authorization": f"Bearer {r.json()['token']}"}
+    b = r.json()
+    return {
+        "headers": {"Authorization": f"Bearer {b['token']}"},
+        "usuario_id": b["usuario_id"],
+    }
+
+
+@pytest_asyncio.fixture
+async def auth_headers(aluno):
+    return aluno["headers"]
