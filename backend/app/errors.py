@@ -7,11 +7,15 @@ Todo erro sai no formato único:
 O app ramifica pelo `code`; o status HTTP segue a semântica padrão. O `422` do
 FastAPI (validação Pydantic) é capturado e reembrulhado no mesmo formato.
 """
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger("app")
 
 # status HTTP → code default (quando o erro não traz um code de domínio próprio).
 _CODE_POR_STATUS = {
@@ -73,4 +77,14 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=_corpo(code, str(exc.detail), {}),
+        )
+
+    @app.exception_handler(Exception)
+    async def _erro_interno(_: Request, exc: Exception):
+        # Mantém o envelope da decisão #5 também no 500, sem vazar o traceback
+        # ao cliente (fica no log). O middleware de transação já fez rollback.
+        logger.exception("erro não tratado")
+        return JSONResponse(
+            status_code=500,
+            content=_corpo("erro_interno", "Erro interno do servidor.", {}),
         )

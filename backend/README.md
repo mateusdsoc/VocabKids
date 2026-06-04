@@ -29,9 +29,14 @@ backend/
       repository.py  # SQLAlchemy Core (1 lugar para o SQL do agregado)
       schemas.py     # contratos de entrada/saída (Pydantic)
       auth.py        # token PROVISÓRIO da fatia A (auth real é plugada depois)
-    vocabulario/     # domínio: leitura do banco global (card de descoberta)
-      routes.py      # GET /v1/palavras (cursor), GET /v1/palavras/{id}
-      service.py · repository.py · schemas.py
+    vocabulario/     # leitura do banco global (card de descoberta)
+    sessao/          # montar_sessao, responder (XP/combo/estado), fim (adaptação)
+    diagnostico/     # escada grosso→fino → nivel_dificuldade_atual
+    progressao/      # regras puras de XP/combo (xp.py)
+    adaptacao/       # regra pura da adaptação de nível (regras.py)
+    trilha/          # mapa, passaporte e loop de recompensa (cartão/carimbo/selo)
+    report/          # POST /v1/questoes/{id}/report — MOCK na fatia A
+    redacao/         # GET /v1/redacoes, /v1/dashboard — MOCK estático na fatia A
   tests/             # pytest + httpx (ASGI), contra um Postgres de teste
   alembic/           # migrations (env.py aponta para app.schema:metadata)
   alembic.ini

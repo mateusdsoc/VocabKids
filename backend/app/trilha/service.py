@@ -103,6 +103,10 @@ async def processar_recompensas(
         if cruzados:
             ultimo_destino = await repo.max_destino_ordem_por_pais(conn)
             for no in cruzados:
+                # Invariante do seed: xp_limiar é monotônico na ordem
+                # país→destino→nó. Por isso "fecha país" = fechar o último nó do
+                # último destino (os anteriores já foram cruzados). Se o seed
+                # reordenar os limiares, esta lógica precisa ser revista.
                 fecha_destino = no.no_ordem == NOS_POR_DESTINO
                 if fecha_destino:
                     await _conceder_por_referencia(

@@ -210,6 +210,10 @@ aluno_questao = Table(
     Column("tentativas", Integer, nullable=False, server_default="0"),
     Column("acertou", Boolean, nullable=False, server_default="false"),
     Column("acertou_primeira", Boolean, nullable=False, server_default="false"),
+    # True quando a resposta foi de INTRODUÇÃO (questão no nível em que a palavra
+    # estava trabalhando), não revisão. É o "sinal limpo" da adaptação (Bloco 2a):
+    # revisão é fácil e inflaria a acurácia, então não conta.
+    Column("conta_sinal", Boolean, nullable=False, server_default="false"),
     Column("respondida_em", DateTime(timezone=True), nullable=True),
     _created_at(),
 )

@@ -244,6 +244,7 @@ async def registrar_aluno_questao(
     tentativas: int,
     acertou: bool,
     acertou_primeira: bool,
+    conta_sinal: bool,
 ) -> None:
     aq = schema.aluno_questao
     stmt = pg_insert(aq).values(
@@ -252,6 +253,7 @@ async def registrar_aluno_questao(
         tentativas=tentativas,
         acertou=acertou,
         acertou_primeira=acertou_primeira,
+        conta_sinal=conta_sinal,
         respondida_em=func.now(),
     )
     stmt = stmt.on_conflict_do_update(
@@ -260,6 +262,7 @@ async def registrar_aluno_questao(
             "tentativas": tentativas,
             "acertou": acertou,
             "acertou_primeira": acertou_primeira,
+            "conta_sinal": conta_sinal,
             "respondida_em": func.now(),
         },
     )
@@ -345,8 +348,9 @@ async def finalizar_sessao(conn: AsyncConnection, sessao_id: int) -> None:
 async def ler_acertos_primeira_no_nivel(
     conn: AsyncConnection, usuario_id: int, nivel: int, janela: int
 ) -> list[bool]:
-    """Janela móvel: `acertou_primeira` das últimas questões respondidas de
-    palavras no nível dado (mais recentes primeiro). Sinal da adaptação."""
+    """Janela móvel do sinal limpo: `acertou_primeira` das últimas respostas de
+    INTRODUÇÃO (`conta_sinal`) de palavras no nível dado — revisão fica de fora
+    para não inflar a acurácia (Bloco 2a)."""
     aq, q, p = schema.aluno_questao, schema.questao, schema.palavra
     juncao = aq.join(q, q.c.id == aq.c.questao_id).join(
         p, p.c.id == q.c.palavra_id
@@ -356,6 +360,7 @@ async def ler_acertos_primeira_no_nivel(
         .select_from(juncao)
         .where(
             aq.c.usuario_id == usuario_id,
+            aq.c.conta_sinal.is_(True),
             p.c.nivel_dificuldade == nivel,
             aq.c.respondida_em.isnot(None),
         )
