@@ -46,9 +46,10 @@ async def _definir_nivel(usuario_id, nivel):
         )
 
 
-async def _semear_respostas_no_nivel(usuario_id, nivel, acertos, total):
+async def _semear_respostas_no_nivel(usuario_id, nivel, acertos, total, conta_sinal=True):
     """Insere `total` respostas de questões de palavras nesse nível; `acertos`
-    delas como acerto de 1ª tentativa — alimenta o sinal da adaptação."""
+    delas como acerto de 1ª tentativa. `conta_sinal` marca se contam para a
+    adaptação (introdução) ou não (revisão)."""
     async with engine.begin() as conn:
         ids = (
             await conn.execute(
@@ -72,6 +73,7 @@ async def _semear_respostas_no_nivel(usuario_id, nivel, acertos, total):
                     tentativas=1,
                     acertou=ok,
                     acertou_primeira=ok,
+                    conta_sinal=conta_sinal,
                     respondida_em=func.now(),
                 )
             )
@@ -388,3 +390,21 @@ async def test_adaptacao_nao_move_com_janela_incompleta(client, aluno):
     b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
     assert b["nivel_mudou"] is False
     assert b["nivel_atual"] == 2  # histerese: janela < 10 não move
+
+
+@pytest.mark.asyncio
+async def test_adaptacao_ignora_revisao_no_sinal(client, aluno):
+    """Sinal limpo: respostas de revisão (conta_sinal=False) não contam — mesmo
+    com 10 acertos de revisão, o nível não sobe."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 2)
+    await _semear_respostas_no_nivel(
+        aluno["usuario_id"], nivel=2, acertos=10, total=10, conta_sinal=False
+    )
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_mudou"] is False
+    assert b["nivel_atual"] == 2  # revisão não infla o sinal

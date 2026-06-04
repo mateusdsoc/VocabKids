@@ -222,6 +222,9 @@ async def responder(
     dominou = False
     xp_dominio = 0
     nivel_trabalho = _NIVEL_DE_TRABALHO.get(estado)
+    # Resposta de introdução (questão no nível em trabalho) = sinal limpo da
+    # adaptação; revisão (nível já passado) não conta (Bloco 2a).
+    conta_sinal = nivel_trabalho is not None and questao.nivel == nivel_trabalho
     if correto and nivel_trabalho is not None and questao.nivel == nivel_trabalho:
         novo_estado = _PROXIMO_ESTADO[nivel_trabalho]
         if nivel_trabalho == 3:
@@ -237,7 +240,7 @@ async def responder(
 
     # Persistência.
     await repo.registrar_aluno_questao(
-        conn, usuario_id, questao_id, tentativa, correto, primeira
+        conn, usuario_id, questao_id, tentativa, correto, primeira, conta_sinal
     )
     if xp_ganho:
         await repo.somar_xp_sessao(conn, sessao_id, xp_ganho)

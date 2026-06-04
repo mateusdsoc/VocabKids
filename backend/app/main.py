@@ -25,6 +25,8 @@ async def db_transacao(request: Request, call_next):
     teardown de dependência `yield`, que comita depois da resposta.
     """
     async with engine.connect() as conn:
+        # request.state é lastreado no `scope` (Starlette), então a conexão é
+        # visível ao handler via get_conn mesmo cruzando o BaseHTTPMiddleware.
         request.state.conn = conn
         transacao = await conn.begin()
         try:
