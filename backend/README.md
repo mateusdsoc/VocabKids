@@ -18,6 +18,7 @@ backend/
     errors.py        # convenção de erro única (Bloco 3, decisão #5)
     seed.py          # seed mínimo da fatia A (escola + turma); `python -m app.seed`
     seed_vocabulario.py  # seed do banco base (palavras + sinônimos + questões)
+    seed_trilha.py   # seed da trilha (países/destinos/nós) + 28 colecionáveis
     main.py          # app FastAPI: /health + handlers de erro + router /v1
     api/
       deps.py        # dependências compartilhadas (conexão transacional por request)
@@ -60,6 +61,7 @@ cp .env.example .env            # ajuste a DATABASE_URL se necessário
 alembic upgrade head            # cria as tabelas do Bloco 1
 python -m app.seed              # cria a turma de demo (código DEMO7A) — idempotente
 python -m app.seed_vocabulario  # popula o banco base (8 palavras, 64 questões) — idempotente
+python -m app.seed_trilha       # popula a trilha (3 países, 20 destinos, 80 nós, 28 itens)
 uvicorn app.main:app --reload   # sobe a API
 curl localhost:8000/health      # -> {"status":"ok"}
 ```

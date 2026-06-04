@@ -20,6 +20,7 @@ from app.adaptacao import regras as adaptacao
 from app.errors import ApiError
 from app.progressao import xp as xp_regras
 from app.sessao import repository as repo
+from app.trilha import service as trilha
 
 # Nível em que o aluno está "trabalhando" por estado (descoberta colapsa no N1:
 # acertar o N1 já leva a nivel_2, sem evento separado de "card visto").
@@ -248,6 +249,12 @@ async def responder(
         conn, usuario_id, xp_total, pontos.combo, pontos.combo_data, palavras_dominadas
     )
 
+    # Trilha: avança o nó e concede recompensas (cartão/carimbo/selo) — o pedaço
+    # que ficou adiado quando a trilha ainda não existia.
+    recompensas = await trilha.processar_recompensas(
+        conn, usuario_id, progresso.xp_total, xp_total, pontos.combo, palavras_dominadas
+    )
+
     return {
         "correto": correto,
         "resposta_correta": questao.resposta_correta,
@@ -257,6 +264,7 @@ async def responder(
         "xp_total": xp_total,
         "estado_palavra": novo_estado,
         "dominou": dominou,
+        "recompensas": recompensas,
     }
 
 

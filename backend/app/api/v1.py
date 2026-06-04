@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.diagnostico.routes import router as diagnostico_router
 from app.identidade.routes import router as identidade_router
 from app.sessao.routes import router as sessao_router
+from app.trilha.routes import router as trilha_router
 from app.vocabulario.routes import router as vocabulario_router
 
 api_router = APIRouter(prefix="/v1")
@@ -14,3 +15,4 @@ api_router.include_router(identidade_router)
 api_router.include_router(vocabulario_router)
 api_router.include_router(sessao_router)
 api_router.include_router(diagnostico_router)
+api_router.include_router(trilha_router)
