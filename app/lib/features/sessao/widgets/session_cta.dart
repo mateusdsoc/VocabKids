@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -46,7 +47,12 @@ class SessionCta extends StatelessWidget {
       color: c.primary,
       borderRadius: radius,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
         borderRadius: radius,
         child: Container(
           width: double.infinity,

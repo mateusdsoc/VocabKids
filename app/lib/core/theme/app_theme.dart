@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../platform/adaptive.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
@@ -31,7 +32,8 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: c.bg,
       canvasColor: c.bg,
-      splashFactory: InkSparkle.splashFactory,
+      // Sem onda de ripple no iOS — toque "à iOS" sem perder o realce.
+      splashFactory: adaptiveSplashFactory,
       textTheme: AppType.textTheme(c.ink),
       extensions: [c],
     );

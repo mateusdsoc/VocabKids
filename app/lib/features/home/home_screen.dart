@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/platform/adaptive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_typography.dart';
@@ -150,8 +151,11 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Adaptativo: spinner Cupertino no iOS, Material no Android.
     return Center(
-      child: CircularProgressIndicator(color: context.colors.primary),
+      child: CircularProgressIndicator.adaptive(
+        valueColor: AlwaysStoppedAnimation(context.colors.primary),
+      ),
     );
   }
 }
@@ -201,7 +205,7 @@ class _ErrorView extends StatelessWidget {
 
 void _abrirSessao(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => const SessionScreen()),
+    adaptivePageRoute(builder: (_) => const SessionScreen()),
   );
 }
 

@@ -66,6 +66,27 @@ A Sessão hoje roda com `sampleSession` (dados de exemplo). Wiring real:
 
 ---
 
+## 📱 Sensação de plataforma (camada adaptativa)
+
+Decisão: **manter o design system da marca** (neutro) e adaptar só os "tells" de
+plataforma — **não** migrar para Cupertino puro. Centralizado em
+`core/platform/adaptive.dart`.
+
+- [x] **Toque sem ripple no iOS** — `adaptiveSplashFactory` no tema (`AppTheme`):
+      ripple no Android, realce/fade no iOS. Vale para toda a árvore de uma vez.
+- [x] **Transição com swipe-back no iOS** — `adaptivePageRoute` (Cupertino no
+      iOS/macOS, Material no resto). Usado ao abrir a Sessão.
+- [x] **Spinner adaptativo** — `CircularProgressIndicator.adaptive` na Home.
+- [x] **Haptics** — `selectionClick` (seleção de alternativa, navegação) e
+      `lightImpact` (CTAs da Sessão).
+- [ ] **Pull-to-refresh** ainda é o `RefreshIndicator` Material. iOS nativo
+      (`CupertinoSliverRefreshControl`) exige migrar a Home para slivers — adiado.
+- [ ] **Press estilo iOS exato** (fade de opacidade no controle inteiro, à la
+      `CupertinoButton`): hoje usamos realce do InkWell. Se quiser idêntico,
+      criar um `Pressable` custom — opcional.
+
+---
+
 ## 🎨 Decisões de design fixadas
 - Paleta **travada**: claro `#1E7FD6`/areia, escuro navy `#172A44`/dourado
   champanhe. Erro sempre **âmbar**, nunca vermelho.

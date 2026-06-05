@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -55,7 +56,12 @@ class OptionTile extends StatelessWidget {
       color: bg,
       borderRadius: radius,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!();
+              },
         borderRadius: radius,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
