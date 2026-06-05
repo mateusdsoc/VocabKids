@@ -7,6 +7,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_icons.dart';
+import '../sessao/session_screen.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
 import 'widgets/continue_card.dart';
@@ -79,7 +80,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: AppBottomNav(
                     destinations: _destinations,
                     currentIndex: _navIndex,
-                    onSelect: (i) => setState(() => _navIndex = i),
+                    onSelect: (i) {
+                      // "Praticar" abre a Sessão; as demais abas são visuais
+                      // por enquanto.
+                      if (i == 2) {
+                        _abrirSessao(context);
+                      } else {
+                        setState(() => _navIndex = i);
+                      }
+                    },
                   ),
                 ),
               ),
@@ -118,7 +127,7 @@ class _Content extends StatelessWidget {
           const SizedBox(height: AppGaps.section),
           ContinueCard(
             lesson: data.lesson,
-            onTap: () => _emBreve(context, 'Sessão'),
+            onTap: () => _abrirSessao(context),
           ),
           const SizedBox(height: AppGaps.section),
           TrilhaRibbon(
@@ -188,6 +197,12 @@ class _ErrorView extends StatelessWidget {
       ),
     );
   }
+}
+
+void _abrirSessao(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => const SessionScreen()),
+  );
 }
 
 void _emBreve(BuildContext context, String label) {

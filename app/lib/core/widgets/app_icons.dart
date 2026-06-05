@@ -19,4 +19,14 @@ abstract final class AppIcons {
   static const meta = Icons.adjust; // alvo concêntrico = meta
   static const perfil = Icons.person_outline_rounded;
   static const praticar = Icons.play_circle_outline_rounded;
+
+  // --- Sessão ---
+  static const close = Icons.close_rounded;
+  static const report = Icons.outlined_flag_rounded;
+  static const speaker = Icons.volume_up_rounded;
+  static const combo = Icons.auto_awesome; // faísca do combo
+  static const quote = Icons.format_quote_rounded;
+  static const novaPalavra = Icons.auto_stories_rounded;
+  static const retry = Icons.refresh_rounded;
+  static const arrow = Icons.arrow_forward_rounded;
 }

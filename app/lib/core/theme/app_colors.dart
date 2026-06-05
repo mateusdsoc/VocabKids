@@ -24,6 +24,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.muted,
     required this.goal,
     required this.onGoal,
+    required this.warn,
+    required this.accentInk,
     required this.track,
     required this.line,
     required this.ring,
@@ -64,6 +66,13 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Conteúdo sobre [goal] (chip/ícone da meta).
   final Color onGoal;
 
+  /// Atenção/erro **gentil** (âmbar terroso) — decisão de produto: o erro
+  /// nunca é vermelho punitivo. Usado no feedback de resposta incorreta.
+  final Color warn;
+
+  /// Texto escuro sobre superfícies douradas (ex.: chip de combo).
+  final Color accentInk;
+
   /// Trilho vazio de barras de progresso.
   final Color track;
 
@@ -92,6 +101,8 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFF9C8C7D),
     goal: Color(0xFF16A971),
     onGoal: Color(0xFFFFFFFF),
+    warn: Color(0xFFC9821C), // âmbar terroso (erro gentil)
+    accentInk: Color(0xFF6B4E0C),
     track: Color(0x29785A32), // rgba(120,90,50,.16)
     line: Color(0x29785A32),
     ring: Color(0x801E7FD6), // primary @ 50%
@@ -112,6 +123,8 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFF9DB0C8),
     goal: Color(0xFF3FB97E),
     onGoal: Color(0xFFFFFFFF),
+    warn: Color(0xFFE0A24E), // âmbar (erro gentil) no escuro
+    accentInk: Color(0xFF23200F),
     track: Color(0x1FFFFFFF), // rgba(255,255,255,.12)
     line: Color(0x1AFFFFFF), // rgba(255,255,255,.10)
     ring: Color(0x8C5FA9E0), // primary @ 55%
@@ -132,6 +145,8 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? muted,
     Color? goal,
     Color? onGoal,
+    Color? warn,
+    Color? accentInk,
     Color? track,
     Color? line,
     Color? ring,
@@ -150,6 +165,8 @@ class AppColors extends ThemeExtension<AppColors> {
       muted: muted ?? this.muted,
       goal: goal ?? this.goal,
       onGoal: onGoal ?? this.onGoal,
+      warn: warn ?? this.warn,
+      accentInk: accentInk ?? this.accentInk,
       track: track ?? this.track,
       line: line ?? this.line,
       ring: ring ?? this.ring,
@@ -173,6 +190,8 @@ class AppColors extends ThemeExtension<AppColors> {
       muted: Color.lerp(muted, other.muted, t)!,
       goal: Color.lerp(goal, other.goal, t)!,
       onGoal: Color.lerp(onGoal, other.onGoal, t)!,
+      warn: Color.lerp(warn, other.warn, t)!,
+      accentInk: Color.lerp(accentInk, other.accentInk, t)!,
       track: Color.lerp(track, other.track, t)!,
       line: Color.lerp(line, other.line, t)!,
       ring: Color.lerp(ring, other.ring, t)!,
