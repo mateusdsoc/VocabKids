@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/format.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_icons.dart';
@@ -95,7 +96,7 @@ class _NivelXp extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '${_milhar(data.xpCurrent)} / ${_milhar(data.xpTarget)} XP',
+              '${milhar(data.xpCurrent)} / ${milhar(data.xpTarget)} XP',
               style: AppType.nunito(
                   size: 11, weight: FontWeight.w800, color: c.muted),
             ),
@@ -173,15 +174,4 @@ class _MetaSemana extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Formata milhares no padrão pt-BR (3120 → "3.120").
-String _milhar(int n) {
-  final s = n.abs().toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i != 0 && (s.length - i) % 3 == 0) buffer.write('.');
-    buffer.write(s[i]);
-  }
-  return n < 0 ? '-$buffer' : buffer.toString();
 }

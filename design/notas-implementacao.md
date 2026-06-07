@@ -25,6 +25,30 @@ cada tela implementada.
   `accentInk` (texto sobre o chip de combo).
 - Navegação: card "Continuar" e aba "Praticar" da Home abrem a Sessão.
 
+### Resumo de sessão (`features/resumo/`)
+- Porte fiel do design `Resumo de sessão`, claro/escuro, com variante **com
+  conquista** (teaser dourado "Novo no Passaporte!"). Card de XP em **vidro**.
+- A Sessão aterrissa no Resumo ao fim (`pushReplacement`).
+
+### Trilha (mapa) (`features/trilha/`)
+- Porte da `Trilha v5 escuro · variação B` (carimbo champanhe). Profundidade por
+  relevo (gradiente + sombras + aba inferior), taxonomia de nós
+  (comum/medal/portão × done/atual/bloqueado), caminho percorrido vivo + futuro
+  rebaixado, textura cartográfica, banhos de cor, fronteira única.
+- Postal **embaçado** (reveal só no Passaporte). **Estático** (sem o *bob* do nó
+  atual, por ora). Decorativos em `widgets/trilha_tones.dart`.
+
+### Design system
+- Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
+  a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
+- `core/widgets/primary_button.dart` (`PrimaryButton`) — CTA primário compartilhado.
+- `core/format.dart` (`milhar`).
+
+> ⚠️ **Bloqueio de build atual:** `home_providers.dart` usa `.valueOrNull` que o
+> riverpod resolvido neste ambiente não expõe → `flutter run` falha. Ver
+> `HANDOFF.md` (raiz). As telas novas estão analyzer-clean mas **não foram
+> verificadas visualmente** por causa disso.
+
 ---
 
 ## ⏳ A fazer (adiado de propósito)
@@ -97,6 +121,6 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próxima tela sugerida
-**Resumo de sessão** (produto 3.7) — par natural da Sessão: XP ganho + progressão
-das palavras (subiu de nível / foi dominada). Sem % de acerto nem tempo. Depois:
-Trilha (mapa) e Passaporte.
+**Passaporte** (produto 3.10) — Modo Conquista: o reveal do cartão-postal
+(polaroid) ao qual a Resumo e a Trilha apontam, hoje só teaser/embaçado. Depois:
+Onboarding e Entrada/Me (saem de placeholder).

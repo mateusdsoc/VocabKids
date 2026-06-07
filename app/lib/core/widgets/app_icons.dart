@@ -29,4 +29,8 @@ abstract final class AppIcons {
   static const novaPalavra = Icons.auto_stories_rounded;
   static const retry = Icons.refresh_rounded;
   static const arrow = Icons.arrow_forward_rounded;
+
+  // --- Resumo de sessão ---
+  static const up = Icons.arrow_upward_rounded; // palavra subiu de nível
+  static const star = Icons.star_rounded; // carimbo do colecionável
 }
