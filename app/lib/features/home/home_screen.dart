@@ -8,6 +8,8 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_icons.dart';
+import '../identidade/me_screen.dart';
+import '../redacao/redacao_screen.dart';
 import '../sessao/session_screen.dart';
 import '../trilha/trilha_screen.dart';
 import 'home_data.dart';
@@ -83,12 +85,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     destinations: _destinations,
                     currentIndex: _navIndex,
                     onSelect: (i) {
-                      // "Trilha" abre o mapa; "Praticar" abre a Sessão; as
-                      // demais abas são visuais por enquanto.
+                      // "Trilha" abre o mapa; "Praticar" abre a Sessão;
+                      // "Perfil" abre o Passaporte; as demais são visuais.
                       if (i == 1) {
                         _abrirTrilha(context);
                       } else if (i == 2) {
                         _abrirSessao(context);
+                      } else if (i == 4) {
+                        _abrirPerfil(context);
                       } else {
                         setState(() => _navIndex = i);
                       }
@@ -140,7 +144,7 @@ class _Content extends StatelessWidget {
           ),
           const SizedBox(height: AppGaps.section),
           QuickActions(
-            onRedacao: () => _emBreve(context, 'Redação'),
+            onRedacao: () => _abrirRedacao(context),
             onEventos: () => _emBreve(context, 'Eventos'),
           ),
         ],
@@ -215,6 +219,18 @@ void _abrirSessao(BuildContext context) {
 void _abrirTrilha(BuildContext context) {
   Navigator.of(context).push(
     adaptivePageRoute(builder: (_) => const TrilhaScreen()),
+  );
+}
+
+void _abrirPerfil(BuildContext context) {
+  Navigator.of(context).push(
+    adaptivePageRoute(builder: (_) => const MeScreen()),
+  );
+}
+
+void _abrirRedacao(BuildContext context) {
+  Navigator.of(context).push(
+    adaptivePageRoute(builder: (_) => const RedacaoScreen()),
   );
 }
 

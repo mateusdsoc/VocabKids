@@ -31,9 +31,12 @@ void main() {
     // Resolve o build() async do AuthController (token == null → deslogado).
     await tester.pumpAndSettle();
 
-    expect(find.text('VocabBR Kids — entrar'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Código da turma'), findsOneWidget);
+    // Tela de embarque (passe de embarque): marca, os dois campos e o CTA.
+    expect(find.text('VocabKids'), findsOneWidget);
+    expect(find.text('PASSE DE EMBARQUE'), findsOneWidget);
+    expect(find.text('CÓDIGO DA TURMA'), findsOneWidget);
+    expect(find.text('SEU NOME'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
-    expect(find.widgetWithText(FilledButton, 'Entrar'), findsOneWidget);
+    expect(find.text('Embarcar'), findsOneWidget);
   });
 }

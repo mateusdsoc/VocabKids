@@ -33,4 +33,23 @@ abstract final class AppIcons {
   // --- Resumo de sessão ---
   static const up = Icons.arrow_upward_rounded; // palavra subiu de nível
   static const star = Icons.star_rounded; // carimbo do colecionável
+
+  // --- Identidade (Embarque / Passaporte) ---
+  static const globe = Icons.public; // mundo no carimbo da marca
+  static const flight = Icons.flight_takeoff_rounded; // embarcar
+  static const ticket = Icons.confirmation_number_outlined; // código da turma
+  static const signature = Icons.edit_outlined; // nome do viajante
+  static const signout = Icons.logout_rounded;
+  static const school = Icons.school_outlined;
+  static const back = Icons.chevron_left_rounded;
+  static const palavras = Icons.menu_book_outlined; // palavras dominadas
+
+  // --- Redação ---
+  static const camera = Icons.photo_camera_rounded;
+  static const gallery = Icons.photo_library_outlined;
+  static const pdf = Icons.picture_as_pdf_outlined;
+  static const add = Icons.add_rounded;
+  static const trash = Icons.delete_outline_rounded;
+  static const sent = Icons.send_rounded;
+  static const clock = Icons.schedule_rounded; // aguardando análise
 }
