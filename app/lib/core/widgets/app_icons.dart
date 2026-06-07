@@ -44,6 +44,17 @@ abstract final class AppIcons {
   static const back = Icons.chevron_left_rounded;
   static const palavras = Icons.menu_book_outlined; // palavras dominadas
 
+  // --- Perfil / Configurações ---
+  static const ajustes = Icons.tune_rounded; // entrada de configurações
+  static const temaSistema = Icons.brightness_auto_rounded;
+  static const temaClaro = Icons.light_mode_rounded;
+  static const temaEscuro = Icons.dark_mode_rounded;
+  static const aparencia = Icons.palette_outlined;
+  static const vibrar = Icons.vibration_rounded;
+  static const sino = Icons.notifications_none_rounded;
+  static const info = Icons.info_outline_rounded;
+  static const privacidade = Icons.shield_outlined;
+
   // --- Redação ---
   static const camera = Icons.photo_camera_rounded;
   static const gallery = Icons.photo_library_outlined;
