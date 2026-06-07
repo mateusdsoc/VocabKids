@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 
-/// Botão primário da Sessão (Entendi · Confirmar · Continuar). Quando
-/// desabilitado (ex.: "Confirmar" antes de escolher), vira um bloco neutro.
-class SessionCta extends StatelessWidget {
-  const SessionCta({
+/// Botão primário do app (CTA preenchido na cor [AppColors.primary]).
+///
+/// Usado pela Sessão (Entendi · Confirmar · Continuar) e pelo Resumo
+/// (Ver trilha). Quando desabilitado (ex.: "Confirmar" antes de escolher), vira
+/// um bloco neutro. Dá um leve `lightImpact` ao tocar (feel de plataforma).
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton({
     super.key,
     required this.label,
     this.onTap,

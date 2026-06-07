@@ -15,6 +15,7 @@ class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
     required this.bg,
     required this.paper,
+    required this.glass,
     required this.primary,
     required this.onPrimary,
     required this.accent,
@@ -36,8 +37,14 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Fundo da tela (canvas areia / navy).
   final Color bg;
 
-  /// Superfície de cards (papel).
+  /// Superfície opaca (papel) — menus, popovers, alternativas: tudo que precisa
+  /// de fundo sólido por legibilidade.
   final Color paper;
+
+  /// Superfície dos **cards** — "vidro fosco" no claro (translúcida, frostada
+  /// por [SurfaceCard]); no escuro coincide com [paper] (painel opaco que o dono
+  /// já aprovou). É o que dá o efeito de vidro sem afetar menus/popovers.
+  final Color glass;
 
   /// Cor de ação primária (CTA, links, nó atual).
   final Color primary;
@@ -89,9 +96,14 @@ class AppColors extends ThemeExtension<AppColors> {
   final List<Color> avatarGradient;
 
   /// CLARO — Tela 01 · Azul Brilhante (areia + azul vivo).
+  ///
+  /// [glass] é translúcido de propósito: os cards do claro são "vidro fosco"
+  /// (espelham a sensação do painel escuro), como na direção do refino
+  /// (`.lt .xpcard { background: rgba(255,255,255,.5) }`).
   static const light = AppColors(
     bg: Color(0xFFFBF3E4),
     paper: Color(0xFFFFFDF8),
+    glass: Color(0x8CFFFFFF),
     primary: Color(0xFF1E7FD6),
     onPrimary: Color(0xFFFFFFFF),
     accent: Color(0xFFE0A82E),
@@ -114,6 +126,7 @@ class AppColors extends ThemeExtension<AppColors> {
   static const dark = AppColors(
     bg: Color(0xFF172A44),
     paper: Color(0xFF21385A),
+    glass: Color(0xFF21385A), // painel opaco (dono já aprovou); sem blur
     primary: Color(0xFF5FA9E0),
     onPrimary: Color(0xFF0E2235),
     accent: Color(0xFFD9C083),
@@ -136,6 +149,7 @@ class AppColors extends ThemeExtension<AppColors> {
   AppColors copyWith({
     Color? bg,
     Color? paper,
+    Color? glass,
     Color? primary,
     Color? onPrimary,
     Color? accent,
@@ -156,6 +170,7 @@ class AppColors extends ThemeExtension<AppColors> {
     return AppColors(
       bg: bg ?? this.bg,
       paper: paper ?? this.paper,
+      glass: glass ?? this.glass,
       primary: primary ?? this.primary,
       onPrimary: onPrimary ?? this.onPrimary,
       accent: accent ?? this.accent,
@@ -181,6 +196,7 @@ class AppColors extends ThemeExtension<AppColors> {
     return AppColors(
       bg: Color.lerp(bg, other.bg, t)!,
       paper: Color.lerp(paper, other.paper, t)!,
+      glass: Color.lerp(glass, other.glass, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       accent: Color.lerp(accent, other.accent, t)!,

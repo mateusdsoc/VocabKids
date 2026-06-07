@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/platform/adaptive.dart';
 import '../../core/widgets/app_icons.dart';
+import '../../core/widgets/primary_button.dart';
+import '../resumo/models.dart';
+import '../resumo/resumo_screen.dart';
 import 'models.dart';
 import 'widgets/discovery_card.dart';
 import 'widgets/feedback_bar.dart';
@@ -8,7 +12,6 @@ import 'widgets/option_tile.dart';
 import 'widgets/question_panel.dart';
 import 'widgets/report_popover.dart';
 import 'widgets/session_background.dart';
-import 'widgets/session_cta.dart';
 import 'widgets/session_top_bar.dart';
 
 /// Sessão — núcleo da prática (produto 3.2 / 3.4).
@@ -57,8 +60,13 @@ class _SessionScreenState extends State<SessionScreen> {
 
   void _advance() {
     if (_index >= widget.steps.length - 1) {
-      // Fim da sessão → por ora volta. Próximo: Resumo de sessão (3.7).
-      Navigator.of(context).maybePop();
+      // Fim da sessão → Resumo (3.7). pushReplacement: o botão voltar não
+      // retorna a uma sessão já encerrada; o Resumo aterrissa na Trilha.
+      Navigator.of(context).pushReplacement(
+        adaptivePageRoute(
+          builder: (_) => const ResumoScreen(summary: SessionSummary.sample),
+        ),
+      );
       return;
     }
     setState(() {
@@ -130,7 +138,7 @@ class _SessionScreenState extends State<SessionScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        SessionCta(
+        PrimaryButton(
           label: 'Entendi',
           leadingIcon: AppIcons.check,
           onTap: _advance,
@@ -191,7 +199,7 @@ class _SessionScreenState extends State<SessionScreen> {
 
   Widget _questionFoot(SessionQuestion q, bool answered) {
     if (!answered) {
-      return SessionCta(
+      return PrimaryButton(
         label: 'Confirmar',
         enabled: _selected != null,
         onTap: _selected == null ? null : () => _confirm(q),
@@ -211,7 +219,7 @@ class _SessionScreenState extends State<SessionScreen> {
           xp: ok ? q.xp : null,
         ),
         const SizedBox(height: 11),
-        SessionCta(label: 'Continuar', trailingIcon: AppIcons.arrow, onTap: _advance),
+        PrimaryButton(label: 'Continuar', trailingIcon: AppIcons.arrow, onTap: _advance),
       ],
     );
   }
