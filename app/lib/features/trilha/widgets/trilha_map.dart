@@ -34,35 +34,6 @@ class TrilhaMap extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // banhos de cor (frio em cima, quente embaixo)
-            Positioned(
-              left: -10, right: -10, top: 0, height: fy + 30,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.92),
-                    radius: 1.1,
-                    colors: [t.washCool, t.washCool.withValues(alpha: 0)],
-                    stops: const [0, 0.8],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: -10, right: -10, top: fy - 20, bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, 0.2),
-                    radius: 1.0,
-                    colors: [t.washWarm, t.washWarm.withValues(alpha: 0)],
-                    stops: const [0, 0.78],
-                  ),
-                ),
-              ),
-            ),
-            // textura cartográfica
-            Positioned.fill(child: CustomPaint(painter: _TexturePainter(t))),
             // caminho
             Positioned.fill(child: CustomPaint(painter: _PathPainter(data.nodes, t))),
             // fronteira única
@@ -135,6 +106,50 @@ class TrilhaMap extends StatelessWidget {
       top: n.y - 30,
       width: 170,
       child: _CurrentAside(node: n, onContinue: onContinue),
+    );
+  }
+}
+
+/// Fundo da Trilha que cobre **a tela toda**: banhos de cor (frio em cima,
+/// quente embaixo) e a textura cartográfica. Separado do [TrilhaMap] para que
+/// os nós (espaço lógico 340×540) fiquem centralizados por cima de um fundo
+/// contínuo, sem o retângulo recortado.
+class TrilhaBackdrop extends StatelessWidget {
+  const TrilhaBackdrop({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = TrilhaTones.of(context);
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // banho frio (topo)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -0.85),
+                radius: 1.1,
+                colors: [t.washCool, t.washCool.withValues(alpha: 0)],
+                stops: const [0, 0.8],
+              ),
+            ),
+          ),
+          // banho quente (base)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, 0.55),
+                radius: 1.0,
+                colors: [t.washWarm, t.washWarm.withValues(alpha: 0)],
+                stops: const [0, 0.78],
+              ),
+            ),
+          ),
+          // textura cartográfica (escala para preencher a tela)
+          CustomPaint(painter: _TexturePainter(t)),
+        ],
+      ),
     );
   }
 }

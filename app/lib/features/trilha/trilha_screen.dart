@@ -177,6 +177,8 @@ class _Background extends StatelessWidget {
               ),
             ),
           ],
+          // Banhos de cor + textura cartográfica cobrindo a tela inteira.
+          const Positioned.fill(child: TrilhaBackdrop()),
           child,
         ],
       ),

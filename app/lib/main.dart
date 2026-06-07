@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/config.dart';
 import 'core/theme/app_dimens.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/home_screen.dart';
@@ -23,7 +24,7 @@ class VocabKidsApp extends StatelessWidget {
       // A escolha segue o sistema; a mesma árvore renderiza nos dois.
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: AppConfig.themeMode,
       themeAnimationDuration: AppDurations.themeSwitch,
       home: const _Gate(),
     );
@@ -37,12 +38,13 @@ class _Gate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (AppConfig.demo) return const HomeScreen();
+
     final auth = ref.watch(authControllerProvider);
     return auth.when(
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
-      // Erro na restauração inicial não deve travar o app: vai para a entrada.
       error: (_, _) => const EntradaScreen(),
       data: (me) => me == null ? const EntradaScreen() : const HomeScreen(),
     );

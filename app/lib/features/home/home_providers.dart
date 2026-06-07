@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config.dart';
 import '../identidade/auth_controller.dart';
 import 'data/trilha_repository.dart';
 import 'home_data.dart';
@@ -16,7 +17,9 @@ final trilhaRepositoryProvider = Provider<TrilhaRepository>(
 /// `autoDispose`: a Home é destino de navegação; ao sair, o estado é liberado e
 /// reconstruído fresco no retorno (evita servir dados velhos pós-sessão).
 final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
-  final me = ref.watch(authControllerProvider).valueOrNull;
+  if (AppConfig.demo) return HomeData.sample();
+
+  final me = ref.watch(authControllerProvider).value;
   if (me == null) {
     throw StateError('Home requer um aluno autenticado.');
   }

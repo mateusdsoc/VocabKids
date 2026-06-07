@@ -4,7 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_icons.dart';
 
-/// Topo da Home: avatar com anel, saudação ("Bom te ver, <nome>") e o selo
+/// Topo da Home: avatar com anel, saudação ("Bom te ver, `nome`") e o selo
 /// **Passaporte** em destaque (pílula preenchida na cor primária).
 class HomeTopBar extends StatelessWidget {
   const HomeTopBar({
@@ -27,7 +27,7 @@ class HomeTopBar extends StatelessWidget {
       children: [
         _Avatar(initial: initial, onTap: onAvatarTap),
         const SizedBox(width: 11),
-        Flexible(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

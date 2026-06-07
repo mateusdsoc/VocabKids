@@ -40,12 +40,12 @@ class ContinueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              width: 112,
+              width: 129,
               child: _Art(asset: l?.imageAsset, country: l?.country ?? 'Brasil'),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
                 child: l == null
                     ? _ModoLivre(color: c)
                     : Column(
@@ -82,13 +82,16 @@ class ContinueCard extends StatelessWidget {
                                       color: c.muted),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              _PlayButton(color: c),
                             ],
                           ),
                         ],
                       ),
               ),
+            ),
+            // Play fixo à direita do card, centralizado na vertical.
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(widthFactor: 1, child: _PlayButton(color: c)),
             ),
           ],
         ),
@@ -192,20 +195,12 @@ class _ModoLivre extends StatelessWidget {
         Text('Modo livre',
             style: AppType.fredoka(size: 20, color: color.ink, height: 1.04)),
         const SizedBox(height: 11),
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                'Continue praticando',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppType.nunito(
-                    size: 11, weight: FontWeight.w800, color: color.muted),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _PlayButton(color: color),
-          ],
+        Text(
+          'Continue praticando',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppType.nunito(
+              size: 11, weight: FontWeight.w800, color: color.muted),
         ),
       ],
     );
