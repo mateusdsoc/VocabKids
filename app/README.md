@@ -22,7 +22,11 @@ app/
         repository.dart   # /v1/acesso/turma, /v1/me
         auth_controller.dart  # AsyncNotifier<Me?> + providers Riverpod
         entrada_screen.dart   # UI PROVISÓRIA (design pendente)
-        me_screen.dart        # UI PROVISÓRIA → vira Home-hub
+        perfil_screen.dart    # Perfil: identidade + progresso + atalho ao Passaporte + Configurações
+      configuracoes/        # preferências locais do aparelho (SharedPreferences)
+        preferencias.dart           # modelo (tema/som/vibração/lembretes)
+        preferencias_controller.dart # AsyncNotifier persistido; alimenta o themeMode
+        configuracoes_screen.dart   # tela de ajustes (aparência ao vivo, som/tato, conta, sobre)
     main.dart             # ProviderScope + _Gate (rota por estado de auth)
   test/
 ```

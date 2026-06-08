@@ -556,7 +556,9 @@ A taxonomia (os três baldes e o que entra em cada um) e o conjunto de colecion�
 
 #### Passaporte
 
-Como o tema da trilha é viagem por países (Brasil, França, Japão), as recompensas colecionáveis seguem a metáfora de um **passaporte** — que fica literal: passaporte carimba países. O passaporte é também o **perfil do aluno** — ao tocar no próprio avatar ou ícone de perfil, o aluno abre o passaporte, que reúne toda a coleção e o status pessoal em um só lugar. Não há tela separada de "achievements" ou "perfil": o passaporte cumpre esse papel. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
+Como o tema da trilha é viagem por países (Brasil, França, Japão), as recompensas colecionáveis seguem a metáfora de um **passaporte** — que fica literal: passaporte carimba países. O passaporte é o espaço de **coleção e celebração** do aluno: reúne carimbos, cartões-postais e selos em um só lugar. Os itens são **puramente colecionáveis** no MVP, sem bônus de gameplay, para manter a economia de XP intacta.
+
+> **Atualização (jun/2026) — Passaporte ≠ Perfil.** A versão anterior desta seção fundia passaporte e perfil numa tela só ("o passaporte é também o perfil do aluno"). Decidiu-se **separar** os dois: o **Passaporte** fica dedicado à *coleção/celebração*; o **Perfil** (tela nova) concentra *identidade, progresso e configurações*. Motivo: misturar uma estante de troféus com itens utilitários (sair da conta, ajustes) dilui o impacto da coleção e empurra a "administração" para dentro de um espaço que deveria ser de orgulho. O passaporte continua acessível pelo **selo "Passaporte" no topo da Home** e por um **atalho dentro do Perfil**; o avatar e a aba "Perfil" abrem o Perfil. Ver "Perfil e Configurações" abaixo.
 
 O passaporte opera em dois modos distintos:
 
@@ -564,11 +566,30 @@ O passaporte opera em dois modos distintos:
 
 > **Por que abrir direto, sem folhear:** atravessar até a página atual obrigaria a renderizar todas as páginas anteriores mantendo consistência com cada card/selo já ganho — custo que cresce com a coleção e fica refém da ferramenta de animação. Abrir direto na página do item desacopla a animação do histórico; só o **item novo** se mexe, o resto da página é fundo estático.
 
-**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte pelo perfil a qualquer hora, o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de países, seção de cartões-postais por país, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. **Não há animação no Modo Exploração:** tocar num item já conquistado não dispara nada (o item fica estático); a animação de revelação é exclusiva do Modo Conquista, o que preserva seu impacto.
+**Modo 2 — Exploração (estático, scrollável):** ao abrir o passaporte a qualquer hora (pelo selo do topo da Home ou pelo atalho no Perfil), o aluno navega por scroll vertical por seções — capa com nome e nível, seção de carimbos de países, seção de cartões-postais por país, seção de selos de feitos. A sensação de passaporte vem do design visual (texturas, tipografia, layout de coleção), não do gesto de virar páginas. Itens ainda não conquistados aparecem como silhuetas ou com cadeado, tornando visível o que falta ganhar — o que é motivador por si só. **Não há animação no Modo Exploração:** tocar num item já conquistado não dispara nada (o item fica estático); a animação de revelação é exclusiva do Modo Conquista, o que preserva seu impacto.
 
 Sobre armazenamento: a coleção do aluno é trivialmente pequena — até 28 flags booleanas por aluno (ganhou ou não cada item). Não representa preocupação de armazenamento em nenhuma escala relevante para o MVP.
 
 Sobre a complexidade técnica: a parte lógica é simples (verificar condição → marcar item como ganho → disparar animação). O custo real é de **arte/ilustração** — cada carimbo, cartão-postal e selo precisa ser desenhado. O conjunto do MVP é de 28 peças (20 cartões-postais + 3 carimbos + 5 selos), gerenciável e expansível sem mexer no sistema.
+
+#### Perfil e Configurações
+
+O **Perfil** é a tela "quem sou eu" do aluno, separada do passaporte (ver atualização acima). Reúne:
+
+- **Identidade** — carteira no estilo do passaporte: avatar, nome do viajante, papel, escola e turma (a mesma `IdentityCard`).
+- **Progresso** — cartões-estatística: XP total, palavras dominadas e nível atual.
+- **Atalho ao Passaporte** — convite caloroso (dourado) para abrir a coleção; o passaporte também segue acessível pelo selo no topo da Home.
+- **Configurações** — entrada ao pé da tela.
+
+As **Configurações** são preferências **locais do aparelho** (não vêm do servidor), persistidas em `SharedPreferences`:
+
+- **Aparência** — seletor Sistema / Claro / Escuro, que troca o tema do app ao vivo (antes só dava para forçar por `--dart-define`).
+- **Som & tato** — efeitos sonoros e vibração (retorno tátil).
+- **Lembretes** — lembrete diário de prática (a notificação local em si é *plumbing* futuro; a preferência já é guardada).
+- **Conta** — turma do aluno e **Sair da conta** (movido para cá; antes ficava solto no passaporte).
+- **Sobre** — versão do app e privacidade.
+
+A separação mantém o passaporte como espaço puramente de coleção/celebração e dá um lar claro para identidade e ajustes. Itens cosméticos de customização de perfil seguem **fora do MVP** (ver "Itens cosméticos de evento").
 
 #### Revelação de recompensa
 
@@ -1023,7 +1044,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Trilha esgotada (aluno termina os 3 países) | Modo livre: prática continua sem avançar o mapa; 4º país (Egito) engatilhado como reserva; países adicionais com base nos dados reais do primeiro cliente |
 | Feedback de progresso na sessão | Barra na sessão + resumo leve no fim (XP + progressão das palavras); sem % de acerto e sem tempo; animação maior só ao completar nó (seção 3.7) |
 | Revelação de recompensa do passaporte | Abrir com toque (estilo baú); determinística, sem raridade aleatória nem loot box; animações curtas e não-bloqueantes (seção 3.10) |
-| Passaporte como perfil do aluno | Passaporte é a tela de perfil — reúne coleção e status em um lugar só; dois modos: Conquista (animado, pós-sessão, abre direto na página do item com flip decorativo único, sem folhear o histórico) e Exploração (scroll vertical, 100% estático, sem animação ao tocar); itens bloqueados exibidos como silhuetas; arte/animação detalhadas em `referencia_arte.md` (seções 3.10/12) |
+| Passaporte vs. Perfil (atualizado jun/2026) | Telas **distintas**. Passaporte = coleção/celebração (carimbos, postais, selos), dois modos: Conquista (animado, pós-sessão, abre direto na página do item com flip decorativo único, sem folhear o histórico) e Exploração (scroll vertical, 100% estático, sem animação ao tocar); itens bloqueados como silhuetas. Perfil = identidade + progresso + Configurações (aparência/tema ao vivo, som/tato, lembretes, conta, sobre). Avatar e aba "Perfil" abrem o Perfil; selo do topo abre o Passaporte; Perfil tem atalho ao Passaporte. Sair da conta migrou para Configurações. Arte/animação em `referencia_arte.md` (seções 3.10/12) |
 | Estrutura da sessão | ~12 questões, 2 palavras novas; cards no início; nível 4 adiado ~2 sessões; 4 questões de revisão (seção 3.4) |
 | Mecânica de domínio | Loop até acertar substitui a regressão; retries vão pro fim da fila (intercalados); loop fixo só na última pendente; nunca repergunta variação já acertada (seção 3.4) |
 | Seleção de revisão | Prioridade nível 2 → nível 3 → repetir erradas; nível 1 nunca vira revisão; revisão antes do nível 4 (seção 3.4) |

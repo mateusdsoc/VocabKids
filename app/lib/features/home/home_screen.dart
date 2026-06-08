@@ -8,7 +8,8 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_icons.dart';
-import '../identidade/me_screen.dart';
+import '../identidade/perfil_screen.dart';
+import '../passaporte/passaporte_screen.dart';
 import '../redacao/redacao_screen.dart';
 import '../sessao/session_screen.dart';
 import '../trilha/trilha_screen.dart';
@@ -86,7 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     currentIndex: _navIndex,
                     onSelect: (i) {
                       // "Trilha" abre o mapa; "Praticar" abre a Sessão;
-                      // "Perfil" abre o Passaporte; as demais são visuais.
+                      // "Perfil" abre o Perfil; as demais são visuais.
                       if (i == 1) {
                         _abrirTrilha(context);
                       } else if (i == 2) {
@@ -127,8 +128,9 @@ class _Content extends StatelessWidget {
           HomeTopBar(
             name: data.studentName,
             initial: data.avatarInitial,
-            onAvatarTap: () => _emBreve(context, 'Passaporte'),
-            onPassportTap: () => _emBreve(context, 'Passaporte'),
+            // O rosto leva ao Perfil ("eu"); o selo leva ao Passaporte (coleção).
+            onAvatarTap: () => _abrirPerfil(context),
+            onPassportTap: () => _abrirPassaporte(context),
           ),
           const SizedBox(height: AppGaps.section),
           StatCard(data: data),
@@ -222,15 +224,24 @@ void _abrirTrilha(BuildContext context) {
   );
 }
 
+// Perfil e Passaporte são telas distintas (produto §3.10): o avatar e a aba
+// "Perfil" abrem o Perfil (identidade + configurações); o selo do topo abre o
+// Passaporte (a coleção). O Perfil tem, por sua vez, um atalho ao Passaporte.
 void _abrirPerfil(BuildContext context) {
   Navigator.of(context).push(
-    adaptivePageRoute(builder: (_) => const MeScreen()),
+    adaptivePageRoute(builder: (_) => const PerfilScreen()),
   );
 }
 
 void _abrirRedacao(BuildContext context) {
   Navigator.of(context).push(
     adaptivePageRoute(builder: (_) => const RedacaoScreen()),
+  );
+}
+
+void _abrirPassaporte(BuildContext context) {
+  Navigator.of(context).push(
+    adaptivePageRoute(builder: (_) => const PassaporteScreen()),
   );
 }
 

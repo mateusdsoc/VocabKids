@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config.dart';
 import 'core/theme/app_dimens.dart';
 import 'core/theme/app_theme.dart';
+import 'features/configuracoes/preferencias_controller.dart';
 import 'features/home/home_screen.dart';
 import 'features/identidade/auth_controller.dart';
 import 'features/identidade/entrada_screen.dart';
@@ -12,19 +13,25 @@ void main() {
   runApp(const ProviderScope(child: VocabKidsApp()));
 }
 
-class VocabKidsApp extends StatelessWidget {
+class VocabKidsApp extends ConsumerWidget {
   const VocabKidsApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Aparência escolhida pelo usuário (Configurações), persistida no aparelho.
+    // Enquanto a preferência carrega do disco, cai no default de compilação.
+    final themeMode = ref.watch(preferenciasControllerProvider).maybeWhen(
+          data: (p) => p.tema.themeMode,
+          orElse: () => AppConfig.themeMode,
+        );
     return MaterialApp(
       title: 'VocabBR Kids',
       debugShowCheckedModeBanner: false,
       // Tema da marca: claro "Azul Brilhante", escuro "Capa do Passaporte".
-      // A escolha segue o sistema; a mesma árvore renderiza nos dois.
+      // A mesma árvore renderiza nos dois; a escolha vem das preferências.
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: AppConfig.themeMode,
+      themeMode: themeMode,
       themeAnimationDuration: AppDurations.themeSwitch,
       home: const _Gate(),
     );
