@@ -74,6 +74,11 @@ Flutter (nenhuma dependência nova; dados mockados como antes):
   palavras). CTA "Ver trilha" responde desde o primeiro frame.
 - Novo widget compartilhado `core/widgets/entrance.dart` (`Entrance`: fade +
   deslize + escala opcional, com `delay` para stagger; roda uma vez).
+- **Onboarding — demo roteirizada (10/06)**: o passo de demonstração deixou de
+  ser estático e virou o roteiro do produto 3.5 (Demo A/B): seleciona e
+  **acerta** (confete + faixa com +100 XP), depois seleciona e **erra** (shake
+  + faixa gentil "a pergunta volta") — reusando `OptionTile` e `FeedbackBar`
+  reais da Sessão, sem componente novo. Revisitar o passo refaz o filme.
 
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
