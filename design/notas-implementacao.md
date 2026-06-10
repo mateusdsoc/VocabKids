@@ -54,6 +54,32 @@ cada tela implementada.
   as posições dos nós escalam com a largura real (`LayoutBuilder`); rótulos e o
   aside "Continuar" clampam nas bordas em vez de recortar em telas estreitas.
 
+### Animações (10/06) — Sessão e Resumo
+Todas curtas e **não-bloqueantes** (princípio 3.7), só com APIs nativas do
+Flutter (nenhuma dependência nova; dados mockados como antes):
+- **Acerto**: confete agora é um **burst animado** (~800 ms, `CustomPainter`
+  em `OptionTile`, cores dos tokens) + pop do chip **+XP** na `FeedbackBar` +
+  **pulso do combo** no `SessionTopBar` (e o chip entra/sai com scale+fade).
+- **Erro**: **shake gentil** da alternativa errada (amplitude ~4 px, sem flash)
+  + ícone X "pipocando" + transição suave da borda (`AnimatedContainer`) —
+  mantém o vermelho suavizado, nada punitivo.
+- **Sessão**: **slide/fade entre passos** (`AnimatedSwitcher`; responder a
+  mesma questão não transiciona — o feedback entra deslizando de baixo) e
+  **barra de progresso enchendo** animada (no `ProgressBar` compartilhado:
+  anima só mudanças de valor, o primeiro build pinta direto).
+- **Entrada do card de descoberta**: coberta pela mesma transição entre passos.
+- **Resumo**: número-herói com **count-up** (0 → +480 XP), barra de nível
+  **enchendo** com o contador `3.120 → 3.600` acompanhando, pop do chip de
+  combo e **entrada escalonada** das seções (cabeçalho → XP → conquista →
+  palavras). CTA "Ver trilha" responde desde o primeiro frame.
+- Novo widget compartilhado `core/widgets/entrance.dart` (`Entrance`: fade +
+  deslize + escala opcional, com `delay` para stagger; roda uma vez).
+- **Onboarding — demo roteirizada (10/06)**: o passo de demonstração deixou de
+  ser estático e virou o roteiro do produto 3.5 (Demo A/B): seleciona e
+  **acerta** (confete + faixa com +100 XP), depois seleciona e **erra** (shake
+  + faixa gentil "a pergunta volta") — reusando `OptionTile` e `FeedbackBar`
+  reais da Sessão, sem componente novo. Revisitar o passo refaz o filme.
+
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
   a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
@@ -73,14 +99,6 @@ cada tela implementada.
 ---
 
 ## ⏳ A fazer (adiado de propósito)
-
-### Animações (deixadas por último)
-- [ ] **Confete do acerto**: hoje é **estático** (`OptionTile._Confetti`,
-      placeholder fiel ao mockup). Trocar por animação curta e **não-bloqueante**.
-- [ ] **Transição entre questões** (slide/fade ao avançar).
-- [ ] **Pulso do combo** quando incrementa.
-- [ ] **Encher da barra de progresso** animado a cada resposta.
-- [ ] Micro-animação de entrada do card de descoberta.
 
 ### Áudio
 - [ ] **Pronúncia (TTS)** no `DiscoveryCard` — botão alto-falante hoje é no-op

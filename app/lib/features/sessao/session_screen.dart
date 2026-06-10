@@ -120,7 +120,31 @@ class _SessionScreenState extends State<SessionScreen> {
                       onReport: () => setState(() => _reportOpen = true),
                     ),
                     const SizedBox(height: 16),
-                    Expanded(child: _buildContent()),
+                    // Slide/fade curto ao trocar de passo (questão → questão,
+                    // card → questão). Responder a MESMA questão não troca a
+                    // chave — o feedback aparece sem transição de tela.
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 280),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) =>
+                            FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.04, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        ),
+                        child: KeyedSubtree(
+                          key: ValueKey(_contentKey),
+                          child: _buildContent(),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -142,6 +166,11 @@ class _SessionScreenState extends State<SessionScreen> {
       ),
     );
   }
+
+  /// Identidade do conteúdo atual para o AnimatedSwitcher: muda ao avançar de
+  /// passo ou ao entrar/sair do card de revisão (2º erro).
+  String get _contentKey =>
+      _reviewCard != null && _outcome == null ? 'review-$_index' : 'step-$_index';
 
   Widget _buildContent() {
     // Interstício: relembrar a palavra (2º erro) antes do próximo passo.

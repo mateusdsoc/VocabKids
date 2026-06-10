@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/platform/adaptive.dart';
@@ -10,6 +12,7 @@ import '../../core/widgets/surface_card.dart';
 import '../home/home_screen.dart';
 import '../identidade/widgets/passport_background.dart';
 import '../sessao/models.dart';
+import '../sessao/widgets/feedback_bar.dart';
 import '../sessao/widgets/option_tile.dart';
 
 /// Onboarding (produto 3.5): o primeiro voo do aluno depois do embarque.
@@ -348,10 +351,60 @@ class _ComoItem extends StatelessWidget {
   }
 }
 
-/// Passo 3 — demonstração de acerto e erro (estática). Mostra ao aluno o
-/// retorno visual antes de valer: verde no acerto, vermelho (com X) no erro.
-class _Demo extends StatelessWidget {
+/// Passo 3 — demonstração **roteirizada** de acerto e erro (produto 3.5):
+/// roda sozinha, como um filme curto, reusando os componentes reais da Sessão.
+/// Primeiro seleciona e acerta (confete + faixa com +XP), depois seleciona e
+/// erra (shake gentil + faixa avisando que a pergunta volta — sem punição).
+/// O aluno só assiste; nada aqui vale ponto. Replays acontecem naturalmente:
+/// cada visita ao passo recria o widget (AnimatedSwitcher com chave por passo).
+class _Demo extends StatefulWidget {
   const _Demo();
+
+  @override
+  State<_Demo> createState() => _DemoState();
+}
+
+class _DemoState extends State<_Demo> {
+  static const _certa =
+      QuestionOption(key: 'A', text: 'Muito grande, amplo', correct: true);
+  static const _errada = QuestionOption(key: 'B', text: 'Muito antigo');
+
+  OptionState _stateA = OptionState.neutral;
+  OptionState _stateB = OptionState.neutral;
+  bool _showAcerto = false;
+  bool _showErro = false;
+  final List<Timer> _timers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Roteiro: pausa → seleciona A → acerta (confete + XP) → pausa →
+    // seleciona B → erra (shake + feedback gentil).
+    _aos(500, () => _stateA = OptionState.selected);
+    _aos(1100, () {
+      _stateA = OptionState.correct;
+      _showAcerto = true;
+    });
+    _aos(2500, () => _stateB = OptionState.selected);
+    _aos(3100, () {
+      _stateB = OptionState.wrong;
+      _showErro = true;
+    });
+  }
+
+  void _aos(int ms, VoidCallback muda) {
+    _timers.add(Timer(Duration(milliseconds: ms), () {
+      if (mounted) setState(muda);
+    }));
+  }
+
+  @override
+  void dispose() {
+    for (final t in _timers) {
+      t.cancel();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,15 +424,30 @@ class _Demo extends StatelessWidget {
             style: AppType.fredoka(
                 size: 16, weight: FontWeight.w600, color: c.ink)),
         const SizedBox(height: 12),
-        const OptionTile(
-          option: QuestionOption(key: 'A', text: 'Muito grande, amplo', correct: true),
-          state: OptionState.correct,
+        OptionTile(
+          option: _certa,
+          state: _stateA,
+          showConfetti: _stateA == OptionState.correct,
         ),
+        if (_showAcerto) ...[
+          const SizedBox(height: 10),
+          const FeedbackBar(
+            positive: true,
+            title: 'Boa!',
+            subtitle: 'Mandou bem!',
+            xp: 100,
+          ),
+        ],
         const SizedBox(height: 10),
-        const OptionTile(
-          option: QuestionOption(key: 'B', text: 'Muito antigo'),
-          state: OptionState.wrong,
-        ),
+        OptionTile(option: _errada, state: _stateB),
+        if (_showErro) ...[
+          const SizedBox(height: 10),
+          const FeedbackBar(
+            positive: false,
+            title: 'Quase! Vamos rever isso.',
+            subtitle: 'A pergunta volta mais pra frente — errar faz parte.',
+          ),
+        ],
       ],
     );
   }

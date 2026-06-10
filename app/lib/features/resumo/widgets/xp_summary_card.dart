@@ -11,14 +11,52 @@ import '../models.dart';
 
 /// Card-herói do XP (vidro no claro): número grande, chip de combo e a barra de
 /// nível com o **ganho** desta sessão destacado.
-class XpSummaryCard extends StatelessWidget {
+///
+/// Anima uma vez ao entrar (sequência curta, não-bloqueante): o número-herói
+/// **conta de 0 até o XP ganho**, depois a barra de nível **enche** do ponto
+/// onde estava até o novo XP (com o contador 3.120 → 3.600 acompanhando) e o
+/// chip de combo pipoca no final. Os valores são os do resumo recebido — a
+/// tela só apresenta, nunca calcula (cliente fino).
+class XpSummaryCard extends StatefulWidget {
   const XpSummaryCard({super.key, required this.summary});
 
   final SessionSummary summary;
 
   @override
+  State<XpSummaryCard> createState() => _XpSummaryCardState();
+}
+
+class _XpSummaryCardState extends State<XpSummaryCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1400))
+    ..forward();
+
+  /// Count-up do número-herói (+0 → +480 XP).
+  late final Animation<double> _count = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.10, 0.60, curve: Curves.easeOutCubic));
+
+  /// Encher da barra de nível (e contador xpFrom → xpTo junto).
+  late final Animation<double> _bar = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.45, 1.0, curve: Curves.easeOutCubic));
+
+  /// Pop do chip de combo, no fim da sequência.
+  late final Animation<double> _chip = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.60, 0.85, curve: Curves.easeOutBack));
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final summary = widget.summary;
     final glass = c.glass.a < 1.0;
     final radius = BorderRadius.circular(20);
 
@@ -51,54 +89,75 @@ class XpSummaryCard extends StatelessWidget {
               ),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final xpShown = (summary.xpGained * _count.value).round();
+              final xpToShown = (summary.xpFrom +
+                      (summary.xpTo - summary.xpFrom) * _bar.value)
+                  .round();
+              final gainShown = summary.baseFraction +
+                  (summary.gainFraction - summary.baseFraction) * _bar.value;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Text('+${summary.xpGained} XP',
-                        style: AppType.fredoka(
-                            size: 36,
-                            weight: FontWeight.w700,
-                            color: c.primary,
-                            height: 0.92)),
-                  ),
-                  if (summary.combo != null) ...[
-                    const SizedBox(width: 8),
-                    _ComboChip(value: summary.combo!),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text('Nível ${summary.level}',
-                      style: AppType.fredoka(
-                          size: 14, weight: FontWeight.w500, color: c.ink)),
-                  const Spacer(),
-                  Text.rich(
-                    TextSpan(
-                      style: AppType.mono(
-                          size: 11, weight: FontWeight.w700, color: c.muted),
-                      children: [
-                        TextSpan(text: '${milhar(summary.xpFrom)} '),
-                        TextSpan(
-                            text: '→ ${milhar(summary.xpTo)}',
-                            style: TextStyle(color: c.primary)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text('+$xpShown XP',
+                            style: AppType.fredoka(
+                                size: 36,
+                                weight: FontWeight.w700,
+                                color: c.primary,
+                                height: 0.92)),
+                      ),
+                      if (summary.combo != null) ...[
+                        const SizedBox(width: 8),
+                        Opacity(
+                          opacity: _chip.value.clamp(0.0, 1.0),
+                          child: Transform.scale(
+                            scale: 0.6 + 0.4 * _chip.value,
+                            child: _ComboChip(value: summary.combo!),
+                          ),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text('Nível ${summary.level}',
+                          style: AppType.fredoka(
+                              size: 14,
+                              weight: FontWeight.w500,
+                              color: c.ink)),
+                      const Spacer(),
+                      Text.rich(
+                        TextSpan(
+                          style: AppType.mono(
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: c.muted),
+                          children: [
+                            TextSpan(text: '${milhar(summary.xpFrom)} '),
+                            TextSpan(
+                                text: '→ ${milhar(xpToShown)}',
+                                style: TextStyle(color: c.primary)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  _XpTrack(base: summary.baseFraction, gain: gainShown),
                 ],
-              ),
-              const SizedBox(height: 7),
-              _XpTrack(
-                  base: summary.baseFraction, gain: summary.gainFraction),
-            ],
+              );
+            },
           ),
         ],
       ),
@@ -159,7 +218,7 @@ class _ComboChip extends StatelessWidget {
 }
 
 /// Barra de nível: trecho-base (já tinha) em azul apagado e o **ganho** desta
-/// sessão num degradê vivo.
+/// sessão num degradê vivo (o pai anima [gain] da base até o valor final).
 class _XpTrack extends StatelessWidget {
   const _XpTrack({required this.base, required this.gain});
   final double base;

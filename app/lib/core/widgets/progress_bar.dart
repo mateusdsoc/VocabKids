@@ -8,6 +8,10 @@ import '../theme/app_colors.dart';
 ///
 /// [value] é clampeado em 0..1. Quando [gradient] é true, o preenchimento
 /// ganha um leve degradê (clareando para a direita), como no mockup do XP.
+///
+/// **Mudanças de [value] são animadas** (encher suave, ~380 ms): a primeira
+/// pintura mostra o valor direto — só as atualizações (ex.: avançar questão na
+/// Sessão) deslizam até a nova fração.
 class ProgressBar extends StatelessWidget {
   const ProgressBar({
     super.key,
@@ -36,8 +40,16 @@ class ProgressBar extends StatelessWidget {
         color: trackColor ?? context.colors.track,
         child: Align(
           alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: fraction == 0 ? 0.0001 : fraction,
+          // Tween com begin == end: o primeiro build não anima; quando [value]
+          // muda, o TweenAnimationBuilder anima do valor corrente ao novo end.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: fraction, end: fraction),
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeOutCubic,
+            builder: (context, animated, child) => FractionallySizedBox(
+              widthFactor: animated <= 0 ? 0.0001 : animated.clamp(0.0, 1.0),
+              child: child,
+            ),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: radius,
