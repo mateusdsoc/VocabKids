@@ -4,6 +4,7 @@ import '../../core/platform/adaptive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
+import '../../core/widgets/entrance.dart';
 import '../../core/widgets/primary_button.dart';
 import '../trilha/trilha_screen.dart';
 import 'models.dart';
@@ -43,29 +44,49 @@ class ResumoScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 3),
-                        ResumoHeader(city: summary.city, lesson: summary.lesson),
+                        // Entrada escalonada: cabeçalho → XP (que então conta
+                        // e enche a barra) → conquista → palavras. Curta e
+                        // não-bloqueante: o CTA do rodapé já responde.
+                        Entrance(
+                          child: ResumoHeader(
+                              city: summary.city, lesson: summary.lesson),
+                        ),
                         const SizedBox(height: 13),
-                        XpSummaryCard(summary: summary),
+                        Entrance(
+                          delay: const Duration(milliseconds: 120),
+                          child: XpSummaryCard(summary: summary),
+                        ),
                         if (ach != null) ...[
                           const SizedBox(height: 16),
-                          AchievementCard(ach: ach),
+                          Entrance(
+                            delay: const Duration(milliseconds: 260),
+                            scaleFrom: 0.96,
+                            child: AchievementCard(ach: ach),
+                          ),
                         ],
                         const SizedBox(height: 13),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Text(
-                            'PALAVRAS DESTA SESSÃO',
-                            style: AppType.mono(
-                                size: 9.5,
-                                weight: FontWeight.w700,
-                                letterSpacing: 1.2,
-                                color: c.muted),
+                        Entrance(
+                          delay: const Duration(milliseconds: 320),
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 2),
+                            child: Text(
+                              'PALAVRAS DESTA SESSÃO',
+                              style: AppType.mono(
+                                  size: 9.5,
+                                  weight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                  color: c.muted),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         for (var i = 0; i < summary.words.length; i++) ...[
                           if (i > 0) const SizedBox(height: 9),
-                          WordProgressRow(word: summary.words[i]),
+                          Entrance(
+                            delay: Duration(milliseconds: 380 + 80 * i),
+                            child: WordProgressRow(word: summary.words[i]),
+                          ),
                         ],
                       ],
                     ),

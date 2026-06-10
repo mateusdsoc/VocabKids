@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -60,7 +62,22 @@ class SessionTopBar extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    if (combo != null) _ComboChip(value: combo!),
+                    // Aparece/some com scale+fade; pulsa quando incrementa.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeIn,
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: ScaleTransition(
+                          scale: anim.drive(Tween(begin: 0.6, end: 1.0)),
+                          child: child,
+                        ),
+                      ),
+                      child: combo == null
+                          ? const SizedBox.shrink()
+                          : _ComboChip(value: combo!),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -119,28 +136,58 @@ class _SquareButton extends StatelessWidget {
   }
 }
 
-class _ComboChip extends StatelessWidget {
+/// Chip do combo. **Pulsa** (escala sobe e volta) quando o valor incrementa —
+/// o "pulso do combo" das notas de implementação.
+class _ComboChip extends StatefulWidget {
   const _ComboChip({required this.value});
   final int value;
 
   @override
+  State<_ComboChip> createState() => _ComboChipState();
+}
+
+class _ComboChipState extends State<_ComboChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 320));
+
+  @override
+  void didUpdateWidget(_ComboChip old) {
+    super.didUpdateWidget(old);
+    if (widget.value > old.value) _pulse.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(7, 3, 9, 3),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.accent.withValues(alpha: 0.24), c.paper),
-        borderRadius: BorderRadius.circular(999),
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) => Transform.scale(
+        scale: 1 + 0.18 * math.sin(_pulse.value * math.pi),
+        child: child,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(AppIcons.combo, size: 12, color: c.accentStrong),
-          const SizedBox(width: 5),
-          Text('×$value',
-              style: AppType.fredoka(
-                  size: 11.5, weight: FontWeight.w600, color: c.accentInk)),
-        ],
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(7, 3, 9, 3),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(c.accent.withValues(alpha: 0.24), c.paper),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(AppIcons.combo, size: 12, color: c.accentStrong),
+            const SizedBox(width: 5),
+            Text('×${widget.value}',
+                style: AppType.fredoka(
+                    size: 11.5, weight: FontWeight.w600, color: c.accentInk)),
+          ],
+        ),
       ),
     );
   }
