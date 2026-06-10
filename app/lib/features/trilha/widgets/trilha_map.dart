@@ -10,6 +10,9 @@ import 'map_pins.dart';
 import 'trilha_tones.dart';
 
 /// Espaço lógico do mapa (igual ao design): 340 de largura × 540 de altura.
+/// As coordenadas dos nós vivem nesse espaço; o widget escala as POSIÇÕES
+/// proporcionalmente à largura disponível (pins/rótulos mantêm o tamanho
+/// intrínseco) — em vez de um canvas fixo que recorta em telas estreitas.
 const double _mapW = 340;
 const double _mapH = 540;
 
@@ -25,64 +28,72 @@ class TrilhaMap extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final t = TrilhaTones.of(context);
-    final fy = data.frontierY;
 
-    return ClipRect(
-      child: SizedBox(
-        width: _mapW,
-        height: _mapH,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // caminho
-            Positioned.fill(child: CustomPaint(painter: _PathPainter(data.nodes, t))),
-            // fronteira única
-            Positioned(
-              left: 14, right: 14, top: fy - 11,
-              child: _Frontier(label: data.frontierLabel ?? 'Fronteira', tones: t),
-            ),
-            // nós
-            for (final n in data.nodes) _positionedPin(n),
-            // rótulos abaixo dos nós (exceto o atual, que usa o aside)
-            for (final n in data.nodes)
-              if (!(n.type == NodeType.medal && n.state == NodeState.current))
-                _positionedLabel(context, n),
-            // aside do nó atual (nome + "Continuar")
-            for (final n in data.nodes)
-              if (n.type == NodeType.medal && n.state == NodeState.current)
-                _positionedAside(context, n),
-            // esmaecido do topo
-            Positioned(
-              left: 0, right: 0, top: 0, height: 24,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [c.bg, c.bg.withValues(alpha: 0)],
-                      stops: const [0.3, 1],
+    return LayoutBuilder(builder: (context, box) {
+      final w = box.maxWidth.isFinite ? box.maxWidth : _mapW;
+      final k = w / _mapW; // escala uniforme: posições acompanham a largura
+      final h = _mapH * k;
+      final fy = data.frontierY * k;
+
+      return ClipRect(
+        child: SizedBox(
+          width: w,
+          height: h,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // caminho
+              Positioned.fill(
+                  child: CustomPaint(painter: _PathPainter(data.nodes, t))),
+              // fronteira única
+              Positioned(
+                left: 14, right: 14, top: fy - 11,
+                child: _Frontier(
+                    label: data.frontierLabel ?? 'Fronteira', tones: t),
+              ),
+              // nós
+              for (final n in data.nodes) _positionedPin(n, k),
+              // rótulos abaixo dos nós (exceto o atual, que usa o aside)
+              for (final n in data.nodes)
+                if (!(n.type == NodeType.medal && n.state == NodeState.current))
+                  _positionedLabel(context, n, k, w),
+              // aside do nó atual (nome + "Continuar")
+              for (final n in data.nodes)
+                if (n.type == NodeType.medal && n.state == NodeState.current)
+                  _positionedAside(context, n, k),
+              // esmaecido do topo
+              Positioned(
+                left: 0, right: 0, top: 0, height: 24,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [c.bg, c.bg.withValues(alpha: 0)],
+                        stops: const [0.3, 1],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
-  Widget _positionedPin(MapNode n) {
+  Widget _positionedPin(MapNode n, double k) {
     final s = MapPin.discSize(n);
     return Positioned(
-      left: n.x - s.width / 2,
-      top: n.y - s.height / 2,
+      left: n.x * k - s.width / 2,
+      top: n.y * k - s.height / 2,
       child: MapPin(node: n),
     );
   }
 
-  Widget _positionedLabel(BuildContext context, MapNode n) {
+  Widget _positionedLabel(BuildContext context, MapNode n, double k, double w) {
     if (n.label == null && n.sub == null) return const SizedBox.shrink();
     final s = MapPin.discSize(n);
     final gap = switch (n.type) {
@@ -91,20 +102,25 @@ class TrilhaMap extends StatelessWidget {
       NodeType.start => 6.0,
       NodeType.comum => 7.0,
     };
+    // Clampa o rótulo dentro do canvas (nós de borda em telas estreitas).
+    final left = (n.x * k - 85).clamp(2.0, w - 172.0);
     return Positioned(
-      left: n.x - 85,
-      top: n.y + s.height / 2 + gap,
+      left: left,
+      top: n.y * k + s.height / 2 + gap,
       width: 170,
       child: Center(child: _Label(node: n)),
     );
   }
 
-  Widget _positionedAside(BuildContext context, MapNode n) {
+  Widget _positionedAside(BuildContext context, MapNode n, double k) {
     final s = MapPin.discSize(n);
+    // Espaço real à esquerda do pin; o aside encolhe em vez de sair da tela.
+    final room = n.x * k - s.width / 2 - 11;
+    final width = room.clamp(0.0, 170.0);
     return Positioned(
-      left: n.x - s.width / 2 - 11 - 170,
-      top: n.y - 30,
-      width: 170,
+      left: room - width,
+      top: n.y * k - 30,
+      width: width,
       child: _CurrentAside(node: n, onContinue: onContinue),
     );
   }

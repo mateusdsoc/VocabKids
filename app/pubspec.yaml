@@ -27,23 +27,27 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
+# Versões EXATAS (sem ^) de propósito: `pub get` em ambiente novo já quebrou o
+# build ao resolver versões diferentes (caso `valueOrNull`/riverpod — HANDOFF).
+# Atualizar dependência é mudança deliberada: editar aqui + `pub get` + commitar
+# o pubspec.lock junto, num PR próprio.
 dependencies:
   flutter:
     sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  characters: ^1.4.0
-  flutter_riverpod: ^3.3.1
-  http: ^1.6.0
-  shared_preferences: ^2.5.5
+  cupertino_icons: 1.0.9
+  characters: 1.4.1
+  flutter_riverpod: 3.3.1
+  http: 1.6.0
+  shared_preferences: 2.5.5
   # Famílias da marca (Fredoka/Nunito/Caveat/Space Mono). Centralizadas em
   # core/theme/app_typography.dart.
-  google_fonts: ^6.2.1
+  google_fonts: 6.3.3
   # Captura de fotos da redação manuscrita (câmera + galeria, multi-página).
   # Funciona em mobile e web (file input). Análise/OCR é fatia C.
-  image_picker: ^1.1.2
+  image_picker: 1.2.2
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +58,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  flutter_lints: 6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

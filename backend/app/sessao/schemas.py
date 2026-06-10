@@ -60,6 +60,15 @@ class RespostaOut(BaseModel):
     estado_palavra: str
     dominou: bool
     recompensas: list[RecompensaOut] = []  # cartão/carimbo/selo ganhos nesta resposta
+    # Intercalação server-side (3.4): a fila restante já reordenada — no erro, o
+    # retry foi pro fim. O app renderiza esta ordem, sem reimplementar a regra.
+    fila: list[Slot] = []
+    proximo: Slot | None = None
+
+
+class ProximoOut(BaseModel):
+    proximo: Slot | None    # null → fila vazia (hora de chamar /fim)
+    restantes: int
 
 
 class ResumoOut(BaseModel):

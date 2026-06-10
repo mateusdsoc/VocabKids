@@ -721,9 +721,11 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `GET` | `/v1/redacoes` · `/v1/dashboard` | telas mockadas/estáticas (A) | redacao |
 
 A montagem da sessão é **server-side** e a entrega é **híbrida** (decisão #3 ao fim do
-bloco): o cliente recebe a **fila planejada em lote** (renderiza + *prefetch*), mas
-**nunca** a resposta correta antecipada; cada resposta é corrigida no servidor, e a
-**intercalação de erro** (Bloco 2a) é reordenada no cliente e reconciliada no servidor.
+bloco, **revisada em 10/06**): o cliente recebe a **fila planejada em lote** (renderiza +
+*prefetch*), mas **nunca** a resposta correta antecipada; cada resposta é corrigida no
+servidor, que **também reordena a fila persistida** (`sessao.fila`) e a devolve na
+resposta (`fila`/`proximo`) — a intercalação de erro (Bloco 2a) vive **só no servidor**,
+o app renderiza a ordem recebida.
 
 ### App Flutter — organização e telas
 
@@ -804,10 +806,13 @@ scaffold nem as migrations do Bloco 1.
 3. **Entrega da sessão: híbrida** (não slot-a-slot puro nem lote ingênuo). O servidor
    manda a **fila planejada em lote** no início (app renderiza tudo + *prefetch* de
    cards/imagens → snappy, no espírito do Duolingo); a **correção continua no servidor**
-   a cada resposta (integridade do XP, não vaza a resposta certa); a **intercalação de
-   erro**, por ser determinística, é **reordenada no cliente** e reconciliada no servidor
-   (ordem não é dado sensível; só pontuação é). Não afeta a stack — é forma de API + lógica
-   de app.
+   a cada resposta (integridade do XP, não vaza a resposta certa). **Revisado em
+   10/06:** a **intercalação de erro também é server-side** — a fila é persistida
+   (`sessao.fila` JSONB), reordenada pelo servidor a cada resposta e devolvida em
+   `POST /respostas` (`fila`/`proximo`) e `GET /proximo`. Racional: a versão
+   anterior ("reordenada no cliente e reconciliada no servidor") duplicava a regra
+   no Dart — exatamente o que o princípio do cliente fino quer evitar — e a chamada
+   por resposta já existe, então devolver a ordem não custa round-trip extra.
 4. **Isolamento: escopo em código agora, RLS adiado** para a janela de LGPD (Out–Jan).
    O escopo por escola no repositório já isola; RLS é reforço defensivo, melhor decidido
    com dados reais de criança.

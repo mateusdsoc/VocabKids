@@ -43,7 +43,23 @@ class _SessionScreenState extends State<SessionScreen> {
   int _combo = 3; // demo: começa com combo aceso, como no mockup
   bool _reportOpen = false;
 
+  /// Erros acumulados por palavra na sessão. No 2º erro da mesma palavra, o
+  /// card de descoberta reabre antes da próxima tentativa ("errar é aprender":
+  /// dá material para acertar de verdade, sem revelar a resposta).
+  final Map<String, int> _wrongByWord = {};
+
+  /// Card a reexibir ao continuar (setado no 2º erro da palavra).
+  SessionDiscovery? _reviewCard;
+
   SessionStep get _step => widget.steps[_index];
+
+  /// Card de descoberta da palavra, procurado nos passos da própria sessão.
+  SessionDiscovery? _cardOf(String word) {
+    for (final step in widget.steps) {
+      if (step is DiscoveryStep && step.card.word == word) return step.card;
+    }
+    return null;
+  }
 
   void _confirm(SessionQuestion q) {
     final correctIndex = q.options.indexWhere((o) => o.correct);
@@ -54,6 +70,14 @@ class _SessionScreenState extends State<SessionScreen> {
         _combo += 1;
       } else {
         _combo = 0;
+        final word = q.effectiveWord;
+        if (word != null) {
+          final wrongs = (_wrongByWord[word] = (_wrongByWord[word] ?? 0) + 1);
+          if (wrongs >= 2) {
+            _reviewCard = _cardOf(word);
+            _wrongByWord[word] = 0; // recomeça a contagem após rever o card
+          }
+        }
       }
     });
   }
@@ -120,13 +144,20 @@ class _SessionScreenState extends State<SessionScreen> {
   }
 
   Widget _buildContent() {
+    // Interstício: relembrar a palavra (2º erro) antes do próximo passo.
+    // O avanço da fila já aconteceu ao sair da questão; aqui só dispensa o card.
+    final review = _reviewCard;
+    if (review != null && _outcome == null) {
+      return _discovery(review,
+          onDone: () => setState(() => _reviewCard = null));
+    }
     return switch (_step) {
-      DiscoveryStep(:final card) => _discovery(card),
+      DiscoveryStep(:final card) => _discovery(card, onDone: _advance),
       QuestionStep(:final question) => _question(question),
     };
   }
 
-  Widget _discovery(SessionDiscovery card) {
+  Widget _discovery(SessionDiscovery card, {required VoidCallback onDone}) {
     return Column(
       children: [
         Expanded(
@@ -141,7 +172,7 @@ class _SessionScreenState extends State<SessionScreen> {
         PrimaryButton(
           label: 'Entendi',
           leadingIcon: AppIcons.check,
-          onTap: _advance,
+          onTap: onDone,
         ),
       ],
     );
@@ -215,7 +246,9 @@ class _SessionScreenState extends State<SessionScreen> {
           title: ok ? 'Boa!' : 'Quase! Vamos rever isso.',
           subtitle: ok
               ? (_combo >= 2 ? 'Combo ×$_combo — você está voando' : 'Mandou bem!')
-              : 'Esta questão volta no fim da fila.',
+              : (_reviewCard != null
+                  ? 'Vamos relembrar a palavra antes de seguir.'
+                  : 'Esta questão volta no fim da fila.'),
           xp: ok ? q.xp : null,
         ),
         const SizedBox(height: 11),

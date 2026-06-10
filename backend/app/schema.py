@@ -387,6 +387,10 @@ sessao = Table(
     Column("iniciada_em", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("finalizada_em", DateTime(timezone=True), nullable=True),
     Column("xp_ganho", Integer, nullable=False, server_default="0"),
+    # Fila de slots pendentes (JSONB). O servidor é o dono da ordem: a
+    # intercalação de erro (3.4) é aplicada aqui a cada resposta e devolvida ao
+    # app — a regra não é duplicada no cliente (revisão da decisão #3, Bloco 3).
+    Column("fila", JSONB, nullable=True),
     _created_at(),
 )
 

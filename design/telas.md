@@ -154,7 +154,11 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
     leve no fundo + borda/texto no vermelho `error`; decisão revisada — o aluno
     precisa enxergar com clareza que errou, sem tom punitivo). A resposta certa
     **não** é revelada. Feedback **gentil**, sem punição; o retry vai pro **fim
-    da fila** (intercalação); a questão é refeita mais à frente (3.4).
+    da fila** (intercalação — a ordem é mantida e devolvida pelo **servidor** a
+    cada resposta); a questão é refeita mais à frente (3.4). **No 2º erro da
+    mesma palavra na sessão**, o **card de descoberta reabre** automaticamente
+    antes de seguir (dá material para acertar de verdade, sem revelar a
+    resposta — "errar é aprender").
   - **Última pendente:** entra em loop fixo até acertar.
 - **Dados:** `POST /v1/sessoes` (monta a fila — entrega **híbrida**: lote
   planejado + prefetch, sem vazar resposta); `GET /v1/sessoes/{id}/proximo`;

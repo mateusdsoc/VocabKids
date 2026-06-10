@@ -53,6 +53,7 @@ class SessionQuestion {
     required this.kind,
     required this.stem,
     required this.options,
+    this.word,
     this.highlightWord,
     this.blank = false,
     this.xp = 100,
@@ -62,6 +63,11 @@ class SessionQuestion {
   final String stem;
   final List<QuestionOption> options;
 
+  /// Palavra trabalhada pela questão (liga a questão ao card de descoberta —
+  /// ex.: para reabrir o card após erros repetidos). Quando nula, vale
+  /// [highlightWord].
+  final String? word;
+
   /// Palavra do enunciado marcada inline (sublinhado pontilhado, reabre o card).
   final String? highlightWord;
 
@@ -69,6 +75,8 @@ class SessionQuestion {
   final bool blank;
 
   final int xp;
+
+  String? get effectiveWord => word ?? highlightWord;
 }
 
 /// Um passo da fila da sessão: ou um card de descoberta, ou uma questão.
@@ -140,6 +148,7 @@ const List<SessionStep> sampleSession = [
   QuestionStep(SessionQuestion(
     kind: QuestionKind.completar,
     stem: 'O oceano é tão _____ que não dá para ver o outro lado.',
+    word: 'vasto',
     blank: true,
     options: [
       QuestionOption(key: 'A', text: 'vasto', correct: true),
