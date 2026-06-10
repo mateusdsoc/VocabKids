@@ -214,6 +214,40 @@ async def test_acerto_de_primeira_da_xp_e_avanca_estado(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_abrir_sessao_zera_o_combo(client, aluno):
+    """Combo é por sessão (3.7): não carrega da sessão anterior."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+
+    # 1ª sessão: um acerto de 1ª tentativa deixa combo = 1.
+    s1 = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(s1["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    b1 = (
+        await client.post(
+            f"/v1/sessoes/{s1['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q1["questao_id"], "opcao": correta},
+        )
+    ).json()
+    assert b1["combo_atual"] == 1
+
+    # 2ª sessão: o combo recomeça do zero (1º acerto → combo 1, não 2).
+    s2 = (await client.post("/v1/sessoes", headers=h)).json()
+    q2 = _primeira_questao(s2["slots"], nivel=1)
+    correta2 = await _resposta_correta(q2["questao_id"])
+    b2 = (
+        await client.post(
+            f"/v1/sessoes/{s2['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q2["questao_id"], "opcao": correta2},
+        )
+    ).json()
+    assert b2["combo_atual"] == 1
+    assert b2["xp_ganho"] == 120  # bônus de combo na posição 1, não acumulado
+
+
+@pytest.mark.asyncio
 async def test_erro_zera_combo_nao_avanca_e_xp_zero(client, aluno):
     await seed_vocabulario()
     h = aluno["headers"]
@@ -408,3 +442,86 @@ async def test_adaptacao_ignora_revisao_no_sinal(client, aluno):
     b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
     assert b["nivel_mudou"] is False
     assert b["nivel_atual"] == 2  # revisão não infla o sinal
+
+
+# ───────────── intercalação server-side (3.4, decisão #3 revisada) ─────────────
+
+
+def _fila_questoes(fila):
+    return [s for s in fila if s["tipo"] == "questao"]
+
+
+@pytest.mark.asyncio
+async def test_acerto_remove_o_slot_da_fila(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+
+    b = (
+        await client.post(
+            f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q1["questao_id"], "opcao": correta},
+        )
+    ).json()
+
+    ids = [s["questao_id"] for s in _fila_questoes(b["fila"])]
+    assert q1["questao_id"] not in ids
+    assert len(b["fila"]) < len(sessao["slots"])  # slot (e card visto) saíram
+    assert b["proximo"] == b["fila"][0]
+
+
+@pytest.mark.asyncio
+async def test_erro_intercala_outra_variacao_no_fim(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    errada = next(o for o in q1["opcoes"] if o != correta)
+
+    b = (
+        await client.post(
+            f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q1["questao_id"], "opcao": errada},
+        )
+    ).json()
+
+    fila = b["fila"]
+    retry = fila[-1]
+    assert retry["tipo"] == "questao"
+    assert retry["palavra_id"] == q1["palavra_id"]
+    assert retry["nivel"] == q1["nivel"]
+    assert retry["questao_id"] != q1["questao_id"]  # outra variação (seed tem ≥2)
+    # o slot original saiu da posição (não está duplicado no meio)
+    ids = [s["questao_id"] for s in _fila_questoes(fila)]
+    assert ids.count(q1["questao_id"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_proximo_devolve_o_primeiro_slot_pendente(client, aluno):
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+
+    p = (await client.get(f"/v1/sessoes/{sid}/proximo", headers=h)).json()
+    assert p["restantes"] == len(sessao["slots"])
+    assert p["proximo"]["tipo"] == sessao["slots"][0]["tipo"]
+
+    # após responder, o próximo acompanha a fila reordenada
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    b = (
+        await client.post(
+            f"/v1/sessoes/{sid}/respostas",
+            headers=h,
+            json={"questao_id": q1["questao_id"], "opcao": correta},
+        )
+    ).json()
+    p2 = (await client.get(f"/v1/sessoes/{sid}/proximo", headers=h)).json()
+    assert p2["restantes"] == len(b["fila"])
+    assert p2["proximo"] == b["proximo"]

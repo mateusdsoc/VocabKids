@@ -16,7 +16,7 @@
 ## O que é esta tela
 
 A **Trilha (mapa)** (produto 3.7): aterrissagem ao **sair de uma sessão**. Mapa
-visual da jornada — "você está aqui", concluído e o que vem, agrupado por
+visual da jornada — nó atual em destaque, concluído e o que vem, agrupado por
 **país → destino**. Fundamental II (~11–14), celular retrato, PT-BR, mockup HTML/CSS.
 Jornada: **3 países → 20 destinos → 80 nós** (~4.500 XP/nó). Mostre um recorte
 navegável (país atual + começo do próximo), não os 80 nós.
@@ -33,8 +33,9 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
   - **brilho/realce no topo** (highlight sutil) e **sombra de contato no chão**
     (drop shadow macia, deslocada pra baixo);
   - leve **gradiente radial** na face (mais claro no topo-esquerda).
-  - **Nó atual:** maior, "flutuando" (sombra mais espalhada), anel destacado e um
-    selo "VOCÊ ESTÁ AQUI" como **etiqueta com relevo**; sugira um leve *bob*.
+  - **Nó atual:** maior, "flutuando" (sombra mais espalhada), anel destacado;
+    sugira um leve *bob*. **Sem selo "você está aqui"** (decisão revisada): o
+    destaque do nó + caminho percorrido já comunicam a posição.
   - **Concluído:** medalhão com a arte + **selo de check em relevo**.
   - **Bloqueado:** aпарência **embutida/gravada** (estilo pedra/baixo-relevo),
     dessaturado, com cadeado **afundado** (inner shadow).
@@ -62,12 +63,14 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
 - **Caminho** serpenteando, conectando os nós (percorrido preenchido/verde;
   futuro apagado).
 - **Nós = cidades** com o tratamento 3D acima; rótulo nome + micro-status
-  (CONCLUÍDO · VOCÊ ESTÁ AQUI · BLOQUEADO). Nó atual domina.
+  (CONCLUÍDO · ATUAL · BLOQUEADO). Nó atual domina (sem selo "você está aqui").
 - **Cabeçalho de país** (carimbo em relevo) com progresso "3 de 6 destinos";
   próximo país bloqueado ("desbloqueia ao concluir o Brasil").
 - **Recompensas** (colecionáveis, **sem bônus de jogo**): destino → postal;
-  país → carimbo. Indique destinos que já renderam postal; **frame 3** revela o
-  postal com volume + atalho "Ver no Passaporte".
+  país → carimbo. Indique destinos que já renderam postal. **A Trilha NÃO
+  revela o postal** (decisão revisada): ele aparece **embaçado** + selo
+  discreto; o reveal nítido é exclusivo do **Passaporte**. O **frame 3** mostra
+  esse estado embaçado + atalho "Ver no Passaporte".
 - **Ações:** CTA chunky para continuar a sessão a partir do nó atual; acesso ao
   Passaporte; **barra inferior** com aba **"Trilha" ativa** (Início · Trilha ·
   Praticar · Eventos · Perfil), igual à da Home.
@@ -76,13 +79,14 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
 
 ## O que gerar — 3 frames (lado a lado)
 
-1. **Mapa · claro** — trilha sinuosa vertical (rola de baixo p/ cima), "você está
-   aqui" no Rio, Brasil em progresso, França (bloqueada) no topo. **Com toda a
+1. **Mapa · claro** — trilha sinuosa vertical (rola de baixo p/ cima), nó atual
+   no Rio, Brasil em progresso, França (bloqueada) no topo. **Com toda a
    profundidade descrita.**
 2. **Mapa · escuro** (Capa do Passaporte) — mesmo relevo; no escuro, o highlight
    é mais sutil e o dourado dá o brilho.
-3. **Detalhe de recompensa · claro** — popover revelando o **cartão-postal** com
-   volume/perspectiva + atalho "Ver no Passaporte".
+3. **Detalhe de recompensa · claro** — popover com o **cartão-postal embaçado**
+   (com volume/perspectiva) + atalho "Ver no Passaporte" — o reveal nítido
+   acontece só no Passaporte.
 
 ---
 
@@ -91,11 +95,11 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
 ```
 País: Brasil · "3 de 6 destinos"
   Salvador — CONCLUÍDO ✅ (postal ganho)
-  Rio de Janeiro — VOCÊ ESTÁ AQUI ← foco
+  Rio de Janeiro — ATUAL ← foco
   Foz do Iguaçu — BLOQUEADO 🔒 (próximo)
   Brasília — BLOQUEADO 🔒
 Topo: "França — desbloqueia ao concluir o Brasil" → Paris 🔒
-Frame 3: Salvador → Cartão-postal do Brasil revelado
+Frame 3: Salvador → Cartão-postal embaçado (reveal só no Passaporte)
 Nível 4 · 3.120 / 4.500 XP (se útil no topo)
 ```
 > Arte real só de **Rio** e **Paris**. Outros destinos → **placeholder** (medalhão
@@ -126,7 +130,7 @@ fundo: #FBF3E4 · card/papel: #FFFDF8
 primária / nó atual: #1E7FD6 (texto sobre primária: #FFFFFF)
 percorrido / concluído: #16A971
 ouro/recompensa: #E0A82E · ouro forte: #B9851A
-texto: #33302B · suave: #9C8C7D · linha/trilho: rgba(120,90,50,.16)
+texto: #33302B · suave: #7A6B5C · linha/trilho: rgba(120,90,50,.16)
 bloqueado: dessaturado, baixo-relevo (cinza-areia), cadeado afundado
 ```
 

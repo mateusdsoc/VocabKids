@@ -104,7 +104,11 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
   - **Progresso da meta semanal:** mostra o **avanço** rumo à meta (ex.: "6 de 10
     palavras dominadas esta semana"), não só um estado binário; quando batida,
     vira selo "meta cumprida". Unidade = palavras dominadas/semana (3.5);
-    visibilidade própria, sem virar colecionável.
+    visibilidade própria, sem virar colecionável. A meta é **configurada pelo
+    professor** (`turma_config.meta_semanal`), com default por ano escolar se
+    nula — o "6 de 10" dos mockups é placeholder; ao definir os defaults,
+    simular contra o ritmo real (2 palavras novas/sessão, domínio em ~3+
+    sessões) para a meta ser batível.
   - **CTA primário:** botão **"Continuar"** → abre/retoma a próxima sessão.
   - **Ação secundária:** acesso ao **mapa da trilha**.
   - **Atalho de redação** → área de redação (mock na fatia A).
@@ -146,8 +150,15 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 - **Estados por questão:**
   - **Acerto:** feedback positivo + **XP** (100/70/50 conforme tentativa) +
     confete; combo quando 1ª tentativa em sequência.
-  - **Erro:** feedback **gentil**, sem punição; o retry vai pro **fim da fila**
-    (intercalação); a questão é refeita mais à frente (3.4).
+  - **Erro:** a alternativa errada fica **vermelha suavizada com "X"** (tint
+    leve no fundo + borda/texto no vermelho `error`; decisão revisada — o aluno
+    precisa enxergar com clareza que errou, sem tom punitivo). A resposta certa
+    **não** é revelada. Feedback **gentil**, sem punição; o retry vai pro **fim
+    da fila** (intercalação — a ordem é mantida e devolvida pelo **servidor** a
+    cada resposta); a questão é refeita mais à frente (3.4). **No 2º erro da
+    mesma palavra na sessão**, o **card de descoberta reabre** automaticamente
+    antes de seguir (dá material para acertar de verdade, sem revelar a
+    resposta — "errar é aprender").
   - **Última pendente:** entra em loop fixo até acertar.
 - **Dados:** `POST /v1/sessoes` (monta a fila — entrega **híbrida**: lote
   planejado + prefetch, sem vazar resposta); `GET /v1/sessoes/{id}/proximo`;
@@ -176,14 +187,16 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 ## 6. Trilha (mapa) — produto 3.7
 
 - **Objetivo:** **aterrissagem pós-sessão**; senso de progresso e próximo passo.
-- **Conteúdo:** mapa visual da trilha; **"você está aqui"** (nó atual); nós do
-  destino; agrupamento por **destino** e **país**; próximo nó/destino.
+- **Conteúdo:** mapa visual da trilha; **nó atual em destaque** (maior, anel,
+  caminho percorrido vivo — **sem selo "você está aqui"**, decisão revisada: a
+  própria trilha já comunica a posição pelo progresso); nós do destino;
+  agrupamento por **destino** e **país**; próximo nó/destino.
   Estrutura: **País → Destino → Nó** (3 países, 20 destinos, 80 nós).
 - **Estados:** **completar nó** → animação (marcador avança + confete), sem item.
   **Completar destino** → cartão-postal (revelado no Passaporte). **Completar
   país** → carimbo (idem). **Modo livre** ao terminar os 3 países (mapa fica no
   último nó; prática continua).
-- **Dados:** `GET /v1/trilha` (nó atual, destinos, "você está aqui").
+- **Dados:** `GET /v1/trilha` (nó atual, destinos).
 - **Navegação:** continuar sessão a partir daqui; abrir Passaporte.
 - **Notas:** progressão é por **XP** (não por nº de palavras) — ~4.500 XP/nó,
   1 nó a cada 2–4 sessões.

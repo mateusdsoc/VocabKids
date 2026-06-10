@@ -5,7 +5,6 @@ nº de palavras). As questões de todas as palavras envolvidas vêm numa só que
 com left join em `aluno_questao` para saber o que já foi usado/acertado.
 """
 from collections import defaultdict
-from datetime import date
 
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -165,11 +164,50 @@ async def buscar_sessao(conn: AsyncConnection, sessao_id: int) -> Row | None:
     s = schema.sessao
     return (
         await conn.execute(
-            select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho).where(
+            select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho, s.c.fila).where(
                 s.c.id == sessao_id
             )
         )
     ).first()
+
+
+async def salvar_fila(
+    conn: AsyncConnection, sessao_id: int, fila: list[dict]
+) -> None:
+    """Persiste a fila de slots pendentes — o servidor é o dono da ordem."""
+    s = schema.sessao
+    await conn.execute(update(s).where(s.c.id == sessao_id).values(fila=fila))
+
+
+async def outra_variacao_nao_acertada(
+    conn: AsyncConnection,
+    usuario_id: int,
+    palavra_id: int,
+    nivel: int,
+    exclui_questao_id: int,
+) -> Row | None:
+    """Variação do mesmo nível ainda não acertada, para o retry do erro (3.4).
+
+    Prioriza variação nunca usada; nunca devolve uma já acertada. `None` →
+    não há outra (o retry repete a própria questão errada).
+    """
+    q, aq = schema.questao, schema.aluno_questao
+    juncao = q.outerjoin(
+        aq, and_(aq.c.questao_id == q.c.id, aq.c.usuario_id == usuario_id)
+    )
+    stmt = (
+        select(q.c.id, q.c.palavra_id, q.c.nivel, q.c.enunciado, q.c.opcoes)
+        .select_from(juncao)
+        .where(
+            q.c.palavra_id == palavra_id,
+            q.c.nivel == nivel,
+            q.c.status == "ativa",
+            q.c.id != exclui_questao_id,
+            (aq.c.acertou.is_(None)) | (aq.c.acertou.is_(False)),
+        )
+        .order_by(aq.c.acertou.is_not(None), q.c.variacao)
+    )
+    return (await conn.execute(stmt)).first()
 
 
 async def somar_xp_sessao(conn: AsyncConnection, sessao_id: int, xp: int) -> None:
@@ -188,6 +226,7 @@ async def buscar_questao(conn: AsyncConnection, questao_id: int) -> Row | None:
                 q.c.id,
                 q.c.palavra_id,
                 q.c.nivel,
+                q.c.enunciado,
                 q.c.opcoes,
                 q.c.resposta_correta,
                 q.c.status,
@@ -229,7 +268,6 @@ async def ler_pontuacao(conn: AsyncConnection, usuario_id: int) -> Row | None:
             select(
                 p.c.xp_total,
                 p.c.combo_atual,
-                p.c.combo_data,
                 p.c.sessoes_total,
                 p.c.palavras_dominadas,
             ).where(p.c.usuario_id == usuario_id)
@@ -293,7 +331,6 @@ async def aplicar_pontuacao(
     usuario_id: int,
     xp_total: int,
     combo_atual: int,
-    combo_data: date,
     palavras_dominadas: int,
 ) -> None:
     p = schema.aluno_progresso
@@ -303,9 +340,16 @@ async def aplicar_pontuacao(
         .values(
             xp_total=xp_total,
             combo_atual=combo_atual,
-            combo_data=combo_data,
             palavras_dominadas=palavras_dominadas,
         )
+    )
+
+
+async def zerar_combo(conn: AsyncConnection, usuario_id: int) -> None:
+    """Combo é por sessão (3.7): zera ao abrir cada sessão."""
+    p = schema.aluno_progresso
+    await conn.execute(
+        update(p).where(p.c.usuario_id == usuario_id).values(combo_atual=0)
     )
 
 

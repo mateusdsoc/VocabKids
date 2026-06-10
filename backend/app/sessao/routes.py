@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.api.deps import get_conn
 from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
 from app.sessao import service
-from app.sessao.schemas import RespostaIn, RespostaOut, ResumoOut, SessaoOut
+from app.sessao.schemas import (
+    ProximoOut,
+    RespostaIn,
+    RespostaOut,
+    ResumoOut,
+    SessaoOut,
+)
 
 router = APIRouter(tags=["sessao"])
 
@@ -23,6 +29,19 @@ async def abrir_sessao(
     conn: Annotated[AsyncConnection, Depends(get_conn)],
 ):
     return await service.montar_sessao(conn, usuario.id)
+
+
+@router.get(
+    "/sessoes/{sessao_id}/proximo",
+    response_model=ProximoOut,
+    summary="Próximo slot pendente da fila (ordem mantida pelo servidor)",
+)
+async def proximo(
+    sessao_id: int,
+    usuario: Annotated[UsuarioAutenticado, Depends(get_usuario_atual)],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    return await service.proximo(conn, usuario.id, sessao_id)
 
 
 @router.post(

@@ -50,17 +50,25 @@ cada tela implementada.
   rebaixado, textura cartográfica, banhos de cor, fronteira única.
 - Postal **embaçado** (reveal só no Passaporte). **Estático** (sem o *bob* do nó
   atual, por ora). Decorativos em `widgets/trilha_tones.dart`.
+- **Posições proporcionais** (10/06): o espaço lógico 340×540 virou referência —
+  as posições dos nós escalam com a largura real (`LayoutBuilder`); rótulos e o
+  aside "Continuar" clampam nas bordas em vez de recortar em telas estreitas.
 
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
   a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
 - `core/widgets/primary_button.dart` (`PrimaryButton`) — CTA primário compartilhado.
 - `core/format.dart` (`milhar`).
+- **Dependências com versão exata** no `pubspec.yaml` (10/06) — `pub get` em
+  ambiente novo já quebrou o build resolvendo versões diferentes (caso
+  `valueOrNull`/riverpod). Atualizar dep agora é PR deliberado (yaml + lock).
+- **`CLAUDE.md`** na raiz (10/06): mapa dos documentos + regra das decisões
+  revisadas (doc contratual atualiza no mesmo commit) + decisões que não mudam.
 
-> ⚠️ **Bloqueio de build atual:** `home_providers.dart` usa `.valueOrNull` que o
-> riverpod resolvido neste ambiente não expõe → `flutter run` falha. Ver
-> `HANDOFF.md` (raiz). As telas novas estão analyzer-clean mas **não foram
-> verificadas visualmente** por causa disso.
+> ✅ **Bloqueio de build resolvido:** `home_providers.dart` usa `.value` (o
+> `.valueOrNull` saiu no riverpod 3) e as dependências agora são exatas no
+> `pubspec.yaml` (10/06) — o caso não se repete. Pendência que restou: telas de
+> Resumo/Trilha ainda **não verificadas visualmente** (fazer no `flutter run`).
 
 ---
 
@@ -81,6 +89,10 @@ cada tela implementada.
 ### Interação
 - [ ] **Tocar na palavra marcada** (enunciado/exemplo) reabrir o card de
       descoberta sem sair da questão. Hoje só o sublinhado pontilhado afoorda.
+- [x] **Card reaberto no 2º erro da palavra** (10/06): a Sessão reapresenta o
+      card de descoberta automaticamente após o 2º erro acumulado da mesma
+      palavra, antes de seguir — sem revelar a resposta ("errar é aprender").
+      Com o backend, o gatilho vem de `tentativas` da `RespostaOut`.
 - [ ] **Selos pontilhados** do `QuestionPanel` são círculos sólidos translúcidos
       (aproximação). Dashed real exige `CustomPainter` — cosmético.
 
@@ -88,17 +100,24 @@ cada tela implementada.
 
 ## 🔌 Pendências de backend (cliente fino)
 
-A Sessão hoje roda com `sampleSession` (dados de exemplo). Wiring real:
+A Sessão hoje roda com `sampleSession` (dados de exemplo). O backend já expõe
+tudo o que a tela precisa — falta o **wiring no app**:
 - [ ] `POST /v1/sessoes` (montar a fila — entrega híbrida, sem vazar resposta).
-- [ ] `GET /v1/sessoes/{id}/proximo`.
+- [ ] `GET /v1/sessoes/{id}/proximo` (**implementado no backend em 10/06**).
 - [ ] `POST /v1/sessoes/{id}/respostas` (correção **server-side** → XP/combo/estado).
       Hoje a correção é local (demo); o servidor será autoritativo.
 - [ ] `POST /v1/questoes/{id}/report` (mock na fatia A).
-- [ ] **Re-queue do erro**: ao errar, a questão volta ao fim da fila (3.4). Hoje
-      a tela só avança (a mensagem já avisa o aluno).
+- [ ] **Re-queue do erro** (decisão #3 **revisada em 10/06**): a intercalação é
+      **server-side** — a fila persiste em `sessao.fila` e volta reordenada em
+      cada `POST /respostas` (`fila`/`proximo`). O app só renderiza a ordem
+      recebida (nada de reimplementar a regra no Dart). No wiring, trocar o
+      "só avança" da demo por consumir `fila`.
 
 ### Home — campos ainda não expostos pela API (ver `HomeMapper`)
-- [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10.
+- [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10. A meta
+      real vem de `turma_config.meta_semanal` (professor configura; default por
+      ano se nula). Ao definir os defaults, simular contra o ritmo real
+      (2 palavras novas/sessão, domínio em ~3+ sessões) para ser batível.
 - [ ] **Arte por destino** na `/v1/trilha` (asset_ref) — hoje só Rio/Paris.
 
 ---
@@ -125,12 +144,26 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## 🎨 Decisões de design fixadas
-- Paleta **travada**: claro `#1E7FD6`/areia, escuro navy `#172A44`/dourado
-  champanhe.
-- **Erro de resposta = vermelho** (decisão revisada pelo dono): o aluno precisa
-  enxergar com clareza que errou (alternativa vermelha + "X"). O âmbar (`warn`)
-  passou a valer só para **atenção gentil** (prazos de redação, validação de
-  formulário, status "em análise") — não mais para o erro de resposta.
+- Paleta: **escuro travado** (navy `#172A44`/dourado champanhe). O **claro**
+  (`#1E7FD6`/areia) é a direção vigente, mas **admite ajustes finos** (dono,
+  10/06) — tons ainda não totalmente definidos.
+- **Contraste mínimo = critério de aceite** da paleta (10/06): texto de corpo
+  ≥ 4.5:1 (AA), texto grande/display ≥ 3:1. Aplicado: `muted` do claro
+  escurecido `#9C8C7D` → `#7A6B5C` (o anterior dava ~3:1 sobre o fundo areia).
+  Ouro/`accent` não deve ser usado como texto pequeno sobre papel.
+- **Erro de resposta = vermelho suavizado** (decisão revisada pelo dono;
+  refinada 10/06 no padrão Duolingo): alternativa errada com **fundo em tint
+  ~12% do vermelho + borda/texto/"X" no token `error`** (`#D23F34` claro /
+  `#E8736A` escuro) — nunca vermelho puro nem flash de tela. O aluno enxerga
+  com clareza que errou, sem tom punitivo. O âmbar (`warn`) vale só para
+  **atenção gentil** (prazos de redação, validação de formulário, status "em
+  análise") — não para o erro de resposta. (O `OptionTile` já implementa esse
+  padrão.)
+- **Combo é por sessão** (decidido 10/06): zera ao iniciar cada sessão (além de
+  ao errar/2ª tentativa); não carrega entre sessões — `combo_data` removido do
+  modelo (`docs/arquitetura.md`).
+- **Trilha sem selo "você está aqui"** (decisão revisada): o nó atual em
+  destaque + caminho percorrido já comunicam a posição.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo (produto).
 - Fontes: Fredoka (display) · Nunito (corpo) · Caveat (só "Passaporte") ·
   Space Mono (micro-rótulos).

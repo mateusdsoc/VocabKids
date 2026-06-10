@@ -12,7 +12,6 @@ variação já acertada e nunca usando o N1 como revisão (3.4).
 import math
 import random
 from collections import defaultdict
-from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -159,9 +158,49 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
 
     # Persistência: abre a sessão e introduz as novas (card a ser visto = descoberta).
     sessao_id = await repo.abrir_sessao(conn, usuario_id)
+    await repo.zerar_combo(conn, usuario_id)  # combo é por sessão (3.7)
+    await repo.salvar_fila(conn, sessao_id, slots)  # servidor é o dono da ordem
     await repo.introduzir_palavras(conn, usuario_id, novas_ids)
 
     return {"sessao_id": sessao_id, "slots": slots}
+
+
+def _reordenar_fila(
+    fila: list[dict], questao_id: int, correto: bool, retry_slot: dict | None
+) -> list[dict]:
+    """Intercalação de erro (3.4), aplicada server-side a cada resposta.
+
+    - Acertou → o slot sai da fila (e os cards da palavra já vistos até ele).
+    - Errou → o slot sai da posição e o retry (outra variação não acertada do
+      mesmo nível; sem outra, a própria questão) vai pro **fim da fila**.
+    - Último pendente → o retry é o único slot: vira o loop fixo natural.
+    """
+    idx = next(
+        (
+            i
+            for i, s in enumerate(fila)
+            if s.get("tipo") == "questao" and s.get("questao_id") == questao_id
+        ),
+        None,
+    )
+    if idx is None:
+        return fila  # resposta fora da fila persistida (ex.: retry repetido)
+
+    palavra_id = fila[idx].get("palavra_id")
+    nova = [
+        s
+        for i, s in enumerate(fila)
+        if i != idx
+        # cards da palavra anteriores à questão respondida já foram vistos
+        and not (
+            i < idx
+            and s.get("tipo") == "card"
+            and s.get("palavra", {}).get("id") == palavra_id
+        )
+    ]
+    if not correto and retry_slot is not None:
+        nova.append(retry_slot)
+    return nova
 
 
 async def responder(
@@ -173,9 +212,10 @@ async def responder(
 ) -> dict:
     """Corrige uma resposta no servidor: XP/combo, avanço de estado, domínio.
 
-    A correção é server-side (integridade do XP, cliente fino). A intercalação de
-    erro é reordenada no cliente (decisão #3) — aqui só registramos e devolvemos o
-    feedback, incluindo a resposta correta (revelada só APÓS responder).
+    A correção é server-side (integridade do XP, cliente fino) e a intercalação
+    de erro também (decisão #3 revisada): a fila persistida é reordenada aqui e
+    devolvida na resposta — o app só renderiza. A resposta correta é revelada
+    só APÓS responder.
     """
     sessao = await repo.buscar_sessao(conn, sessao_id)
     if sessao is None:
@@ -211,8 +251,6 @@ async def responder(
         correto=correto,
         tentativa=tentativa,
         combo_atual=progresso.combo_atual,
-        combo_data=progresso.combo_data,
-        hoje=date.today(),
     )
 
     # Avanço de estado: só no acerto e só quando a questão é do nível em trabalho.
@@ -238,6 +276,34 @@ async def responder(
     xp_total = progresso.xp_total + xp_ganho
     palavras_dominadas = progresso.palavras_dominadas + (1 if dominou else 0)
 
+    # Intercalação server-side (3.4): no erro, a outra variação não acertada do
+    # mesmo nível (ou a própria questão, se não houver) vai pro fim da fila.
+    fila_antiga: list[dict] = sessao.fila or []
+    retry_slot = None
+    if not correto:
+        original = next(
+            (
+                s
+                for s in fila_antiga
+                if s.get("tipo") == "questao" and s.get("questao_id") == questao_id
+            ),
+            None,
+        )
+        alt = await repo.outra_variacao_nao_acertada(
+            conn, usuario_id, questao.palavra_id, questao.nivel, questao_id
+        )
+        retry = alt if alt is not None else questao
+        retry_slot = {
+            "tipo": "questao",
+            "questao_id": retry.id,
+            "palavra_id": retry.palavra_id,
+            "nivel": retry.nivel,
+            "is_revisao": (original or {}).get("is_revisao", False),
+            "enunciado": retry.enunciado,
+            "opcoes": _embaralhar(retry.opcoes),
+        }
+    fila = _reordenar_fila(fila_antiga, questao_id, correto, retry_slot)
+
     # Persistência.
     await repo.registrar_aluno_questao(
         conn, usuario_id, questao_id, tentativa, correto, primeira, conta_sinal
@@ -249,8 +315,10 @@ async def responder(
             conn, usuario_id, questao.palavra_id, novo_estado, nivel4_agendado, dominou
         )
     await repo.aplicar_pontuacao(
-        conn, usuario_id, xp_total, pontos.combo, pontos.combo_data, palavras_dominadas
+        conn, usuario_id, xp_total, pontos.combo, palavras_dominadas
     )
+    if fila != fila_antiga:
+        await repo.salvar_fila(conn, sessao_id, fila)
 
     # Trilha: avança o nó e concede recompensas (cartão/carimbo/selo) — o pedaço
     # que ficou adiado quando a trilha ainda não existia.
@@ -268,7 +336,24 @@ async def responder(
         "estado_palavra": novo_estado,
         "dominou": dominou,
         "recompensas": recompensas,
+        # O servidor é o dono da ordem (3.4): o app renderiza a fila devolvida,
+        # sem reimplementar a intercalação.
+        "fila": fila,
+        "proximo": fila[0] if fila else None,
     }
+
+
+async def proximo(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> dict:
+    """Próximo slot pendente da fila persistida (`GET /v1/sessoes/{id}/proximo`)."""
+    sessao = await repo.buscar_sessao(conn, sessao_id)
+    if sessao is None:
+        raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
+    if sessao.usuario_id != usuario_id:
+        raise ApiError(403, "sem_permissao", "Sessão de outro usuário.")
+    if sessao.finalizada_em is not None:
+        raise ApiError(409, "sessao_encerrada", "Sessão já encerrada.")
+    fila = sessao.fila or []
+    return {"proximo": fila[0] if fila else None, "restantes": len(fila)}
 
 
 async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> dict:
