@@ -228,8 +228,9 @@ aluno_progresso = Table(
     Column("xp_total", BigInteger, nullable=False, server_default="0"),
     Column("no_atual_id", BigInteger, ForeignKey("trilha_no.id", ondelete="SET NULL"), nullable=True),
     Column("palavras_dominadas", Integer, nullable=False, server_default="0"),
+    # Combo é POR SESSÃO (3.7, decidido 10/06): zera ao abrir cada sessão,
+    # ao errar e ao acertar só na 2ª — não carrega entre sessões.
     Column("combo_atual", Integer, nullable=False, server_default="0"),
-    Column("combo_data", Date, nullable=True),
     Column("nivel_dificuldade_atual", Integer, nullable=False, server_default="1"),
     Column("sessoes_total", Integer, nullable=False, server_default="0"),
     Column("nivel_mudou_em_sessao", Integer, nullable=True),  # cooldown da histerese

@@ -115,7 +115,8 @@ class AppColors extends ThemeExtension<AppColors> {
     accentStrong: Color(0xFFB9851A),
     xp: Color(0xFF1E7FD6),
     ink: Color(0xFF33302B),
-    muted: Color(0xFF9C8C7D),
+    // Escurecido do #9C8C7D do mockup (~3:1) para cumprir AA (≥4.5:1) sobre bg.
+    muted: Color(0xFF7A6B5C),
     goal: Color(0xFF16A971),
     onGoal: Color(0xFFFFFFFF),
     warn: Color(0xFFC9821C), // âmbar terroso (atenção gentil)

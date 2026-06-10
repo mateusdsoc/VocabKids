@@ -1,6 +1,9 @@
-"""Regras puras de XP/combo (seção 3.7) — sem banco."""
-from datetime import date, timedelta
+"""Regras puras de XP/combo (seção 3.7) — sem banco.
 
+O combo é por sessão: quem zera entre sessões é a abertura da sessão
+(`montar_sessao` → `zerar_combo`), testada em `test_sessao.py`. Aqui, `pontuar`
+só continua o combo recebido.
+"""
 from app.progressao import xp
 
 
@@ -12,36 +15,31 @@ def test_xp_base_por_tentativa():
 
 
 def test_acerto_primeira_inicia_combo():
-    hoje = date.today()
-    r = xp.pontuar(correto=True, tentativa=1, combo_atual=0, combo_data=None, hoje=hoje)
+    r = xp.pontuar(correto=True, tentativa=1, combo_atual=0)
     assert r.combo == 1
     assert r.xp == 100 + (18 + 2 * 1)  # 120
 
 
 def test_combo_cresce_no_acerto_de_primeira():
-    hoje = date.today()
-    r = xp.pontuar(correto=True, tentativa=1, combo_atual=1, combo_data=hoje, hoje=hoje)
+    r = xp.pontuar(correto=True, tentativa=1, combo_atual=1)
     assert r.combo == 2
     assert r.xp == 100 + (18 + 2 * 2)  # 122
 
 
 def test_erro_zera_combo_e_nao_da_xp():
-    hoje = date.today()
-    r = xp.pontuar(correto=False, tentativa=1, combo_atual=5, combo_data=hoje, hoje=hoje)
+    r = xp.pontuar(correto=False, tentativa=1, combo_atual=5)
     assert r.combo == 0
     assert r.xp == 0
 
 
 def test_acerto_na_segunda_zera_combo_e_xp_70():
-    hoje = date.today()
-    r = xp.pontuar(correto=True, tentativa=2, combo_atual=4, combo_data=hoje, hoje=hoje)
+    r = xp.pontuar(correto=True, tentativa=2, combo_atual=4)
     assert r.combo == 0
     assert r.xp == 70
 
 
-def test_combo_zera_em_novo_dia():
-    hoje = date.today()
-    ontem = hoje - timedelta(days=1)
-    r = xp.pontuar(correto=True, tentativa=1, combo_atual=9, combo_data=ontem, hoje=hoje)
-    assert r.combo == 1  # recomeçou do zero e incrementou
-    assert r.xp == 100 + (18 + 2 * 1)
+def test_pontuar_continua_o_combo_da_sessao():
+    # `pontuar` não conhece dia/sessão: só continua o combo recebido.
+    r = xp.pontuar(correto=True, tentativa=1, combo_atual=9)
+    assert r.combo == 10
+    assert r.xp == 100 + (18 + 2 * 10)  # 138

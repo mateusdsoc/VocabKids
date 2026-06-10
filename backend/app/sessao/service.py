@@ -12,7 +12,6 @@ variação já acertada e nunca usando o N1 como revisão (3.4).
 import math
 import random
 from collections import defaultdict
-from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -159,6 +158,7 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
 
     # Persistência: abre a sessão e introduz as novas (card a ser visto = descoberta).
     sessao_id = await repo.abrir_sessao(conn, usuario_id)
+    await repo.zerar_combo(conn, usuario_id)  # combo é por sessão (3.7)
     await repo.introduzir_palavras(conn, usuario_id, novas_ids)
 
     return {"sessao_id": sessao_id, "slots": slots}
@@ -211,8 +211,6 @@ async def responder(
         correto=correto,
         tentativa=tentativa,
         combo_atual=progresso.combo_atual,
-        combo_data=progresso.combo_data,
-        hoje=date.today(),
     )
 
     # Avanço de estado: só no acerto e só quando a questão é do nível em trabalho.
@@ -249,7 +247,7 @@ async def responder(
             conn, usuario_id, questao.palavra_id, novo_estado, nivel4_agendado, dominou
         )
     await repo.aplicar_pontuacao(
-        conn, usuario_id, xp_total, pontos.combo, pontos.combo_data, palavras_dominadas
+        conn, usuario_id, xp_total, pontos.combo, palavras_dominadas
     )
 
     # Trilha: avança o nó e concede recompensas (cartão/carimbo/selo) — o pedaço

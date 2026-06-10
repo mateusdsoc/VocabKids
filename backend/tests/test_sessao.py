@@ -214,6 +214,40 @@ async def test_acerto_de_primeira_da_xp_e_avanca_estado(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_abrir_sessao_zera_o_combo(client, aluno):
+    """Combo é por sessão (3.7): não carrega da sessão anterior."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+
+    # 1ª sessão: um acerto de 1ª tentativa deixa combo = 1.
+    s1 = (await client.post("/v1/sessoes", headers=h)).json()
+    q1 = _primeira_questao(s1["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    b1 = (
+        await client.post(
+            f"/v1/sessoes/{s1['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q1["questao_id"], "opcao": correta},
+        )
+    ).json()
+    assert b1["combo_atual"] == 1
+
+    # 2ª sessão: o combo recomeça do zero (1º acerto → combo 1, não 2).
+    s2 = (await client.post("/v1/sessoes", headers=h)).json()
+    q2 = _primeira_questao(s2["slots"], nivel=1)
+    correta2 = await _resposta_correta(q2["questao_id"])
+    b2 = (
+        await client.post(
+            f"/v1/sessoes/{s2['sessao_id']}/respostas",
+            headers=h,
+            json={"questao_id": q2["questao_id"], "opcao": correta2},
+        )
+    ).json()
+    assert b2["combo_atual"] == 1
+    assert b2["xp_ganho"] == 120  # bônus de combo na posição 1, não acumulado
+
+
+@pytest.mark.asyncio
 async def test_erro_zera_combo_nao_avanca_e_xp_zero(client, aluno):
     await seed_vocabulario()
     h = aluno["headers"]

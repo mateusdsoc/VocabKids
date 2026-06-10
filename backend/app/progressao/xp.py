@@ -5,11 +5,11 @@ constantes do MVP, ajustáveis com telemetria depois.
 
     xp_base = 100 (1ª tentativa) | 70 (2ª) | 50 (3ª+, piso)
     combo:   só acerto de 1ª tentativa incrementa; bônus = 18 + 2×posição
-             zera ao errar, ao acertar só na 2ª, e a cada novo dia (combo_data)
+             zera ao errar e ao acertar só na 2ª; é POR SESSÃO — zera ao
+             abrir cada sessão (decidido 10/06), não carrega entre sessões
     bônus de domínio (passar o N4): +500
 """
 from dataclasses import dataclass
-from datetime import date
 
 XP_PRIMEIRA = 100
 XP_SEGUNDA = 70
@@ -31,7 +31,6 @@ def xp_base(tentativa: int) -> int:
 class ResultadoPontuacao:
     xp: int            # XP da questão (sem o bônus de domínio)
     combo: int         # novo combo
-    combo_data: date   # dia do combo
 
 
 def pontuar(
@@ -39,15 +38,16 @@ def pontuar(
     correto: bool,
     tentativa: int,
     combo_atual: int,
-    combo_data: date | None,
-    hoje: date,
 ) -> ResultadoPontuacao:
-    """XP/combo de uma resposta. `tentativa` é a nº desta resposta (1 = primeira)."""
-    # Combo zera a cada novo dia (ou se nunca houve combo hoje).
-    combo = combo_atual if combo_data == hoje else 0
+    """XP/combo de uma resposta. `tentativa` é a nº desta resposta (1 = primeira).
+
+    `combo_atual` é o combo da sessão corrente — quem zera entre sessões é a
+    abertura da sessão (`montar_sessao`), não esta função.
+    """
+    combo = combo_atual
 
     if not correto:
-        return ResultadoPontuacao(xp=0, combo=0, combo_data=hoje)
+        return ResultadoPontuacao(xp=0, combo=0)
 
     base = xp_base(tentativa)
     if tentativa == 1:
@@ -56,4 +56,4 @@ def pontuar(
     else:
         combo = 0   # acertar só na 2ª (ou mais) zera o combo
         bonus = 0
-    return ResultadoPontuacao(xp=base + bonus, combo=combo, combo_data=hoje)
+    return ResultadoPontuacao(xp=base + bonus, combo=combo)

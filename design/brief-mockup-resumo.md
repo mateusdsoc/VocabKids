@@ -71,6 +71,11 @@ em PT-BR. Mockup visual (HTML/CSS), não precisa ser funcional.
 
 ## Dados de exemplo (use estes)
 
+> ⚠️ **Valores ilustrativos (mockup):** os números abaixo servem só ao layout.
+> A economia real de XP é definida pelo backend (servidor autoritativo) e deve
+> sustentar o ritmo de **~2–4 sessões por nó** (~4.500 XP/nó) — não calibrar
+> expectativa de progresso pelos valores deste brief.
+
 ```
 Título: "Sessão concluída!"     Contexto: "Rio de Janeiro · Lição 3"
 XP da sessão: +480 XP
@@ -114,7 +119,7 @@ primária:    #1E7FD6   (texto sobre primária: #FFFFFF)
 XP:          #1E7FD6
 sucesso/dominada: #16A971
 ouro/conquista:   #E0A82E  ·  ouro forte: #B9851A
-texto:       #33302B   ·  texto suave: #9C8C7D
+texto:       #33302B   ·  texto suave: #7A6B5C
 linha/trilho: rgba(120,90,50,.16)
 ```
 

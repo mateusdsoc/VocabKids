@@ -5,7 +5,6 @@ nº de palavras). As questões de todas as palavras envolvidas vêm numa só que
 com left join em `aluno_questao` para saber o que já foi usado/acertado.
 """
 from collections import defaultdict
-from datetime import date
 
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -229,7 +228,6 @@ async def ler_pontuacao(conn: AsyncConnection, usuario_id: int) -> Row | None:
             select(
                 p.c.xp_total,
                 p.c.combo_atual,
-                p.c.combo_data,
                 p.c.sessoes_total,
                 p.c.palavras_dominadas,
             ).where(p.c.usuario_id == usuario_id)
@@ -293,7 +291,6 @@ async def aplicar_pontuacao(
     usuario_id: int,
     xp_total: int,
     combo_atual: int,
-    combo_data: date,
     palavras_dominadas: int,
 ) -> None:
     p = schema.aluno_progresso
@@ -303,9 +300,16 @@ async def aplicar_pontuacao(
         .values(
             xp_total=xp_total,
             combo_atual=combo_atual,
-            combo_data=combo_data,
             palavras_dominadas=palavras_dominadas,
         )
+    )
+
+
+async def zerar_combo(conn: AsyncConnection, usuario_id: int) -> None:
+    """Combo é por sessão (3.7): zera ao abrir cada sessão."""
+    p = schema.aluno_progresso
+    await conn.execute(
+        update(p).where(p.c.usuario_id == usuario_id).values(combo_atual=0)
     )
 
 

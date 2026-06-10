@@ -98,7 +98,10 @@ A Sessão hoje roda com `sampleSession` (dados de exemplo). Wiring real:
       a tela só avança (a mensagem já avisa o aluno).
 
 ### Home — campos ainda não expostos pela API (ver `HomeMapper`)
-- [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10.
+- [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10. A meta
+      real vem de `turma_config.meta_semanal` (professor configura; default por
+      ano se nula). Ao definir os defaults, simular contra o ritmo real
+      (2 palavras novas/sessão, domínio em ~3+ sessões) para ser batível.
 - [ ] **Arte por destino** na `/v1/trilha` (asset_ref) — hoje só Rio/Paris.
 
 ---
@@ -125,12 +128,26 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## 🎨 Decisões de design fixadas
-- Paleta **travada**: claro `#1E7FD6`/areia, escuro navy `#172A44`/dourado
-  champanhe.
-- **Erro de resposta = vermelho** (decisão revisada pelo dono): o aluno precisa
-  enxergar com clareza que errou (alternativa vermelha + "X"). O âmbar (`warn`)
-  passou a valer só para **atenção gentil** (prazos de redação, validação de
-  formulário, status "em análise") — não mais para o erro de resposta.
+- Paleta: **escuro travado** (navy `#172A44`/dourado champanhe). O **claro**
+  (`#1E7FD6`/areia) é a direção vigente, mas **admite ajustes finos** (dono,
+  10/06) — tons ainda não totalmente definidos.
+- **Contraste mínimo = critério de aceite** da paleta (10/06): texto de corpo
+  ≥ 4.5:1 (AA), texto grande/display ≥ 3:1. Aplicado: `muted` do claro
+  escurecido `#9C8C7D` → `#7A6B5C` (o anterior dava ~3:1 sobre o fundo areia).
+  Ouro/`accent` não deve ser usado como texto pequeno sobre papel.
+- **Erro de resposta = vermelho suavizado** (decisão revisada pelo dono;
+  refinada 10/06 no padrão Duolingo): alternativa errada com **fundo em tint
+  ~12% do vermelho + borda/texto/"X" no token `error`** (`#D23F34` claro /
+  `#E8736A` escuro) — nunca vermelho puro nem flash de tela. O aluno enxerga
+  com clareza que errou, sem tom punitivo. O âmbar (`warn`) vale só para
+  **atenção gentil** (prazos de redação, validação de formulário, status "em
+  análise") — não para o erro de resposta. (O `OptionTile` já implementa esse
+  padrão.)
+- **Combo é por sessão** (decidido 10/06): zera ao iniciar cada sessão (além de
+  ao errar/2ª tentativa); não carrega entre sessões — `combo_data` removido do
+  modelo (`docs/arquitetura.md`).
+- **Trilha sem selo "você está aqui"** (decisão revisada): o nó atual em
+  destaque + caminho percorrido já comunicam a posição.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo (produto).
 - Fontes: Fredoka (display) · Nunito (corpo) · Caveat (só "Passaporte") ·
   Space Mono (micro-rótulos).

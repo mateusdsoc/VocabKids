@@ -1,6 +1,4 @@
 """Trilha: mapa, passaporte e o loop de recompensa (cartão/carimbo/selo)."""
-from datetime import date
-
 import pytest
 from sqlalchemy import select, update
 
@@ -109,10 +107,21 @@ async def test_fechar_pais_concede_cartao_e_carimbo(client, aluno):
 async def test_combo_10_concede_selo_e_e_idempotente(client, aluno):
     await seed_trilha()
     await seed_vocabulario()
-    # combo a um acerto de chegar a 10.
-    await _set_progresso(aluno["usuario_id"], combo_atual=9, combo_data=date.today())
+    # O combo é por sessão (zera ao abrir): a sessão precisa estar aberta ANTES
+    # de posicionar o combo a um acerto de chegar a 10.
+    sessao = (await client.post("/v1/sessoes", headers=aluno["headers"])).json()
+    await _set_progresso(aluno["usuario_id"], combo_atual=9)
 
-    respostas = await _responder_questoes_n1(client, aluno["headers"], 2)
+    n1 = [s for s in sessao["slots"] if s["tipo"] == "questao" and s["nivel"] == 1]
+    respostas = []
+    for q in n1[:2]:
+        cor = await _correta(q["questao_id"])
+        r = await client.post(
+            f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+            headers=aluno["headers"],
+            json={"questao_id": q["questao_id"], "opcao": cor},
+        )
+        respostas.append(r.json())
     selos_1 = [c for c in respostas[0]["recompensas"] if c["tipo"] == "selo"]
     assert any(c["referencia"] == "feito:combo_10" for c in selos_1)
     assert respostas[0]["combo_atual"] == 10

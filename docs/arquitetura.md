@@ -104,7 +104,7 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `combo_data` (date), `nivel_dificuldade_atual` (1–10), `sessoes_total` (int), `nivel_mudou_em_sessao` (int, nullable) | 1:1 com aluno. `combo` zera por dia e ao errar/2ª tentativa (seção 3.7). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. `nivel_mudou_em_sessao` = cooldown da histerese da adaptação. | A |
+| `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `nivel_dificuldade_atual` (1–10), `sessoes_total` (int), `nivel_mudou_em_sessao` (int, nullable) | 1:1 com aluno. `combo` é **por sessão** (decidido 10/06): zera ao **iniciar cada sessão** e ao errar/2ª tentativa (seção 3.7) — não carrega entre sessões (sem `combo_data`). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. `nivel_mudou_em_sessao` = cooldown da histerese da adaptação. | A |
 | `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 28 por aluno (passaporte: 20 cartões + 3 carimbos + 5 selos — seção 3.10 / `referencia_arte.md`). Booleano (ganhou/não). | A |
 
 > **XP de evento** (seção 3.9) é uma economia separada e **pós-MVP** — não modelado
@@ -314,7 +314,8 @@ Calculado a cada acerto e persistido em `aluno_progresso`:
 ```
 xp_base = 100 (1ª tentativa) | 70 (2ª) | 50 (3ª+, piso)
 combo:   só acerto de 1ª tentativa incrementa; bônus = 18 + 2×posicao
-         zera ao errar, ao acertar só na 2ª, e a cada novo dia (combo_data)
+         zera ao errar, ao acertar só na 2ª, e ao INICIAR cada sessão
+         (combo é por sessão — seção 3.7; não carrega entre sessões)
 xp_questao = xp_base + (combo>0 ? bônus : 0)
 ao dominar palavra (passar N4): + 500 de bônus; palavras_dominadas += 1
 ```

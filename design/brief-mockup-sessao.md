@@ -65,10 +65,12 @@ Gere **5 frames** da mesma tela em momentos diferentes do fluxo:
 - **Estado de acerto (frame 3):** alternativa certa fica verde (`success`),
   feedback positivo + **+XP** (ex.: "+100 XP") + sugestão de confete/animação
   curta e **não-bloqueante**; mostra o combo subir.
-- **Estado de erro (frame 4):** alternativa escolhida fica em tom de atenção
-  (sem vermelho agressivo), **feedback gentil** ("Quase! Vamos rever isso."),
-  **sem punição**; deixa claro que a questão **volta mais à frente** (retry no fim
-  da fila), não trava aqui.
+- **Estado de erro (frame 4):** alternativa escolhida fica **vermelha suavizada**
+  (padrão Duolingo: fundo com tint leve ~12% do vermelho, borda e "X" no vermelho
+  `error` — nunca vermelho puro nem flash de tela), **feedback gentil** ("Quase!
+  Vamos rever isso."), **sem punição**; a resposta certa **não** é revelada;
+  deixa claro que a questão **volta mais à frente** (retry no fim da fila), não
+  trava aqui.
 - **Botão primário** de avançar ("Continuar") aparece **depois** de responder.
 
 ---
@@ -102,8 +104,10 @@ Report (caixa): "Por que está reportando?"
 
 - ❌ **Percentual de acerto, tempo ou velocidade** em qualquer lugar (vira boletim
   e incentiva chute).
-- ❌ **Vermelho punitivo / "X" agressivo / vidas/corações** no erro. Errar é
-  aprender: o feedback é gentil e a questão reaparece depois.
+- ❌ **Vidas/corações, penalidade ou tom punitivo** no erro. Errar é aprender:
+  o feedback é gentil e a questão reaparece depois. (O erro **é** vermelho —
+  decisão revisada — mas na variante suavizada acima, nunca vermelho puro
+  agressivo.)
 - ❌ **Streak diário / chama / meta diária / mascote.** A mecânica é **combo por
   sessão** + meta semanal; o tema é viagem/passaporte, sem personagem.
 - ❌ Mostrar a resposta correta "vazada" antes de responder.
@@ -128,9 +132,11 @@ bg (fundo):        #FBF3E4      paper (card):   #FFFDF8
 primária (CTA):    #1E7FD6      sobre primária: #FFFFFF
 acento/ouro:       #E0A82E      acento forte:   #B9851A
 XP:                #1E7FD6      sucesso/acerto: #16A971
-texto:             #33302B      texto suave:    #9C8C7D
+texto:             #33302B      texto suave:    #7A6B5C
 linha/trilho:      rgba(120,90,50,.16)
-atenção (erro, suave): tom âmbar/terroso derivado do acento (NÃO vermelho forte)
+erro (resposta errada): #D23F34 (vermelho terroso suavizado — borda/texto/X;
+                        fundo da alternativa = tint ~12% sobre o papel)
+atenção gentil (warn): âmbar terroso #C9821C (prazos/validação — NÃO é o erro)
 ```
 
 **Paleta ESCURA — "Capa do Passaporte" (navy + dourado champanhe)**
@@ -140,6 +146,7 @@ primária (CTA):    #5FA9E0      sobre primária: #0E2235
 acento/ouro:       #D9C083      XP:             #D9C083
 texto:             #F2EAD9      texto suave:    #9DB0C8
 sucesso/acerto:    #3FB97E
+erro (resposta errada): #E8736A (legível sobre o navy; fundo = tint ~10%)
 linha:             rgba(255,255,255,.10)   trilho: rgba(255,255,255,.12)
 ```
 
