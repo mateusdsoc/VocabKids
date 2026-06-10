@@ -5,6 +5,8 @@
 /// com o backend troque só a fonte, não os widgets.
 library;
 
+import '../passaporte/models.dart';
+
 /// Como uma palavra trabalhada na sessão evoluiu.
 enum WordChange { dominated, levelUp }
 
@@ -33,6 +35,7 @@ class SummaryAchievement {
     required this.title,
     required this.subtitle,
     this.imageAsset,
+    this.conquista,
   });
 
   final String kicker;
@@ -41,6 +44,10 @@ class SummaryAchievement {
 
   /// Arte do cartão-postal; `null` → o widget desenha um placeholder.
   final String? imageAsset;
+
+  /// Item para abrir o **Modo Conquista** do Passaporte (reveal). `null` →
+  /// o teaser fica sem ação (estado de transição enquanto não há wiring).
+  final Conquista? conquista;
 }
 
 /// Resumo completo de uma sessão concluída.
@@ -128,6 +135,7 @@ class SessionSummary {
       title: 'Cartão-postal do Rio',
       subtitle: 'Você desbloqueou um carimbo de viagem.',
       imageAsset: 'assets/images/rio.png',
+      conquista: Conquista.sampleRio,
     ),
   );
 }

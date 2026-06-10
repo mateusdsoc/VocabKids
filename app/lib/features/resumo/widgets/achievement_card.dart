@@ -7,10 +7,12 @@ import '../models.dart';
 
 /// Teaser dourado do colecionável recém-desbloqueado (frame "com conquista").
 /// É um painel **sólido** (não é vidro) — comemora o item novo no Passaporte.
+/// [onVerPassaporte] abre o Modo Conquista (o reveal); `null` desativa o CTA.
 class AchievementCard extends StatelessWidget {
-  const AchievementCard({super.key, required this.ach});
+  const AchievementCard({super.key, required this.ach, this.onVerPassaporte});
 
   final SummaryAchievement ach;
+  final VoidCallback? onVerPassaporte;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +74,7 @@ class AchievementCard extends StatelessWidget {
             label: 'Ver no Passaporte',
             icon: AppIcons.passaporte,
             ink: ctaInk,
-            onTap: () {},
+            onTap: onVerPassaporte,
           ),
         ],
       ),

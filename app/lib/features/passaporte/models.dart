@@ -94,6 +94,75 @@ class Capa {
   String get inicial => nome.trim().isEmpty ? '?' : nome.trim()[0].toUpperCase();
 }
 
+/// Item recém-conquistado — alimenta o **Modo Conquista** (reveal que dispara
+/// uma única vez, após o Resumo). Com o backend, virá no retorno de
+/// `POST /v1/sessoes/{id}/fim`; aqui, o shape que a tela precisa, com amostras
+/// para a fatia A.
+sealed class Conquista {
+  const Conquista();
+
+  /// Amostra: o cartão-postal do Rio (casa com o teaser do Resumo).
+  static const Conquista sampleRio = ConquistaPostal(
+    destino: Destino(cidade: 'Rio de Janeiro', conquistado: true),
+    pais: Pais.brasil,
+  );
+
+  /// Amostra: selo "100 palavras" caindo no grid (não wireada no fluxo; útil
+  /// para exercitar o reveal de selo).
+  static const Conquista sampleSelo = ConquistaSelo(
+    novoIndex: 3,
+    todos: [
+      Selo(
+        titulo: 'Primeira carta',
+        descricao: 'Enviou a 1ª redação',
+        icone: AppIcons.redacao,
+        conquistado: true,
+      ),
+      Selo(
+        titulo: 'Combo de 10',
+        descricao: '10 acertos seguidos',
+        icone: AppIcons.combo,
+        conquistado: true,
+      ),
+      Selo(
+        titulo: '25 palavras',
+        descricao: '25 palavras dominadas',
+        icone: AppIcons.palavras,
+        conquistado: true,
+      ),
+      Selo(
+        titulo: '100 palavras',
+        descricao: '100 palavras dominadas',
+        icone: AppIcons.palavras,
+        conquistado: true,
+      ),
+      Selo(
+        titulo: '250 palavras',
+        descricao: '250 palavras dominadas',
+        icone: AppIcons.star,
+        conquistado: false,
+      ),
+    ],
+  );
+}
+
+/// Cartão-postal novo (destino concluído): 1 por página, só ele anima.
+class ConquistaPostal extends Conquista {
+  const ConquistaPostal({required this.destino, required this.pais});
+  final Destino destino;
+  final Pais pais;
+}
+
+/// Selo novo (feito): grid com os antigos estáticos; só [novoIndex] anima
+/// (cai, pulsa e encaixa).
+class ConquistaSelo extends Conquista {
+  const ConquistaSelo({required this.todos, required this.novoIndex});
+
+  /// O grid completo, na ordem de exibição.
+  final List<Selo> todos;
+  final int novoIndex;
+}
+
 /// O passaporte completo.
 class Passaporte {
   const Passaporte({

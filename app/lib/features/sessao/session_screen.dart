@@ -86,9 +86,12 @@ class _SessionScreenState extends State<SessionScreen> {
     if (_index >= widget.steps.length - 1) {
       // Fim da sessão → Resumo (3.7). pushReplacement: o botão voltar não
       // retorna a uma sessão já encerrada; o Resumo aterrissa na Trilha.
+      // Demo: a variante com conquista exercita a cadeia completa
+      // Resumo → Modo Conquista → Passaporte.
       Navigator.of(context).pushReplacement(
         adaptivePageRoute(
-          builder: (_) => const ResumoScreen(summary: SessionSummary.sample),
+          builder: (_) => const ResumoScreen(
+              summary: SessionSummary.sampleWithAchievement),
         ),
       );
       return;

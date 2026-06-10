@@ -80,6 +80,32 @@ Flutter (nenhuma dependência nova; dados mockados como antes):
   + faixa gentil "a pergunta volta") — reusando `OptionTile` e `FeedbackBar`
   reais da Sessão, sem componente novo. Revisitar o passo refaz o filme.
 
+### Passaporte — Modo Conquista (10/06) — `conquista_screen.dart`
+Implementa o reveal de `telas.md` §7, fiel ao contrato e fora da tela
+scrollável (decisão deliberada: animar dentro do `JournalView` repintaria os
+vidros a cada frame e o item ficaria pequeno; a tela dedicada anima **um**
+item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
+- O passaporte **sobe** em tela cheia (rota custom deslizando de baixo) →
+  **flip decorativo único** da capa (rotateY com perspectiva + mergulho de
+  escala) → abre **direto na página do item**.
+- **Cartão-postal**: polaroid grande **embaçada** ("toque para revelar"
+  pulsando) → toque revela **nítido** (overlay de blur com sigma fixo, só a
+  opacidade anima, e sai da árvore ao terminar) + brilhos dourados
+  (`_Sparkles`) + **encaixa** com leve inclinação; legenda `? ? ?` → cidade.
+- **Selo**: grid com os antigos estáticos; o novo **cai** (bounce) sobre a
+  silhueta pontilhada, **pulsa e encaixa** (amostra `Conquista.sampleSelo`,
+  ainda não wireada no fluxo).
+- Fluxo: teaser do Resumo (CTA dourado, agora funcional) → Conquista →
+  "Ver no Passaporte" aterrissa no **Modo Exploração** com a peça guardada;
+  "Voltar ao resumo"/X nunca prendem o aluno (não-bloqueante).
+- Decisão de detalhe: o Modo Conquista dispara pelo **toque no teaser** do
+  Resumo (não automático ao abrir) — o aluno lê o resumo primeiro; compatível
+  com o "antes/junto" de `telas.md` §5.
+- Demo: o fim de sessão agora usa `SessionSummary.sampleWithAchievement`,
+  exercitando a cadeia completa Sessão → Resumo → Conquista → Passaporte.
+- Modelo novo `Conquista` (`ConquistaPostal`/`ConquistaSelo`) em
+  `passaporte/models.dart`; com o backend, virá em `POST /v1/sessoes/{id}/fim`.
+
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
   a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
@@ -188,9 +214,10 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 
 ---
 
-## ▶️ Próxima tela sugerida
-**Passaporte** (produto 3.10) — Modo Conquista: o reveal do cartão-postal
-(polaroid) ao qual a Resumo e a Trilha apontam, hoje só teaser/embaçado.
+## ▶️ Próximo passo sugerido
+**Trilha — animações** (produto 3.7): o *bob* do nó atual (hoje estático) e a
+animação de **completar nó** (marcador avança + confete). O Modo Conquista do
+Passaporte foi implementado em 10/06 (`conquista_screen.dart`).
 
 > **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
 > cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.

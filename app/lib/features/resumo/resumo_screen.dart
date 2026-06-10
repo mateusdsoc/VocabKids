@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/entrance.dart';
 import '../../core/widgets/primary_button.dart';
+import '../passaporte/conquista_screen.dart';
 import '../trilha/trilha_screen.dart';
 import 'models.dart';
 import 'widgets/achievement_card.dart';
@@ -61,7 +62,13 @@ class ResumoScreen extends StatelessWidget {
                           Entrance(
                             delay: const Duration(milliseconds: 260),
                             scaleFrom: 0.96,
-                            child: AchievementCard(ach: ach),
+                            child: AchievementCard(
+                              ach: ach,
+                              onVerPassaporte: ach.conquista == null
+                                  ? null
+                                  : () => Navigator.of(context).push(
+                                      ConquistaScreen.route(ach.conquista!)),
+                            ),
                           ),
                         ],
                         const SizedBox(height: 13),

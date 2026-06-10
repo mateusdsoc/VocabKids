@@ -10,7 +10,8 @@ import 'widgets/passaporte_background.dart';
 
 /// Passaporte (produto §3.10) — Modo Exploração: a coleção de recompensas
 /// (carimbos, cartões-postais, selos) na direção **Caderno de Viagem** (escolha
-/// do dono). A animação de revelação (Modo Conquista, pós-Resumo) é fase 2.
+/// do dono). O Modo Conquista (reveal pós-Resumo) vive em
+/// `conquista_screen.dart` e aterrissa aqui ao "guardar" o item.
 class PassaporteScreen extends StatelessWidget {
   const PassaporteScreen({super.key, this.passaporte = Passaporte.sample});
 
