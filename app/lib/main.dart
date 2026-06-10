@@ -45,7 +45,9 @@ class _Gate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (AppConfig.demo) return const HomeScreen();
+    // Demo: começa no embarque para contar a história desde o início
+    // (Entrada → Onboarding → Home), tudo com dados de exemplo.
+    if (AppConfig.demo) return const EntradaScreen();
 
     final auth = ref.watch(authControllerProvider);
     return auth.when(

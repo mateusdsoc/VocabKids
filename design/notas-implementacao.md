@@ -21,9 +21,22 @@ cada tela implementada.
 - Componentes: `SessionTopBar` (progresso + combo + report), `DiscoveryCard`,
   `QuestionPanel`, `OptionTile` (neutro/selecionado/correto/erro), `FeedbackBar`,
   `ReportPopover`, `SessionCta`, `SessionBackground` (Fundo A + brilho radial).
-- Tokens novos no `AppColors`: `warn` (erro âmbar, **nunca** vermelho) e
-  `accentInk` (texto sobre o chip de combo).
+- Tokens no `AppColors`: `error` (**vermelho** da resposta errada — ver decisão
+  revisada abaixo), `warn` (âmbar de atenção gentil: prazos/validação/"em
+  análise") e `accentInk` (texto sobre o chip de combo).
+- Feedback de erro: a alternativa errada fica **vermelha com um "X"**; a faixa de
+  feedback ("Quase! Vamos rever isso.") usa o ícone de **rever** (a questão volta
+  ao fim da fila). A resposta certa **não** é revelada.
 - Navegação: card "Continuar" e aba "Praticar" da Home abrem a Sessão.
+
+### Onboarding (`features/onboarding/`)
+- Fluxo em 5 passos (boas-vindas → como funciona → demonstração de acerto/erro →
+  diagnóstico → primeira palavra), com progresso por pontos, "Pular" e CTA fixo.
+- **Diagnóstico em placeholder de propósito**: mostra a *estrutura* da etapa
+  (barra + esqueleto de questão + chip "em preparação"), sem inventar as
+  perguntas — o conteúdo pedagógico será definido depois, com apoio de professor.
+- Demo navegável: em `DEMO`, o app começa em **Entrada → Onboarding → Home**;
+  "Embarcar" pula o backend e abre o onboarding com o nome digitado.
 
 ### Resumo de sessão (`features/resumo/`)
 - Porte fiel do design `Resumo de sessão`, claro/escuro, com variante **com
@@ -113,7 +126,11 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 
 ## 🎨 Decisões de design fixadas
 - Paleta **travada**: claro `#1E7FD6`/areia, escuro navy `#172A44`/dourado
-  champanhe. Erro sempre **âmbar**, nunca vermelho.
+  champanhe.
+- **Erro de resposta = vermelho** (decisão revisada pelo dono): o aluno precisa
+  enxergar com clareza que errou (alternativa vermelha + "X"). O âmbar (`warn`)
+  passou a valer só para **atenção gentil** (prazos de redação, validação de
+  formulário, status "em análise") — não mais para o erro de resposta.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo (produto).
 - Fontes: Fredoka (display) · Nunito (corpo) · Caveat (só "Passaporte") ·
   Space Mono (micro-rótulos).
@@ -122,5 +139,7 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 
 ## ▶️ Próxima tela sugerida
 **Passaporte** (produto 3.10) — Modo Conquista: o reveal do cartão-postal
-(polaroid) ao qual a Resumo e a Trilha apontam, hoje só teaser/embaçado. Depois:
-Onboarding e Entrada/Me (saem de placeholder).
+(polaroid) ao qual a Resumo e a Trilha apontam, hoje só teaser/embaçado.
+
+> **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
+> cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config.dart';
+import '../../core/platform/adaptive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/surface_card.dart';
+import '../onboarding/onboarding_screen.dart';
 import 'auth_controller.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/passport_background.dart';
@@ -41,6 +44,15 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
   Future<void> _entrar() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+    // Demo: pula o backend e segue para o onboarding com o nome digitado.
+    if (AppConfig.demo) {
+      Navigator.of(context).push(
+        adaptivePageRoute(
+          builder: (_) => OnboardingScreen(nome: _nome.text.trim()),
+        ),
+      );
+      return;
+    }
     await ref.read(authControllerProvider.notifier).entrar(
           codigoTurma: _codigo.text.trim(),
           nome: _nome.text.trim(),

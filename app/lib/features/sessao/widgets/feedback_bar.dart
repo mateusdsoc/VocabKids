@@ -5,7 +5,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_icons.dart';
 
 /// Faixa de feedback pós-resposta. [positive] = acerto (verde + XP); senão é o
-/// erro **gentil** (âmbar, com aviso de que a questão volta no fim da fila).
+/// erro (vermelho), com o ícone de **rever** avisando que a questão volta no
+/// fim da fila para uma nova chance.
 class FeedbackBar extends StatelessWidget {
   const FeedbackBar({
     super.key,
@@ -23,7 +24,7 @@ class FeedbackBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final accent = positive ? c.goal : c.warn;
+    final accent = positive ? c.goal : c.error;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
