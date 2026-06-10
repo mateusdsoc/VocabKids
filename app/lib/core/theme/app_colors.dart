@@ -26,6 +26,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.goal,
     required this.onGoal,
     required this.warn,
+    required this.error,
     required this.accentInk,
     required this.track,
     required this.line,
@@ -73,9 +74,13 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Conteúdo sobre [goal] (chip/ícone da meta).
   final Color onGoal;
 
-  /// Atenção/erro **gentil** (âmbar terroso) — decisão de produto: o erro
-  /// nunca é vermelho punitivo. Usado no feedback de resposta incorreta.
+  /// Atenção **gentil** (âmbar terroso) — prazos de redação, validação de
+  /// formulário, status "em análise". NÃO é o erro de resposta (ver [error]).
   final Color warn;
+
+  /// Erro de resposta na Sessão (vermelho). O aluno precisa enxergar com
+  /// clareza que errou — a alternativa errada fica vermelha com um "X".
+  final Color error;
 
   /// Texto escuro sobre superfícies douradas (ex.: chip de combo).
   final Color accentInk;
@@ -113,7 +118,8 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFF9C8C7D),
     goal: Color(0xFF16A971),
     onGoal: Color(0xFFFFFFFF),
-    warn: Color(0xFFC9821C), // âmbar terroso (erro gentil)
+    warn: Color(0xFFC9821C), // âmbar terroso (atenção gentil)
+    error: Color(0xFFD23F34), // vermelho da resposta errada
     accentInk: Color(0xFF6B4E0C),
     track: Color(0x29785A32), // rgba(120,90,50,.16)
     line: Color(0x29785A32),
@@ -136,7 +142,8 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFF9DB0C8),
     goal: Color(0xFF3FB97E),
     onGoal: Color(0xFFFFFFFF),
-    warn: Color(0xFFE0A24E), // âmbar (erro gentil) no escuro
+    warn: Color(0xFFE0A24E), // âmbar (atenção gentil) no escuro
+    error: Color(0xFFE8736A), // vermelho legível sobre o navy
     accentInk: Color(0xFF23200F),
     track: Color(0x1FFFFFFF), // rgba(255,255,255,.12)
     line: Color(0x1AFFFFFF), // rgba(255,255,255,.10)
@@ -160,6 +167,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? goal,
     Color? onGoal,
     Color? warn,
+    Color? error,
     Color? accentInk,
     Color? track,
     Color? line,
@@ -181,6 +189,7 @@ class AppColors extends ThemeExtension<AppColors> {
       goal: goal ?? this.goal,
       onGoal: onGoal ?? this.onGoal,
       warn: warn ?? this.warn,
+      error: error ?? this.error,
       accentInk: accentInk ?? this.accentInk,
       track: track ?? this.track,
       line: line ?? this.line,
@@ -207,6 +216,7 @@ class AppColors extends ThemeExtension<AppColors> {
       goal: Color.lerp(goal, other.goal, t)!,
       onGoal: Color.lerp(onGoal, other.onGoal, t)!,
       warn: Color.lerp(warn, other.warn, t)!,
+      error: Color.lerp(error, other.error, t)!,
       accentInk: Color.lerp(accentInk, other.accentInk, t)!,
       track: Color.lerp(track, other.track, t)!,
       line: Color.lerp(line, other.line, t)!,

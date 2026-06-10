@@ -46,9 +46,9 @@ class OptionTile extends StatelessWidget {
           Color.alphaBlend(c.goal.withValues(alpha: 0.12), c.paper)
         ),
       OptionState.wrong => (
-          c.warn,
+          c.error,
           2.0,
-          Color.alphaBlend(c.warn.withValues(alpha: 0.12), c.paper)
+          Color.alphaBlend(c.error.withValues(alpha: 0.12), c.paper)
         ),
     };
 
@@ -83,9 +83,9 @@ class OptionTile extends StatelessWidget {
                     Icon(
                       state == OptionState.correct
                           ? AppIcons.check
-                          : AppIcons.retry,
+                          : AppIcons.wrong,
                       size: 21,
-                      color: state == OptionState.correct ? c.goal : c.warn,
+                      color: state == OptionState.correct ? c.goal : c.error,
                     ),
                   ],
                 ],
@@ -124,7 +124,7 @@ class _Key extends StatelessWidget {
     final c = context.colors;
     final flat = switch (state) {
       OptionState.correct => c.goal,
-      OptionState.wrong => c.warn,
+      OptionState.wrong => c.error,
       _ => null,
     };
 

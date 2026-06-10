@@ -27,7 +27,8 @@ abstract final class AppIcons {
   static const combo = Icons.auto_awesome; // faísca do combo
   static const quote = Icons.format_quote_rounded;
   static const novaPalavra = Icons.auto_stories_rounded;
-  static const retry = Icons.refresh_rounded;
+  static const retry = Icons.refresh_rounded; // "rever": questão volta à fila
+  static const wrong = Icons.close_rounded; // "X" da alternativa errada
   static const arrow = Icons.arrow_forward_rounded;
 
   // --- Resumo de sessão ---
