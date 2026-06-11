@@ -113,8 +113,12 @@ class ResumoScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _Footer(
+                  // Vindo do Resumo, a Trilha celebra a chegada ao nó
+                  // (completar nó: trecho se desenha + pin pipoca + confete).
                   onTrilha: () => Navigator.of(context).pushReplacement(
-                    adaptivePageRoute(builder: (_) => const TrilhaScreen()),
+                    adaptivePageRoute(
+                        builder: (_) =>
+                            const TrilhaScreen(celebrarChegada: true)),
                   ),
                 ),
               ],

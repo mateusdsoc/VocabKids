@@ -17,12 +17,30 @@ import 'widgets/trilha_map.dart';
 ///
 /// Profundidade por relevo (gradientes + sombras + aba inferior), nós como
 /// pontos tocáveis, e a recompensa **não** se revela aqui — fica embaçada até o
-/// Passaporte. Sem o pulso (bob) do nó atual, por ora.
-class TrilhaScreen extends StatelessWidget {
-  const TrilhaScreen({super.key, this.data = TrilhaMapData.sample});
+/// Passaporte. **Sem bob/flutuação contínua no nó atual** (decisão do dono,
+/// 11/06): o destaque é estático (maior + anel + halo).
+///
+/// [celebrarChegada] toca a animação de **completar nó** ao aterrissar (o
+/// trecho verde se desenha, o pin pipoca com confete e assenta) — passado
+/// pelo "Ver trilha" do Resumo. Abrir pela Home/nav fica estático. Com o
+/// backend, o gatilho real será "completou nó nesta sessão" (hoje, demo:
+/// toda vinda do Resumo celebra). Respeita reduce-motion.
+class TrilhaScreen extends StatefulWidget {
+  const TrilhaScreen({
+    super.key,
+    this.data = TrilhaMapData.sample,
+    this.celebrarChegada = false,
+  });
 
   final TrilhaMapData data;
+  final bool celebrarChegada;
 
+  @override
+  State<TrilhaScreen> createState() => _TrilhaScreenState();
+}
+
+class _TrilhaScreenState extends State<TrilhaScreen>
+    with SingleTickerProviderStateMixin {
   static const _destinations = [
     NavDestination(icon: AppIcons.home, label: 'Início'),
     NavDestination(icon: AppIcons.map, label: 'Trilha'),
@@ -31,9 +49,51 @@ class TrilhaScreen extends StatelessWidget {
     NavDestination(icon: AppIcons.perfil, label: 'Perfil'),
   ];
 
+  late final AnimationController _chegada = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1500));
+  bool _arrancou = false;
+  bool _hapticDado = false;
+  bool _reduzido = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Haptic leve no instante do pop do pin (~55% da coreografia).
+    _chegada.addListener(() {
+      if (!_hapticDado && _chegada.value >= 0.55) {
+        _hapticDado = true;
+        HapticFeedback.lightImpact();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_arrancou) return;
+    _arrancou = true;
+    _reduzido = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (!widget.celebrarChegada || _reduzido) {
+      _hapticDado = true;
+      _chegada.value = 1; // estado final, sem animação
+    } else {
+      // Pequena espera para a transição da rota assentar antes do desenho.
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) _chegada.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _chegada.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final data = widget.data;
     final overlay = Theme.of(context).brightness == Brightness.dark
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
@@ -55,6 +115,9 @@ class TrilhaScreen extends StatelessWidget {
                         alignment: Alignment.topCenter,
                         child: TrilhaMap(
                           data: data,
+                          chegada: widget.celebrarChegada && !_reduzido
+                              ? _chegada
+                              : null,
                           onContinue: () => Navigator.of(context).push(
                             adaptivePageRoute(
                                 builder: (_) => const SessionScreen()),

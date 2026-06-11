@@ -48,8 +48,20 @@ cada tela implementada.
   relevo (gradiente + sombras + aba inferior), taxonomia de nós
   (comum/medal/portão × done/atual/bloqueado), caminho percorrido vivo + futuro
   rebaixado, textura cartográfica, banhos de cor, fronteira única.
-- Postal **embaçado** (reveal só no Passaporte). **Estático** (sem o *bob* do nó
-  atual, por ora). Decorativos em `widgets/trilha_tones.dart`.
+- Postal **embaçado** (reveal só no Passaporte). Decorativos em
+  `widgets/trilha_tones.dart`.
+- **Sem bob/flutuação contínua no nó atual** (decisão do dono, 11/06): nada
+  fica quicando em loop; o destaque do nó atual é estático (maior + anel +
+  halo). O que era "por ora" virou decisão.
+- **Chegada ao nó (completar nó, 11/06)**: vindo do Resumo ("Ver trilha"), o
+  último trecho verde **se desenha** (`PathMetric.extractPath`) com um
+  marcador na ponta, o pin do nó atual **pipoca** (overshoot) com **confete**
+  (`ConfettiBurst` compartilhado) e haptic leve, e o aside "Continuar" entra
+  em fade — tudo **assenta estático** em ~1,5 s, não-bloqueante (o CTA já
+  responde durante). Abrir a Trilha pela Home/nav fica 100% estático (a
+  animação nem entra na árvore). Respeita reduce-motion. *Pendência de
+  wiring*: com o backend, o gatilho real é "completou nó nesta sessão" — na
+  demo, toda vinda do Resumo celebra.
 - **Posições proporcionais** (10/06): o espaço lógico 340×540 virou referência —
   as posições dos nós escalam com a largura real (`LayoutBuilder`); rótulos e o
   aside "Continuar" clampam nas bordas em vez de recortar em telas estreitas.
@@ -74,6 +86,8 @@ Flutter (nenhuma dependência nova; dados mockados como antes):
   palavras). CTA "Ver trilha" responde desde o primeiro frame.
 - Novo widget compartilhado `core/widgets/entrance.dart` (`Entrance`: fade +
   deslize + escala opcional, com `delay` para stagger; roda uma vez).
+- Confete extraído para `core/widgets/confetti_burst.dart` (11/06) —
+  compartilhado entre o acerto da Sessão e a chegada ao nó da Trilha.
 - **Onboarding — demo roteirizada (10/06)**: o passo de demonstração deixou de
   ser estático e virou o roteiro do produto 3.5 (Demo A/B): seleciona e
   **acerta** (confete + faixa com +100 XP), depois seleciona e **erra** (shake
@@ -225,9 +239,11 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Trilha — animações** (produto 3.7): o *bob* do nó atual (hoje estático) e a
-animação de **completar nó** (marcador avança + confete). O Modo Conquista do
-Passaporte foi implementado em 10/06 (`conquista_screen.dart`).
+**Wiring com o backend** (`/v1/sessoes` na Sessão; fila de conquistas via
+`/v1/passaporte`; gatilho real do "completar nó" na Trilha) ou **TTS de
+pronúncia** no card de descoberta. As animações do contrato estão todas
+implementadas (Sessão/Resumo 10/06, Modo Conquista 10/06, Trilha 11/06 —
+chegada ao nó; sem bob, por decisão).
 
 > **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
 > cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.
