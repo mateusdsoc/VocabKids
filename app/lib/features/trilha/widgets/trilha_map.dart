@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_icons.dart';
+import '../../../core/widgets/confetti_burst.dart';
 import '../models.dart';
 import 'map_pins.dart';
 import 'trilha_tones.dart';
@@ -18,11 +19,18 @@ const double _mapH = 540;
 
 /// O mapa da Trilha: banhos de cor por país, textura cartográfica, o caminho
 /// sinuoso (percorrido vivo + futuro rebaixado), a fronteira única e os nós.
+///
+/// [chegada] (opcional) toca a animação de **completar nó** (produto 3.7):
+/// 0→1, o último trecho verde se desenha com um marcador na ponta, o pin do
+/// nó atual pipoca na chegada (confete + aside em fade) e tudo **assenta
+/// estático** — decisão do dono (11/06): sem bob/flutuação contínua. `null`
+/// = mapa estático (custo zero de animação).
 class TrilhaMap extends StatelessWidget {
-  const TrilhaMap({super.key, required this.data, this.onContinue});
+  const TrilhaMap({super.key, required this.data, this.onContinue, this.chegada});
 
   final TrilhaMapData data;
   final VoidCallback? onContinue;
+  final Animation<double>? chegada;
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +50,11 @@ class TrilhaMap extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // caminho
+              // caminho (repinta sozinho durante a chegada, via repaint)
               Positioned.fill(
-                  child: CustomPaint(painter: _PathPainter(data.nodes, t))),
+                  child: CustomPaint(
+                      painter: _PathPainter(data.nodes, t,
+                          chegada: chegada, markerColor: c.primary))),
               // fronteira única
               Positioned(
                 left: 14, right: 14, top: fy - 11,
@@ -61,6 +71,8 @@ class TrilhaMap extends StatelessWidget {
               for (final n in data.nodes)
                 if (n.type == NodeType.medal && n.state == NodeState.current)
                   _positionedAside(context, n, k),
+              // confete da chegada, sobre o nó atual (monta no pop, 1×)
+              if (chegada != null) _confettiChegada(k),
               // esmaecido do topo
               Positioned(
                 left: 0, right: 0, top: 0, height: 24,
@@ -86,10 +98,47 @@ class TrilhaMap extends StatelessWidget {
 
   Widget _positionedPin(MapNode n, double k) {
     final s = MapPin.discSize(n);
+    Widget pin = MapPin(node: n);
+    final cheg = chegada;
+    // Chegada: o pin do nó atual fica oculto enquanto o marcador viaja e
+    // pipoca (overshoot) quando o trecho termina de se desenhar.
+    if (cheg != null && n.state == NodeState.current) {
+      pin = AnimatedBuilder(
+        animation: cheg,
+        builder: (context, child) {
+          final scale = const Interval(0.55, 0.85, curve: Curves.easeOutBack)
+              .transform(cheg.value);
+          if (scale <= 0) return SizedBox(width: s.width, height: s.height);
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: pin,
+      );
+    }
     return Positioned(
       left: n.x * k - s.width / 2,
       top: n.y * k - s.height / 2,
-      child: MapPin(node: n),
+      child: pin,
+    );
+  }
+
+  /// Confete centrado no nó atual; só entra na árvore quando o pin pipoca
+  /// (o [ConfettiBurst] roda uma vez ao montar).
+  Widget _confettiChegada(double k) {
+    final atual = data.nodes.where((n) => n.state == NodeState.current);
+    if (atual.isEmpty) return const SizedBox.shrink();
+    final n = atual.first;
+    return AnimatedBuilder(
+      animation: chegada!,
+      builder: (context, _) {
+        if (chegada!.value < 0.55) return const SizedBox.shrink();
+        return Positioned(
+          left: n.x * k - 75,
+          top: n.y * k - 75,
+          width: 150,
+          height: 150,
+          child: const ConfettiBurst(),
+        );
+      },
     );
   }
 
@@ -117,11 +166,30 @@ class TrilhaMap extends StatelessWidget {
     // Espaço real à esquerda do pin; o aside encolhe em vez de sair da tela.
     final room = n.x * k - s.width / 2 - 11;
     final width = room.clamp(0.0, 170.0);
+    Widget aside = _CurrentAside(node: n, onContinue: onContinue);
+    final cheg = chegada;
+    if (cheg != null) {
+      // Entra em fade depois do pop do pin. Segue tocável desde já
+      // (só a opacidade anima — princípio 3.7, não-bloqueante).
+      aside = AnimatedBuilder(
+        animation: cheg,
+        builder: (context, child) {
+          final f = const Interval(0.62, 0.95, curve: Curves.easeOutCubic)
+              .transform(cheg.value);
+          return Opacity(
+            opacity: f,
+            child: Transform.translate(
+                offset: Offset(0, 8 * (1 - f)), child: child),
+          );
+        },
+        child: aside,
+      );
+    }
     return Positioned(
       left: room - width,
       top: n.y * k - 30,
       width: width,
-      child: _CurrentAside(node: n, onContinue: onContinue),
+      child: aside,
     );
   }
 }
@@ -347,9 +415,14 @@ class _DashedLine extends CustomPainter {
 }
 
 class _PathPainter extends CustomPainter {
-  _PathPainter(this.nodes, this.t);
+  _PathPainter(this.nodes, this.t, {this.chegada, required this.markerColor})
+      : super(repaint: chegada);
   final List<MapNode> nodes;
   final TrilhaTones t;
+
+  /// Animação da chegada (completar nó); `null` = mapa estático.
+  final Animation<double>? chegada;
+  final Color markerColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -363,7 +436,28 @@ class _PathPainter extends CustomPainter {
     final traveled = pts.sublist(0, curIdx + 1);
     final future = pts.sublist(curIdx);
 
-    final all = _curve(pts), fut = _curve(future), trav = _curve(traveled);
+    final all = _curve(pts), fut = _curve(future);
+    var trav = _curve(traveled);
+
+    // Chegada: o último trecho do percorrido se desenha (extractPath) com um
+    // marcador na ponta; o resto do percorrido já aparece completo.
+    Offset? marker;
+    final v = chegada?.value;
+    if (v != null && traveled.length >= 2) {
+      final pathT = const Interval(0.0, 0.55, curve: Curves.easeInOutCubic)
+          .transform(v);
+      if (pathT < 1) {
+        final metrics = trav.computeMetrics().toList();
+        if (metrics.isNotEmpty) {
+          final m = metrics.first;
+          final lastLen = _lastSegmentLength(traveled);
+          final visible =
+              (m.length - lastLen * (1 - pathT)).clamp(0.0, m.length);
+          trav = m.extractPath(0, visible);
+          marker = m.getTangentForOffset(visible)?.position;
+        }
+      }
+    }
 
     void stroke(Path path, Color color, double w, {double dy = 0, double opacity = 1}) {
       final paint = Paint()
@@ -385,6 +479,21 @@ class _PathPainter extends CustomPainter {
     stroke(trav, t.pathGreenDark, 19, dy: 7);
     stroke(trav, t.pathGreen, 16);
     stroke(trav, t.pathGreenHi, 5, dy: -3, opacity: 0.75);
+
+    // Marcador que viaja na ponta do trecho (sombra de contato + anel branco).
+    if (marker != null) {
+      canvas.drawCircle(
+          marker + const Offset(0, 3), 8, Paint()..color = t.contact);
+      canvas.drawCircle(marker, 9, Paint()..color = Colors.white);
+      canvas.drawCircle(marker, 6.5, Paint()..color = markerColor);
+    }
+  }
+
+  /// Comprimento do trecho final (do último nó concluído até o atual).
+  double _lastSegmentLength(List<Offset> traveled) {
+    final seg = _curve([traveled[traveled.length - 2], traveled.last]);
+    final ms = seg.computeMetrics().toList();
+    return ms.isEmpty ? 0 : ms.first.length;
   }
 
   Path _curve(List<Offset> pts) {
@@ -400,7 +509,8 @@ class _PathPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PathPainter old) => old.nodes != nodes;
+  bool shouldRepaint(_PathPainter old) =>
+      old.nodes != nodes || old.chegada != chegada;
 }
 
 class _TexturePainter extends CustomPainter {
