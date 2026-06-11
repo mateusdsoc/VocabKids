@@ -179,7 +179,11 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
   tempo/velocidade (incentivaria chute).
 - **Dados:** retorno de `POST /v1/sessoes/{id}/fim` (resumo + roda adaptação).
 - **Navegação:** → Trilha (mapa). **Se há item novo** (cartão/carimbo/selo) →
-  dispara o **Passaporte em Modo Conquista** antes/junto.
+  o Resumo mostra um **teaser dourado** com CTA "Ver no Passaporte" que abre o
+  **Modo Conquista** na hora. **O reveal não é automático** (decisão revisada
+  11/06 — não atropelar a leitura do resumo): se o aluno não tocar e seguir
+  pra Trilha, o item fica **enfileirado** e o reveal toca ao abrir o
+  Passaporte (ver §7). Assim ninguém perde a animação.
 - **Notas:** separado da trilha; é o feedback frequente e leve.
 
 ---
@@ -209,11 +213,17 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 
 - **Objetivo:** guardar e exibir a coleção (até 28 peças) e o status do aluno.
 - **Dois modos:**
-  - **Modo Conquista (animado, dispara 1×):** após o resumo, quando há item novo.
-    Passaporte sobe em tela cheia, **flip decorativo único**, abre **direto na
-    página do item** (não folheia histórico). Cartão = 1 por página (página
-    vazia, só o novo anima). Selo = **grid** com os antigos estáticos e **só o
-    novo anima** (cai/pulsa/encaixa). Aluno toca → item revela e encaixa.
+  - **Modo Conquista (animado, dispara 1×):** quando há item novo. Disparo
+    (decisão revisada 11/06): pelo **teaser do Resumo** (atalho "Ver no
+    Passaporte") **ou**, se o aluno não tocou, ao **abrir o Passaporte** —
+    onde uma **fila** de pendências (acúmulo de várias sessões) toca **uma de
+    cada vez**. Passaporte sobe em tela cheia, **flip decorativo único**, abre
+    **direto na página do item** (não folheia histórico). Cartão = 1 por
+    página (página vazia, só o novo anima). Selo = **grid** com os antigos
+    estáticos e **só o novo anima** (cai/pulsa/encaixa). Aluno toca → item
+    revela e encaixa. Várias pendências → "Próxima lembrança" entre elas.
+    Cliente fino: a fila de itens não revelados é, no fim, **autoritativa do
+    servidor** (`GET /v1/passaporte` traz os novos; `POST` marca vistos).
   - **Modo Exploração (estático, scroll):** capa (nome + nível) → carimbos de
     países → cartões-postais por país → selos de feitos. Itens não conquistados
     aparecem como **silhueta/cadeado** (mostra o que falta). **Sem animação** ao

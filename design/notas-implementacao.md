@@ -80,6 +80,42 @@ Flutter (nenhuma dependência nova; dados mockados como antes):
   + faixa gentil "a pergunta volta") — reusando `OptionTile` e `FeedbackBar`
   reais da Sessão, sem componente novo. Revisitar o passo refaz o filme.
 
+### Passaporte — Modo Conquista (10/06) — `conquista_screen.dart`
+Implementa o reveal de `telas.md` §7, fiel ao contrato e fora da tela
+scrollável (decisão deliberada: animar dentro do `JournalView` repintaria os
+vidros a cada frame e o item ficaria pequeno; a tela dedicada anima **um**
+item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
+- O passaporte **sobe** em tela cheia (rota custom deslizando de baixo) →
+  **flip decorativo único** da capa (rotateY com perspectiva + mergulho de
+  escala) → abre **direto na página do item**.
+- **Cartão-postal**: polaroid grande **embaçada** ("toque para revelar"
+  pulsando) → toque revela **nítido** (overlay de blur com sigma fixo, só a
+  opacidade anima, e sai da árvore ao terminar) + brilhos dourados
+  (`_Sparkles`) + **encaixa** com leve inclinação; legenda `? ? ?` → cidade.
+- **Selo**: grid com os antigos estáticos; o novo **cai** (bounce) sobre a
+  silhueta pontilhada, **pulsa e encaixa** (amostra `Conquista.sampleSelo`,
+  ainda não wireada no fluxo).
+- Fluxo: teaser do Resumo (CTA dourado, agora funcional) → Conquista →
+  "Ver no Passaporte" aterrissa no **Modo Exploração** com a peça guardada;
+  "Voltar ao resumo"/X nunca prendem o aluno (não-bloqueante).
+- **Disparo + fila (decisão revisada 11/06, com o dono):** o reveal dispara
+  pelo **teaser do Resumo** (atalho "Ver no Passaporte") **ou**, se o aluno não
+  tocar, ao **abrir o Passaporte** — `ConquistaQueue` (singleton, em memória)
+  guarda as pendências e o `PassaporteScreen` as drena no `initState`
+  (post-frame), tocando **uma de cada vez** ("Próxima lembrança" entre elas).
+  Cada item sai da fila ao ser revelado, então os dois caminhos não duplicam.
+  `telas.md` §5/§7 atualizados no mesmo commit. *Não-automático após o resumo*
+  de propósito (não atropelar a leitura). A fila em memória cobre "várias
+  sessões na mesma execução"; a **fonte de verdade real é o servidor** (cliente
+  fino) — `GET /v1/passaporte` traz os novos, `POST` marca vistos; o store só
+  espelha. Custo: a fila não soma render (um item anima por vez).
+- **Reduce-motion**: respeita `MediaQuery.disableAnimations` — mostra os itens
+  já revelados, sem flip/blur/sparkle (acessibilidade e aparelho fraco).
+- Demo: o fim de sessão agora usa `SessionSummary.sampleWithAchievement` e
+  **enfileira** a conquista, exercitando os dois caminhos (teaser e fila).
+- Modelo novo `Conquista` (`ConquistaPostal`/`ConquistaSelo`) em
+  `passaporte/models.dart`; com o backend, virá em `POST /v1/sessoes/{id}/fim`.
+
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
   a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
@@ -188,9 +224,10 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 
 ---
 
-## ▶️ Próxima tela sugerida
-**Passaporte** (produto 3.10) — Modo Conquista: o reveal do cartão-postal
-(polaroid) ao qual a Resumo e a Trilha apontam, hoje só teaser/embaçado.
+## ▶️ Próximo passo sugerido
+**Trilha — animações** (produto 3.7): o *bob* do nó atual (hoje estático) e a
+animação de **completar nó** (marcador avança + confete). O Modo Conquista do
+Passaporte foi implementado em 10/06 (`conquista_screen.dart`).
 
 > **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
 > cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.
