@@ -7,6 +7,7 @@ import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/entrance.dart';
 import '../../core/widgets/primary_button.dart';
 import '../passaporte/conquista_screen.dart';
+import '../passaporte/passaporte_screen.dart';
 import '../trilha/trilha_screen.dart';
 import 'models.dart';
 import 'widgets/achievement_card.dart';
@@ -67,7 +68,18 @@ class ResumoScreen extends StatelessWidget {
                               onVerPassaporte: ach.conquista == null
                                   ? null
                                   : () => Navigator.of(context).push(
-                                      ConquistaScreen.route(ach.conquista!)),
+                                        ConquistaScreen.route(
+                                          [ach.conquista!],
+                                          concluirLabel: 'Ver no Passaporte',
+                                          onConcluir: () =>
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                            adaptivePageRoute(
+                                                builder: (_) =>
+                                                    const PassaporteScreen()),
+                                          ),
+                                        ),
+                                      ),
                             ),
                           ),
                         ],

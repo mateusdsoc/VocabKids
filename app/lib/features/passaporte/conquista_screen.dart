@@ -5,46 +5,65 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/platform/adaptive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/primary_button.dart';
+import 'conquista_queue.dart';
 import 'models.dart';
-import 'passaporte_screen.dart';
 import 'widgets/passaporte_background.dart';
 import 'widgets/postcard_face.dart';
 import 'widgets/seal_badge.dart';
 
-/// Passaporte — **Modo Conquista** (produto §3.10, `telas.md` §7): o reveal
-/// que dispara uma única vez após o Resumo, quando há item novo.
+/// Passaporte — **Modo Conquista** (produto §3.10, `telas.md` §7): o reveal de
+/// itens novos. Reproduz uma **fila** de conquistas, uma de cada vez — cobre
+/// tanto o atalho do Resumo (fila de 1) quanto o acúmulo de várias sessões
+/// drenado ao abrir o Passaporte.
 ///
 /// Coreografia (curta e não-bloqueante; o X pula a qualquer momento):
 /// 1. o passaporte **sobe** em tela cheia (rota deslizando de baixo);
-/// 2. **flip decorativo único** da capa, abrindo direto na página do item
-///    (não folheia histórico);
+/// 2. **flip decorativo único** da capa, abrindo direto na página do 1º item;
 /// 3. o item espera **embaçado** ("toque para revelar" pulsando);
-/// 4. toque → revela **nítido** (só aqui — na Trilha continua embaçado),
-///    com brilhos dourados, e **encaixa** com uma leve inclinação de
-///    "colado no caderno". Selo: cai no grid, pulsa e encaixa; os antigos
-///    ficam estáticos.
-/// 5. CTA "Ver no Passaporte" aterrissa no Modo Exploração (a tela
-///    scrollável), onde a peça está guardada.
+/// 4. toque → revela **nítido** (só aqui — na Trilha continua embaçado), com
+///    brilhos dourados, e **encaixa** com leve inclinação de "colado no
+///    caderno". Selo: cai no grid, pulsa e encaixa; os antigos ficam estáticos;
+/// 5. se há mais itens → "Próxima lembrança" (transição leve, sem reflipar);
+///    no fim, o CTA aterrissa onde o chamador definir ([onConcluir]).
 ///
-/// Desempenho: nada de `BackdropFilter`; um único item anima, com transforms
-/// (rotate/scale/translate) sob `RepaintBoundary`. O embaçado é um overlay de
-/// sigma fixo que só tem a **opacidade** animada e sai da árvore ao terminar.
+/// Desempenho: um item anima por vez (a fila não soma custo de render); nada de
+/// `BackdropFilter`; transforms sob `RepaintBoundary`; o embaçado é overlay de
+/// sigma fixo com só a **opacidade** animada, e sai da árvore ao revelar.
+/// Respeita **reduce-motion** (acessibilidade/aparelho fraco): mostra os itens
+/// já revelados, sem animar.
 class ConquistaScreen extends StatefulWidget {
-  const ConquistaScreen({super.key, required this.conquista});
+  const ConquistaScreen({
+    super.key,
+    required this.fila,
+    this.onConcluir,
+    this.concluirLabel = 'Concluir',
+  });
 
-  final Conquista conquista;
+  /// Itens a revelar, em ordem.
+  final List<Conquista> fila;
+
+  /// O que fazer ao terminar a fila. `null` → fecha a tela (volta de onde veio,
+  /// ex.: o Passaporte por baixo). O teaser do Resumo passa um pushReplacement
+  /// para o Passaporte.
+  final VoidCallback? onConcluir;
+  final String concluirLabel;
 
   /// Rota em tela cheia que **sobe** do rodapé (o "passaporte sobe").
-  static Route<void> route(Conquista conquista) => PageRouteBuilder<void>(
+  static Route<void> route(
+    List<Conquista> fila, {
+    VoidCallback? onConcluir,
+    String concluirLabel = 'Concluir',
+  }) =>
+      PageRouteBuilder<void>(
         fullscreenDialog: true,
         transitionDuration: const Duration(milliseconds: 420),
         reverseTransitionDuration: const Duration(milliseconds: 260),
-        pageBuilder: (_, _, _) => ConquistaScreen(conquista: conquista),
+        pageBuilder: (_, _, _) => ConquistaScreen(
+            fila: fila, onConcluir: onConcluir, concluirLabel: concluirLabel),
         transitionsBuilder: (_, animation, _, child) => SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
               .chain(CurveTween(curve: Curves.easeOutCubic))
@@ -66,7 +85,7 @@ class _ConquistaScreenState extends State<ConquistaScreen>
   late final CurvedAnimation _flipT =
       CurvedAnimation(parent: _flip, curve: Curves.easeInOutCubic);
 
-  /// Pulso do "toque para revelar" (repete em vai-e-vem até o toque).
+  /// Pulso do "toque para revelar" (vai-e-vem até o toque).
   late final AnimationController _hint = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 900));
 
@@ -74,18 +93,23 @@ class _ConquistaScreenState extends State<ConquistaScreen>
       vsync: this, duration: const Duration(milliseconds: 1200));
 
   _Fase _fase = _Fase.capa;
+  bool _flipFeito = false;
+  int _idx = 0;
   Timer? _inicio;
+  bool _arrancou = false;
+
+  Conquista get _atual => widget.fila[_idx];
+  bool get _temProximo => _idx < widget.fila.length - 1;
 
   @override
   void initState() {
     super.initState();
-    // Espera a rota terminar de subir antes do flip decorativo único.
-    _inicio = Timer(const Duration(milliseconds: 480), () {
-      if (mounted) _flip.forward();
-    });
     _flip.addStatusListener((s) {
       if (s == AnimationStatus.completed && mounted) {
-        setState(() => _fase = _Fase.espera);
+        setState(() {
+          _flipFeito = true;
+          _fase = _Fase.espera;
+        });
         _hint.repeat(reverse: true);
       }
     });
@@ -94,6 +118,26 @@ class _ConquistaScreenState extends State<ConquistaScreen>
         setState(() => _fase = _Fase.pronto);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_arrancou) return;
+    _arrancou = true;
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      // Reduce-motion: tudo já revelado, sem timers nem animação.
+      _flip.value = 1;
+      _reveal.value = 1;
+      _flipFeito = true;
+      _fase = _Fase.pronto;
+      ConquistaQueue.instance.revelada(_atual);
+    } else {
+      // Espera a rota terminar de subir antes do flip decorativo único.
+      _inicio = Timer(const Duration(milliseconds: 480), () {
+        if (mounted) _flip.forward();
+      });
+    }
   }
 
   @override
@@ -110,14 +154,37 @@ class _ConquistaScreenState extends State<ConquistaScreen>
     if (_fase != _Fase.espera) return;
     HapticFeedback.mediumImpact();
     _hint.stop();
+    // O aluno viu este item: tira da fila global para não reaparecer.
+    ConquistaQueue.instance.revelada(_atual);
     setState(() => _fase = _Fase.revelando);
     _reveal.forward();
   }
 
-  void _verPassaporte() {
-    Navigator.of(context).pushReplacement(
-      adaptivePageRoute(builder: (_) => const PassaporteScreen()),
-    );
+  void _proximo() {
+    if (!_temProximo) return;
+    setState(() {
+      _idx += 1;
+      _fase = _Fase.espera;
+    });
+    final reduzido =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduzido) {
+      _reveal.value = 1;
+      ConquistaQueue.instance.revelada(_atual);
+      setState(() => _fase = _Fase.pronto);
+    } else {
+      _reveal.reset();
+      _hint.repeat(reverse: true);
+    }
+  }
+
+  void _concluir() {
+    final cb = widget.onConcluir;
+    if (cb != null) {
+      cb();
+    } else {
+      Navigator.of(context).maybePop();
+    }
   }
 
   @override
@@ -126,6 +193,41 @@ class _ConquistaScreenState extends State<ConquistaScreen>
     final size = MediaQuery.sizeOf(context);
     final cardW = math.min(320.0, size.width - 44);
     final cardH = math.min(cardW * 1.38, size.height * 0.62);
+
+    final page = _PageFace(
+      key: ValueKey(_idx),
+      conquista: _atual,
+      fase: _fase,
+      reveal: _reveal,
+      hint: _hint,
+    );
+
+    final Widget cartao = _flipFeito
+        ? AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            switchInCurve: Curves.easeOutCubic,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                        begin: const Offset(0.12, 0), end: Offset.zero)
+                    .animate(anim),
+                child: child,
+              ),
+            ),
+            child: SizedBox(
+                key: ValueKey(_idx), width: cardW, height: cardH, child: page),
+          )
+        : AnimatedBuilder(
+            animation: _flipT,
+            builder: (context, _) => _FlipCard(
+              t: _flipT.value,
+              width: cardW,
+              height: cardH,
+              front: const _CoverFace(),
+              back: page,
+            ),
+          );
 
     return Scaffold(
       body: PassaporteBackground(
@@ -136,9 +238,10 @@ class _ConquistaScreenState extends State<ConquistaScreen>
                 padding: const EdgeInsets.fromLTRB(17, 8, 17, 0),
                 child: Row(
                   children: [
+                    if (widget.fila.length > 1)
+                      _ContadorFila(atual: _idx + 1, total: widget.fila.length),
                     const Spacer(),
-                    _CloseButton(
-                        onTap: () => Navigator.of(context).maybePop()),
+                    _CloseButton(onTap: () => Navigator.of(context).maybePop()),
                   ],
                 ),
               ),
@@ -147,29 +250,13 @@ class _ConquistaScreenState extends State<ConquistaScreen>
                   child: GestureDetector(
                     onTap: _revelar,
                     behavior: HitTestBehavior.opaque,
-                    child: RepaintBoundary(
-                      child: AnimatedBuilder(
-                        animation: _flipT,
-                        builder: (context, _) => _FlipCard(
-                          t: _flipT.value,
-                          width: cardW,
-                          height: cardH,
-                          front: const _CoverFace(),
-                          back: _PageFace(
-                            conquista: widget.conquista,
-                            fase: _fase,
-                            reveal: _reveal,
-                            hint: _hint,
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: RepaintBoundary(child: cartao),
                   ),
                 ),
               ),
               // Rodapé com altura reservada: o CTA entra sem pular o layout.
               SizedBox(
-                height: 124,
+                height: 110,
                 child: IgnorePointer(
                   ignoring: !pronto,
                   child: AnimatedBuilder(
@@ -186,25 +273,14 @@ class _ConquistaScreenState extends State<ConquistaScreen>
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-                      child: Column(
-                        children: [
-                          PrimaryButton(
-                            label: 'Ver no Passaporte',
-                            leadingIcon: AppIcons.passaporte,
-                            onTap: _verPassaporte,
-                          ),
-                          const SizedBox(height: 6),
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.of(context).maybePop(),
-                            child: Text('Voltar ao resumo',
-                                style: AppType.nunito(
-                                    size: 13,
-                                    weight: FontWeight.w800,
-                                    color: context.colors.muted)),
-                          ),
-                        ],
+                      padding: const EdgeInsets.fromLTRB(22, 10, 22, 8),
+                      child: PrimaryButton(
+                        label:
+                            _temProximo ? 'Próxima lembrança' : widget.concluirLabel,
+                        leadingIcon:
+                            _temProximo ? null : AppIcons.passaporte,
+                        trailingIcon: _temProximo ? AppIcons.arrow : null,
+                        onTap: _temProximo ? _proximo : _concluir,
                       ),
                     ),
                   ),
@@ -214,6 +290,28 @@ class _ConquistaScreenState extends State<ConquistaScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "1 de 3" — só aparece quando a fila tem mais de um item.
+class _ContadorFila extends StatelessWidget {
+  const _ContadorFila({required this.atual, required this.total});
+  final int atual;
+  final int total;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: c.glass,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.line, width: 1),
+      ),
+      child: Text('$atual de $total',
+          style: AppType.mono(
+              size: 11, weight: FontWeight.w700, color: c.muted)),
     );
   }
 }
@@ -353,6 +451,7 @@ class _CoverFace extends StatelessWidget {
 /// A página do item — abre direto nela (não folheia histórico).
 class _PageFace extends StatelessWidget {
   const _PageFace({
+    super.key,
     required this.conquista,
     required this.fase,
     required this.reveal,
@@ -463,12 +562,12 @@ class _PolaroidReveal extends StatelessWidget {
       animation: reveal,
       builder: (context, _) {
         final t = reveal.value;
-        final desfoque = 1 -
-            const Interval(0.0, 0.5, curve: Curves.easeOut).transform(t);
-        final pop = math.sin(
-            const Interval(0.10, 0.65).transform(t) * math.pi);
-        final encaixe = const Interval(0.55, 1.0, curve: Curves.easeOutBack)
-            .transform(t);
+        final desfoque =
+            1 - const Interval(0.0, 0.5, curve: Curves.easeOut).transform(t);
+        final pop =
+            math.sin(const Interval(0.10, 0.65).transform(t) * math.pi);
+        final encaixe =
+            const Interval(0.55, 1.0, curve: Curves.easeOutBack).transform(t);
         final revelado = t > 0.45;
 
         final face = PostcardFace(
@@ -522,8 +621,8 @@ class _PolaroidReveal extends StatelessWidget {
                                       child: face,
                                     ),
                                     ColoredBox(
-                                        color: c.paper
-                                            .withValues(alpha: 0.28)),
+                                        color:
+                                            c.paper.withValues(alpha: 0.28)),
                                   ],
                                 ),
                               ),
@@ -536,13 +635,9 @@ class _PolaroidReveal extends StatelessWidget {
                           child: IgnorePointer(
                             child: CustomPaint(
                               painter: _Sparkles(
-                                progress: const Interval(0.15, 1.0)
-                                    .transform(t),
-                                colors: [
-                                  c.accent,
-                                  c.accentStrong,
-                                  Colors.white,
-                                ],
+                                progress:
+                                    const Interval(0.15, 1.0).transform(t),
+                                colors: [c.accent, c.accentStrong, Colors.white],
                               ),
                             ),
                           ),
@@ -649,8 +744,8 @@ class _NovoSelo extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Opacity(
-              opacity: (1 - const Interval(0.35, 0.55).transform(t))
-                  .clamp(0.0, 1.0),
+              opacity:
+                  (1 - const Interval(0.35, 0.55).transform(t)).clamp(0.0, 1.0),
               child: SeloBadge(selo: silhueta, mostrarDescricao: false),
             ),
             if (t > 0)

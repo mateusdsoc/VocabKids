@@ -4,18 +4,42 @@ import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
+import 'conquista_queue.dart';
+import 'conquista_screen.dart';
 import 'models.dart';
 import 'variants/journal_view.dart';
 import 'widgets/passaporte_background.dart';
 
 /// Passaporte (produto §3.10) — Modo Exploração: a coleção de recompensas
 /// (carimbos, cartões-postais, selos) na direção **Caderno de Viagem** (escolha
-/// do dono). O Modo Conquista (reveal pós-Resumo) vive em
-/// `conquista_screen.dart` e aterrissa aqui ao "guardar" o item.
-class PassaporteScreen extends StatelessWidget {
+/// do dono). O Modo Conquista (reveal) vive em `conquista_screen.dart`.
+///
+/// Ao abrir, **drena a fila de conquistas pendentes** ([ConquistaQueue]): se o
+/// aluno terminou sessões e não tocou "Ver no Passaporte", os reveals tocam
+/// aqui (um de cada vez) antes de mostrar a coleção.
+class PassaporteScreen extends StatefulWidget {
   const PassaporteScreen({super.key, this.passaporte = Passaporte.sample});
 
   final Passaporte passaporte;
+
+  @override
+  State<PassaporteScreen> createState() => _PassaporteScreenState();
+}
+
+class _PassaporteScreenState extends State<PassaporteScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Pós-frame: empurra o Modo Conquista por cima desta tela (que fica
+    // pronta por baixo). Só uma vez — initState não repete ao voltar do reveal.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final fila = ConquistaQueue.instance.pendentes;
+      if (fila.isNotEmpty) {
+        Navigator.of(context).push(ConquistaScreen.route(fila));
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +59,7 @@ class PassaporteScreen extends StatelessWidget {
                   child: _TopBar(onBack: () => Navigator.of(context).maybePop()),
                 ),
                 Expanded(
-                  child: _Reveal(child: JournalView(p: passaporte)),
+                  child: _Reveal(child: JournalView(p: widget.passaporte)),
                 ),
               ],
             ),

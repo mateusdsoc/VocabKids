@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/platform/adaptive.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/primary_button.dart';
+import '../passaporte/conquista_queue.dart';
 import '../resumo/models.dart';
 import '../resumo/resumo_screen.dart';
 import 'models.dart';
@@ -88,11 +89,16 @@ class _SessionScreenState extends State<SessionScreen> {
       // retorna a uma sessão já encerrada; o Resumo aterrissa na Trilha.
       // Demo: a variante com conquista exercita a cadeia completa
       // Resumo → Modo Conquista → Passaporte.
+      const summary = SessionSummary.sampleWithAchievement;
+      // Enfileira o item novo: se o aluno seguir direto pra Trilha sem tocar
+      // "Ver no Passaporte", o reveal toca quando ele abrir o Passaporte
+      // (fila drenada lá; o teaser do Resumo é só o atalho).
+      final conquista = summary.achievement?.conquista;
+      if (conquista != null) {
+        ConquistaQueue.instance.enfileirar(conquista);
+      }
       Navigator.of(context).pushReplacement(
-        adaptivePageRoute(
-          builder: (_) => const ResumoScreen(
-              summary: SessionSummary.sampleWithAchievement),
-        ),
+        adaptivePageRoute(builder: (_) => const ResumoScreen(summary: summary)),
       );
       return;
     }

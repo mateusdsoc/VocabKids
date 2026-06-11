@@ -98,11 +98,21 @@ item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
 - Fluxo: teaser do Resumo (CTA dourado, agora funcional) → Conquista →
   "Ver no Passaporte" aterrissa no **Modo Exploração** com a peça guardada;
   "Voltar ao resumo"/X nunca prendem o aluno (não-bloqueante).
-- Decisão de detalhe: o Modo Conquista dispara pelo **toque no teaser** do
-  Resumo (não automático ao abrir) — o aluno lê o resumo primeiro; compatível
-  com o "antes/junto" de `telas.md` §5.
-- Demo: o fim de sessão agora usa `SessionSummary.sampleWithAchievement`,
-  exercitando a cadeia completa Sessão → Resumo → Conquista → Passaporte.
+- **Disparo + fila (decisão revisada 11/06, com o dono):** o reveal dispara
+  pelo **teaser do Resumo** (atalho "Ver no Passaporte") **ou**, se o aluno não
+  tocar, ao **abrir o Passaporte** — `ConquistaQueue` (singleton, em memória)
+  guarda as pendências e o `PassaporteScreen` as drena no `initState`
+  (post-frame), tocando **uma de cada vez** ("Próxima lembrança" entre elas).
+  Cada item sai da fila ao ser revelado, então os dois caminhos não duplicam.
+  `telas.md` §5/§7 atualizados no mesmo commit. *Não-automático após o resumo*
+  de propósito (não atropelar a leitura). A fila em memória cobre "várias
+  sessões na mesma execução"; a **fonte de verdade real é o servidor** (cliente
+  fino) — `GET /v1/passaporte` traz os novos, `POST` marca vistos; o store só
+  espelha. Custo: a fila não soma render (um item anima por vez).
+- **Reduce-motion**: respeita `MediaQuery.disableAnimations` — mostra os itens
+  já revelados, sem flip/blur/sparkle (acessibilidade e aparelho fraco).
+- Demo: o fim de sessão agora usa `SessionSummary.sampleWithAchievement` e
+  **enfileira** a conquista, exercitando os dois caminhos (teaser e fila).
 - Modelo novo `Conquista` (`ConquistaPostal`/`ConquistaSelo`) em
   `passaporte/models.dart`; com o backend, virá em `POST /v1/sessoes/{id}/fim`.
 
