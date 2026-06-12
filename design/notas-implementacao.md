@@ -151,8 +151,13 @@ item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
 ## ⏳ A fazer (adiado de propósito)
 
 ### Áudio
-- [ ] **Pronúncia (TTS)** no `DiscoveryCard` — botão alto-falante hoje é no-op
-      (`onSpeak`). Plugar `flutter_tts` ou áudio do backend.
+- [x] **TTS de pronúncia — FORA do MVP** (decisão do dono, 11/06; vale para o
+      apresentável e o completo): exigiria áudio para cada palavra do banco
+      (asset por palavra ou requisição de TTS a cada palavra nova). O botão de
+      alto-falante foi **removido** do `DiscoveryCard` (sem botão morto na
+      demo); `audio_url` segue nullable no modelo, reservado pós-MVP. Docs
+      atualizados no mesmo commit (`telas.md` §4, brief da Sessão,
+      `rascunho_product.md`, `arquitetura.md`).
 
 ### Interação
 - [ ] **Tocar na palavra marcada** (enunciado/exemplo) reabrir o card de
@@ -239,11 +244,11 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Wiring com o backend** (`/v1/sessoes` na Sessão; fila de conquistas via
-`/v1/passaporte`; gatilho real do "completar nó" na Trilha) ou **TTS de
-pronúncia** no card de descoberta. As animações do contrato estão todas
-implementadas (Sessão/Resumo 10/06, Modo Conquista 10/06, Trilha 11/06 —
-chegada ao nó; sem bob, por decisão).
+**Dashboard escola/professor** (`telas.md` §8.2 — única tela da fatia A ainda
+não implementada; mock estático, fala com quem assina) ou **wiring com o
+backend** (`/v1/sessoes` na Sessão; fila de conquistas via `/v1/passaporte`;
+gatilho real do "completar nó" na Trilha). As animações do contrato estão
+todas implementadas; TTS saiu do MVP (11/06).
 
 > **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
 > cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.

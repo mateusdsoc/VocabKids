@@ -135,14 +135,16 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 - **Objetivo:** a prática: cards de descoberta + questões, com feedback contínuo.
 - **Conteúdo (slots em fila, ~12 por sessão, 2 palavras novas):**
   - **Card de descoberta** (1ª vez de cada palavra nova): palavra em destaque;
-    definição curta e conversacional; exemplo em frase; **áudio de pronúncia**
-    (ícone alto-falante / TTS). **Gancho contextual** só quando a palavra é de
+    definição curta e conversacional; exemplo em frase. **Sem áudio de
+    pronúncia** (decisão revisada 11/06: TTS **fora do MVP** — apresentável e
+    completo; exigiria áudio por palavra ou requisição de TTS a cada palavra
+    nova; reavaliar pós-MVP). **Gancho contextual** só quando a palavra é de
     origem pessoal (redação) — ex.: "Você usou 'importante' várias vezes. Conheça
     uma alternativa:" (na fatia A não há redação, então sem gancho).
   - **Questões** (4 tipos fixos, progressão por nível): 1 significado, 2 sinônimo,
     3 completar frase, 4 julgar uso. Múltipla escolha.
   - **Destaque inline:** a palavra nova fica marcada nas questões dela; **tocar
-    reabre o card** (definição/exemplo/áudio) sem sair da questão.
+    reabre o card** (definição/exemplo) sem sair da questão.
   - **Barra de progresso fina** no topo, enche a cada questão respondida.
   - **Ferramenta de report:** ícone discreto; abre caixa com **motivo
     predefinido** (ex.: "a resposta parece errada", "não entendi a palavra").

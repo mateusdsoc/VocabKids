@@ -6,13 +6,13 @@ import '../../../core/widgets/app_icons.dart';
 import '../models.dart';
 import 'highlighted_text.dart';
 
-/// Card de descoberta: herói com a palavra nova + áudio, e o corpo com
-/// definição conversacional e exemplo destacado.
+/// Card de descoberta: herói com a palavra nova, e o corpo com definição
+/// conversacional e exemplo destacado. Sem áudio de pronúncia — TTS ficou
+/// fora do MVP (decisão do dono, 11/06; ver `design/notas-implementacao.md`).
 class DiscoveryCard extends StatelessWidget {
-  const DiscoveryCard({super.key, required this.card, this.onSpeak});
+  const DiscoveryCard({super.key, required this.card});
 
   final SessionDiscovery card;
-  final VoidCallback? onSpeak;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +21,7 @@ class DiscoveryCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _Hero(card: card, onSpeak: onSpeak),
+        _Hero(card: card),
         const SizedBox(height: 14),
         // Corpo: definição + exemplo.
         Container(
@@ -49,10 +49,9 @@ class DiscoveryCard extends StatelessWidget {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.card, this.onSpeak});
+  const _Hero({required this.card});
 
   final SessionDiscovery card;
-  final VoidCallback? onSpeak;
 
   @override
   Widget build(BuildContext context) {
@@ -82,18 +81,9 @@ class _Hero extends StatelessWidget {
               children: [
                 const _Tag(),
                 const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(card.word,
-                          style: AppType.fredoka(
-                              size: 42, color: Colors.white, height: 0.95)),
-                    ),
-                    const SizedBox(width: 8),
-                    _Speaker(onSpeak: onSpeak),
-                  ],
-                ),
+                Text(card.word,
+                    style: AppType.fredoka(
+                        size: 42, color: Colors.white, height: 0.95)),
                 const SizedBox(height: 8),
                 Text(card.partOfSpeech,
                     style: AppType.nunito(
@@ -136,28 +126,6 @@ class _Tag extends StatelessWidget {
               style: AppType.mono(
                   size: 9.5, weight: FontWeight.w700, color: Colors.white)),
         ],
-      ),
-    );
-  }
-}
-
-class _Speaker extends StatelessWidget {
-  const _Speaker({this.onSpeak});
-  final VoidCallback? onSpeak;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.2),
-      borderRadius: BorderRadius.circular(13),
-      child: InkWell(
-        onTap: onSpeak,
-        borderRadius: BorderRadius.circular(13),
-        child: const SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(AppIcons.speaker, size: 20, color: Colors.white),
-        ),
       ),
     );
   }

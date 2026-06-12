@@ -200,10 +200,7 @@ class _SessionScreenState extends State<SessionScreen> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            child: DiscoveryCard(
-              card: card,
-              onSpeak: () {}, // TODO(áudio): tocar TTS da pronúncia.
-            ),
+            child: DiscoveryCard(card: card),
           ),
         ),
         const SizedBox(height: 12),

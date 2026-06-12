@@ -73,7 +73,7 @@ agir" é exclusivo de `professor` nas suas turmas.
 
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
-| `palavra` | `id`, `lema` (unique), `definicao`, `exemplo_uso`, `nivel_dificuldade` (1–10), `audio_url` (nullable), `origem` (`banco_base`\|`redacao`) | Chave de busca/dedup é o **lema** (spaCy normaliza antes de inserir — seção 3.3). `definicao` + `exemplo_uso` + `audio_url` são o conteúdo do **card de descoberta** (seção 3.2). Global. | A |
+| `palavra` | `id`, `lema` (unique), `definicao`, `exemplo_uso`, `nivel_dificuldade` (1–10), `audio_url` (nullable), `origem` (`banco_base`\|`redacao`) | Chave de busca/dedup é o **lema** (spaCy normaliza antes de inserir — seção 3.3). `definicao` + `exemplo_uso` são o conteúdo do **card de descoberta** (seção 3.2); `audio_url` fica **reservado pós-MVP** (TTS fora do MVP — decisão 11/06). Global. | A |
 | `palavra_sinonimo` | `palavra_id→palavra`, `texto` | 2–3 por palavra (seção 3.3). | A |
 | `questao` | `id`, `palavra_id→palavra`, `nivel` (1–4), `variacao` (`a`\|`b`…), `enunciado`, `opcoes` (JSONB), `resposta_correta`, `status` (`ativa`\|`oculta_report`\|`em_revisao`\|`removida`) | Mín. 2 variações por nível. Recurso do **banco**, não do aluno (seção 3.6). `opcoes` em JSONB (enunciado/distratores). Global. | A |
 | `report_questao` | `id`, `questao_id→questao`, `usuario_id→usuario` (reporter), `motivo` (enum), `veredito` (`pendente`\|`valido`\|`invalido`), `resolved_at` (nullable) | Agrega entre escolas (seção 3.6). Veredito do admin alimenta o anti-abuso. | C (mock em A) |

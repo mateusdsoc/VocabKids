@@ -51,7 +51,6 @@ Gere **5 frames** da mesma tela em momentos diferentes do fluxo:
 - **Classe gramatical** curta (ex.: "adjetivo").
 - **Definição curta e conversacional** (não dicionarística).
 - **Exemplo em frase**, com a palavra destacada.
-- **Áudio de pronúncia**: ícone de alto-falante (TTS) tocável.
 - **CTA** para seguir (ex.: "Entendi" / "Continuar").
 - Sem "gancho contextual de redação" nesta fatia (não há redação ainda).
 
@@ -61,7 +60,7 @@ Gere **5 frames** da mesma tela em momentos diferentes do fluxo:
   **(4) julgar o uso**.
 - **4 alternativas** em cartões tocáveis, bem legíveis.
 - **Destaque inline** da palavra nova dentro do enunciado/alternativas; um affordance
-  de que **tocar nela reabre o card** (definição/exemplo/áudio) sem sair da questão.
+  de que **tocar nela reabre o card** (definição/exemplo) sem sair da questão.
 - **Estado de acerto (frame 3):** alternativa certa fica verde (`success`),
   feedback positivo + **+XP** (ex.: "+100 XP") + sugestão de confete/animação
   curta e **não-bloqueante**; mostra o combo subir.
@@ -111,6 +110,8 @@ Report (caixa): "Por que está reportando?"
 - ❌ **Streak diário / chama / meta diária / mascote.** A mecânica é **combo por
   sessão** + meta semanal; o tema é viagem/passaporte, sem personagem.
 - ❌ Mostrar a resposta correta "vazada" antes de responder.
+- ❌ **Áudio de pronúncia / ícone de alto-falante** — TTS fora do MVP
+  (decisão revisada 11/06).
 
 ---
 
