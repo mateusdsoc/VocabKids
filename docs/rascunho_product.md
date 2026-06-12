@@ -70,8 +70,9 @@ O card é deliberadamente mínimo. Campos:
 
 - **Palavra** em destaque;
 - **Definição curta e conversacional** — linguagem acessível para a faixa etária, não copiada de dicionário. Ex: "relevante = que importa, que faz diferença numa situação", não "que tem relevância; pertinente";
-- **Exemplo de uso em frase** — contexto concreto da palavra;
-- **Áudio de pronúncia** (recomendado) — ícone de alto-falante com TTS. Custo baixo e ajuda no contato com palavras nunca vistas.
+- **Exemplo de uso em frase** — contexto concreto da palavra.
+
+**Áudio de pronúncia — fora do MVP** (decisão revisada 11/06, dono): exigiria gerar/armazenar áudio para cada palavra do banco (ou mais uma requisição a uma ferramenta de TTS por palavra nova). Reavaliar pós-MVP; o campo `audio_url` segue reservado no modelo.
 
 #### Gancho contextual
 
@@ -87,7 +88,7 @@ Referências de produto com card de vocabulário no mesmo espírito: Vocabulary.
 
 #### Destaque inline (lembrete)
 
-Depois do card, nas questões daquela palavra, a palavra nova fica **destacada** visualmente (cor/marcação). Tocar nela **reabre o card** (definição, exemplo, áudio) sem sair da questão — um lembrete leve, inspirado na marcação "palavra nova" do Duolingo. O card cheio aparece uma vez (no início da sessão); o destaque inline é o reforço nas questões seguintes, para quem precisar relembrar sem quebrar o fluxo.
+Depois do card, nas questões daquela palavra, a palavra nova fica **destacada** visualmente (cor/marcação). Tocar nela **reabre o card** (definição, exemplo) sem sair da questão — um lembrete leve, inspirado na marcação "palavra nova" do Duolingo. O card cheio aparece uma vez (no início da sessão); o destaque inline é o reforço nas questões seguintes, para quem precisar relembrar sem quebrar o fluxo.
 
 A sequência completa de uma palavra fica:
 
@@ -1021,7 +1022,7 @@ Esses itens podem voltar a ser discutidos, mas não devem guiar implementação 
 | Tema visual da trilha | Países como destinos turísticos — MVP: Brasil, França, Japão (estrutura assimétrica: 5/7/8 destinos); Egito engatilhado como reserva |
 | LGPD | Deferido para pré-lançamento com primeiros clientes; arquitetura já é LGPD-friendly |
 | Sequência de autenticação e privacidade | Decididas só com o primeiro cliente interessado (ciclo de venda dá folga); arquitetura já auth-agnóstica via identidade + associações (seções 3.11 e 10) |
-| Card de descoberta | Mínimo: palavra + definição conversacional + exemplo + áudio (recomendado); gancho contextual quando vem da redação |
+| Card de descoberta | Mínimo: palavra + definição conversacional + exemplo (áudio **fora do MVP**, decisão 11/06); gancho contextual quando vem da redação |
 | Valores de XP | 100 (1ª tentativa), 70 (2ª), 50 da 3ª em diante (piso), 500 (bônus por dominar palavra); sem variar por dificuldade |
 | Bônus de sequência (combo) | 18 + 2×posição por acerto seguido de 1ª tentativa; zera ao errar, na 2ª tentativa e a cada dia |
 | Leaderboard de turma | Aluno vê próprio XP + top 3 da turma com valores; não vê XP exato dos demais |
