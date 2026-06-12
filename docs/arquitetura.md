@@ -131,7 +131,7 @@ Conteúdo, não dado de aluno. ~80 nós + 28 peças (seção 3.7/3.10), praticam
 |---|---|---|---|
 | `redacao_atribuicao` | `id`, `turma_id→turma`, `professor_associacao_id→associacao`, `tema`, `prazo` | Professor atribui à turma (seção 4.6). | C (mock em A) |
 | `redacao` | `id`, `atribuicao_id→redacao_atribuicao`, `usuario_id→usuario`, `formato` (`manuscrita`\|`digital`), `arquivo_ref` (R2), `texto_extraido`, `status`, `enviada_em`, `analisada_em` (nullable) | Aluno envia (foto/PDF). `arquivo_ref` aponta p/ R2. | C (mock em A) |
-| `redacao_analise` | `redacao_id→redacao`, `anotacoes` (JSONB por dimensão) | Multidimensional (seção 4.2). Anotações coloridas vêm daqui. | C (mock em A) |
+| `redacao_analise` | `redacao_id→redacao`, `anotacoes` (JSONB por dimensão — **contrato** na pipeline §2) | Multidimensional (seção 4.2). Anotações coloridas vêm daqui. | C (mock em A) |
 | `redacao_palavra` | `id`, `redacao_id→redacao`, `texto`, `lema`, `tipo` (`fraca`\|`superutilizada`), `virou_atribuicao` (bool) | Palavras extraídas que alimentam a trilha (seção 4.5). `lema` via spaCy. | C |
 | `sinal_turma` | `turma_id→turma`, `palavra_id→palavra`, `periodo`, `pct`, `computado_em` | Palavra fraca/superutilizada em ≥30% da turma (seção 3.5). Computado/materializado. | C |
 
@@ -472,6 +472,84 @@ adequado, coesão/estrutura. Resultado em `redacao_analise.anotacoes` (JSONB por
   reconstrução (3.8) — mas fora de escopo agora (seção 09).
 - O **piso é o preset da turma; o teto pode subir** para o nível individual do aluno
   como bônus, nunca cobra além do preset (4.3) — alinha com `nivel_dificuldade_atual`.
+
+#### Contrato — `redacao_analise.anotacoes` (JSONB) e `GET /v1/redacoes/{id}/analise`
+
+Duas camadas distintas, para não confundir o **artefato da análise** com o que a
+**tela do aluno** consome (telas §8.1):
+
+**A. Coluna `redacao_analise.anotacoes` (JSONB)** — o que `analisar()` grava. É a
+saída pura do LLM, validada pelo backend antes de persistir.
+
+```jsonc
+{
+  "versao": 1,
+  // dimensões efetivamente avaliadas (as desativadas no preset_rigor saem, 4.3)
+  "dimensoes": ["vocabulario", "acentuacao", "pontuacao", "uso_adequado", "coesao_estrutura"],
+  "pontos_fortes": [                       // elogio primeiro (tom 3.7); 0..n frases
+    "Você contou uma história com começo, meio e fim",
+    "Usou um exemplo de verdade — o 14-Bis!"
+  ],
+  "anotacoes": [
+    {
+      "id": "an_1",                        // estável dentro da análise (refs)
+      "dimensao": "vocabulario",
+      "subtipo": "superutilizada",         // opc.: fraca|superutilizada (= redacao_palavra.tipo)
+      "titulo": "“muito” apareceu 3 vezes",
+      "comentario": "Repetir a mesma palavra deixa o texto cansado. Experimente variar:",
+      "sugestoes": ["bastante", "extremamente", "imensamente"],   // 0..n chips
+      "ancoras": [                         // spans em texto_extraido; [] = holística → nota, sem grifo
+        { "inicio": 58, "fim": 63, "trecho": "muito", "ocorrencia": 1 },
+        { "inicio": 80, "fim": 85, "trecho": "muito", "ocorrencia": 2 },
+        { "inicio": 165, "fim": 170, "trecho": "muito", "ocorrencia": 3 }
+      ]
+    },
+    {
+      "id": "an_5",
+      "dimensao": "coesao_estrutura",
+      "titulo": "Começo, meio e fim — muito bem!",
+      "comentario": "Para ligar os parágrafos, experimente “por isso” ou “além disso”.",
+      "sugestoes": [],
+      "ancoras": []                        // holística: a tela renderiza como NOTA, nunca grifo
+    }
+  ]
+}
+```
+
+Semântica dos campos:
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `versao` | int | Versão do schema (migração futura sem ambiguidade). |
+| `dimensao` | enum | `vocabulario` \| `acentuacao` \| `pontuacao` \| `uso_adequado` \| `coesao_estrutura` (4.2). |
+| `ancoras[]` | lista | Spans no `texto_extraido`. **Vazia = anotação holística** → a tela mostra como nota; **não vazia = grifo inline** (a mesma anotação pode ter N spans, ex.: palavra repetida). É o `ancoras` que decide o render — **não** a dimensão (extensível, 3.8). |
+| `ancora.inicio/fim` | int | Intervalo **meia-aberta** `[inicio, fim)` em **code points Unicode** (não bytes — PT-BR tem acento) sobre `texto_extraido`. |
+| `ancora.trecho/ocorrencia` | str/int | O texto e a **n-ésima ocorrência** que o LLM apontou. O backend **resolve** isso em `inicio/fim` (busca no `texto_extraido`) e **valida**; não confia em offset cru do LLM — desacopla a contagem frágil do modelo do artefato persistido (robustez a ruído de OCR, igual à discussão de 12/06). Âncora não resolvível é **descartada** (a anotação vira holística), nunca quebra a tela. |
+| `subtipo` | enum? | Só em `vocabulario`: `fraca` \| `superutilizada`. |
+
+**B. Resposta de `GET /v1/redacoes/{id}/analise`** — a **view-model** que a tela do
+aluno consome. Compõe as anotações (de `redacao_analise`) com as **palavras novas**
+que já viraram atribuição na trilha (de `redacao_palavra`/`aluno_palavra`, passos
+3–4) e com o `texto_extraido`. O cliente é fino: recebe pronto, não junta nada.
+
+```jsonc
+{
+  "redacao_id": "rdc_123",
+  "status": "analisada",                   // em_analise|analisada|erro_ingestao
+  "texto_extraido": "Meu heroi brasileiro é Santos Dumont. Ele foi um inventor muito …",
+  "analise": { /* o objeto A acima */ },
+  "palavras_novas": [                       // fecho do ciclo 4.5; [] se nenhuma virou atribuição
+    { "palavra": "bastante", "gatilho": "muito",  "anotacao_id": "an_1" },
+    { "palavra": "inovador", "gatilho": "legal",  "anotacao_id": "an_3" }
+  ]
+}
+```
+
+> O mock Flutter `features/redacao/analise_mock.dart` (`AnaliseRedacao`, na branch
+> da tela) **espelha a resposta B**, só que com as âncoras **já pré-resolvidas em
+> segmentos de texto** (`TrechoAnalisado`) — que é exatamente o que o app monta a
+> partir de `texto_extraido` + `ancoras`. O wiring (`GET …/analise`, fatia C) troca
+> a fonte, não os widgets. Manter os dois lados em sincronia ao mudar o schema.
 
 ### 3. Extração e validação de palavras — `extrair_palavras(redacao_analise)`
 
