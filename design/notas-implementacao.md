@@ -32,9 +32,18 @@ cada tela implementada.
 ### Onboarding (`features/onboarding/`)
 - Fluxo em 5 passos (boas-vindas → como funciona → demonstração de acerto/erro →
   diagnóstico → primeira palavra), com progresso por pontos, "Pular" e CTA fixo.
-- **Diagnóstico em placeholder de propósito**: mostra a *estrutura* da etapa
-  (barra + esqueleto de questão + chip "em preparação"), sem inventar as
-  perguntas — o conteúdo pedagógico será definido depois, com apoio de professor.
+- **Diagnóstico jogável (mock)** — `features/onboarding/diagnostico_data.dart`:
+  o passo agora roda como mini-quiz (telas §2.3), percorrendo questões de
+  exemplo uma a uma (barra de progresso fina, avança ao responder). Reaproveita
+  `QuestionPanel`/`OptionTile` da Sessão; **não calcula nota nem revela a
+  alternativa correta** (cliente fino) e fecha num cartão de "ponto de partida"
+  sem nível numérico. As questões espelham o schema do backend
+  (`QuestaoDiagnostico`) e cada uma carrega o `nivel` da escada grosso→fino,
+  para o wiring futuro trocar só a fonte (`POST /v1/onboarding/diagnostico`).
+  > ⚠️ **Conteúdo é exemplo, não validado.** A decisão do dono (12/06) foi
+  > apresentá-lo **sem rótulo** na UI (parecer final) para a demo a escolas;
+  > as perguntas ainda **precisam de revisão pedagógica** (professor) antes de
+  > virarem conteúdo real. Esta nota é o registro honesto disso.
 - Demo navegável: em `DEMO`, o app começa em **Entrada → Onboarding → Home**;
   "Embarcar" pula o backend e abre o onboarding com o nome digitado.
 
@@ -250,5 +259,7 @@ backend** (`/v1/sessoes` na Sessão; fila de conquistas via `/v1/passaporte`;
 gatilho real do "completar nó" na Trilha). As animações do contrato estão
 todas implementadas; TTS saiu do MVP (11/06).
 
-> **Diagnóstico (conteúdo):** definir as perguntas reais do onboarding com
-> cuidado (e apoio de um professor) — hoje a etapa existe só como esqueleto.
+> **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
+> exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um
+> professor para virar conteúdo real, e o wiring com a escada do backend
+> (`POST /v1/onboarding/diagnostico`).

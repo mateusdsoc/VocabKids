@@ -14,14 +14,16 @@ import '../identidade/widgets/passport_background.dart';
 import '../sessao/models.dart';
 import '../sessao/widgets/feedback_bar.dart';
 import '../sessao/widgets/option_tile.dart';
+import '../sessao/widgets/question_panel.dart';
+import 'diagnostico_data.dart';
 
 /// Onboarding (produto 3.5): o primeiro voo do aluno depois do embarque.
 ///
 /// Conduz boas-vindas → como funciona → demonstração (acerto/erro) →
-/// diagnóstico → primeira palavra. As **perguntas do diagnóstico ficam como
-/// placeholder de propósito**: o conteúdo pedagógico será definido com calma
-/// (e com apoio de um professor), então aqui mostramos só a *estrutura* da
-/// etapa, marcada como "em preparação". Tudo é mockado — nenhuma rede.
+/// diagnóstico → primeira palavra. O **diagnóstico** roda como um mini-quiz
+/// (telas §2.3): posiciona o aluno "sem ser prova" — o app percorre as questões
+/// de exemplo (ver `diagnostico_data.dart`), mas **não calcula nota** nem revela
+/// a alternativa correta (cliente fino). Tudo é mockado — nenhuma rede.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, this.nome});
 
@@ -35,6 +37,10 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
+
+  /// O diagnóstico (passo 3) dirige a si mesmo respondendo questão a questão;
+  /// o CTA "Continuar" só aparece quando ele termina.
+  bool _diagConcluido = false;
 
   static const _total = 5;
 
@@ -54,7 +60,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _voltar() {
     if (_step == 0) return;
-    setState(() => _step--);
+    // Voltar para o diagnóstico recomeça a etapa (recria o widget); o CTA
+    // some de novo até ele ser concluído outra vez.
+    setState(() {
+      _step--;
+      if (_step == 3) _diagConcluido = false;
+    });
   }
 
   void _irParaApp() {
@@ -66,6 +77,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final ultima = _step == _total - 1;
+    // No diagnóstico, o avanço acontece ao responder; o CTA só surge no fim.
+    final ctaOculto = _step == 3 && !_diagConcluido;
 
     return Scaffold(
       body: PassportBackground(
@@ -96,11 +109,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    PrimaryButton(
-                      label: _ctaLabel,
-                      trailingIcon: ultima ? AppIcons.play : AppIcons.arrow,
-                      onTap: _avancar,
-                    ),
+                    if (ctaOculto)
+                      // Mantém a altura do CTA para o layout não "pular" quando
+                      // o botão aparecer ao terminar o diagnóstico.
+                      const SizedBox(height: 54)
+                    else
+                      PrimaryButton(
+                        label: _ctaLabel,
+                        trailingIcon: ultima ? AppIcons.play : AppIcons.arrow,
+                        onTap: _avancar,
+                      ),
                   ],
                 ),
               ),
@@ -123,7 +141,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         0 => _Boas(nome: _primeiroNome),
         1 => const _Como(),
         2 => const _Demo(),
-        3 => const _Diagnostico(),
+        3 => _Diagnostico(
+            onConcluir: () => setState(() => _diagConcluido = true)),
         _ => _Pronto(nome: _primeiroNome),
       };
 }
@@ -453,15 +472,63 @@ class _DemoState extends State<_Demo> {
   }
 }
 
-/// Passo 4 — diagnóstico. Estrutura visível, **conteúdo em preparação**: as
-/// perguntas serão definidas depois (com apoio de um professor). Aqui fica só
-/// o esqueleto, marcado, para a demo mostrar a etapa sem inventar questões.
-class _Diagnostico extends StatelessWidget {
-  const _Diagnostico();
+/// Passo 4 — diagnóstico jogável (telas §2.3). Mini-quiz que **posiciona** o
+/// aluno na trilha "sem ser prova": percorre as questões de exemplo
+/// ([sampleDiagnostico]), uma a uma, com barra de progresso fina. Ao escolher
+/// uma alternativa, ela fica **selecionada** e a etapa avança sozinha — **a
+/// resposta correta não é revelada** (cliente fino; quem corrige é o servidor).
+/// No fim, um cartão amigável fecha a etapa e chama [onConcluir], que libera o
+/// CTA "Continuar". Tudo mockado — nenhuma rede.
+class _Diagnostico extends StatefulWidget {
+  const _Diagnostico({required this.onConcluir});
+
+  /// Chamado uma vez quando a última questão é respondida.
+  final VoidCallback onConcluir;
+
+  @override
+  State<_Diagnostico> createState() => _DiagnosticoState();
+}
+
+class _DiagnosticoState extends State<_Diagnostico> {
+  static const _questoes = sampleDiagnostico;
+
+  int _index = 0;
+  String? _escolhida;
+  bool _concluido = false;
+  Timer? _avanco;
+
+  void _responder(String key) {
+    if (_escolhida != null) return; // trava: uma escolha por questão
+    setState(() => _escolhida = key);
+    // Pequena pausa para o aluno ver a seleção, depois avança/fecha.
+    _avanco = Timer(const Duration(milliseconds: 480), () {
+      if (!mounted) return;
+      if (_index >= _questoes.length - 1) {
+        setState(() => _concluido = true);
+        widget.onConcluir();
+      } else {
+        setState(() {
+          _index++;
+          _escolhida = null;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _avanco?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_concluido) return const _DiagResultado();
+
     final c = context.colors;
+    final q = _questoes[_index].questao;
+    final total = _questoes.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -487,27 +554,40 @@ class _Diagnostico extends StatelessWidget {
                           letterSpacing: 1.4,
                           color: c.muted)),
                   const Spacer(),
-                  _ChipPreparo(c: c),
+                  Text('Pergunta ${_index + 1} de $total',
+                      style: AppType.nunito(
+                          size: 11.5, weight: FontWeight.w800, color: c.muted)),
                 ],
               ),
               const SizedBox(height: 12),
-              ProgressBar(value: 0.0, color: c.primary),
+              ProgressBar(value: (_index + 1) / total, color: c.primary),
               const SizedBox(height: 16),
-              // Esqueleto de uma questão — sem texto real (conteúdo a definir).
-              _SkeletonLine(c: c, widthFactor: 0.85),
-              const SizedBox(height: 8),
-              _SkeletonLine(c: c, widthFactor: 0.55),
-              const SizedBox(height: 16),
-              for (var i = 0; i < 3; i++) ...[
-                _SkeletonOption(c: c),
-                const SizedBox(height: 9),
-              ],
-              const SizedBox(height: 4),
-              Text(
-                'As perguntas do diagnóstico serão definidas com cuidado, junto '
-                'a um professor. Por enquanto, seguimos para sua primeira palavra.',
-                style: AppType.nunito(
-                    size: 12, weight: FontWeight.w600, color: c.muted, height: 1.4),
+              // Reaproveita o painel e as alternativas da Sessão; troca apenas
+              // a questão a cada passo (chave por índice anima a transição).
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: KeyedSubtree(
+                  key: ValueKey(_index),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      QuestionPanel(question: q),
+                      const SizedBox(height: 14),
+                      for (final opt in q.options) ...[
+                        OptionTile(
+                          option: opt,
+                          state: _escolhida == opt.key
+                              ? OptionState.selected
+                              : OptionState.neutral,
+                          onTap: _escolhida == null
+                              ? () => _responder(opt.key)
+                              : null,
+                        ),
+                        if (opt != q.options.last) const SizedBox(height: 9),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -517,91 +597,56 @@ class _Diagnostico extends StatelessWidget {
   }
 }
 
-class _ChipPreparo extends StatelessWidget {
-  const _ChipPreparo({required this.c});
-  final AppColors c;
+/// Fecho do diagnóstico: cartão amigável de "ponto de partida". **Não** mostra
+/// nota nem nível numérico — a estimativa real é do servidor (cliente fino).
+class _DiagResultado extends StatelessWidget {
+  const _DiagResultado();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.warn.withValues(alpha: 0.16), c.paper),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(AppIcons.clock, size: 12, color: c.warn),
-          const SizedBox(width: 4),
-          Text('em preparação',
-              style: AppType.nunito(
-                  size: 10.5, weight: FontWeight.w800, color: c.warn)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkeletonLine extends StatelessWidget {
-  const _SkeletonLine({required this.c, required this.widthFactor});
-  final AppColors c;
-  final double widthFactor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: widthFactor,
-        child: Container(
-          height: 12,
-          decoration: BoxDecoration(
-            color: c.track,
-            borderRadius: BorderRadius.circular(6),
+    final c = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _StepHeader(
+          icon: AppIcons.check,
+          title: 'Tudo certo por aqui!',
+          subtitle:
+              'Encontramos um bom ponto de partida para você. A dificuldade '
+              'vai se ajustando sozinha conforme você avança.',
+        ),
+        const SizedBox(height: 22),
+        SurfaceCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color:
+                      Color.alphaBlend(c.goal.withValues(alpha: 0.14), c.paper),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(AppIcons.meta, size: 22, color: c.goal),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  'Sua trilha já está calibrada. Toque em “Continuar” para '
+                  'conhecer sua primeira palavra.',
+                  style: AppType.nunito(
+                      size: 13,
+                      weight: FontWeight.w600,
+                      color: c.muted,
+                      height: 1.4),
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SkeletonOption extends StatelessWidget {
-  const _SkeletonOption({required this.c});
-  final AppColors c;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: c.line, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              color: c.track,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              height: 11,
-              margin: const EdgeInsets.only(right: 40),
-              decoration: BoxDecoration(
-                color: c.track,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
