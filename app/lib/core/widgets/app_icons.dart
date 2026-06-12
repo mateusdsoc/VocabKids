@@ -64,4 +64,6 @@ abstract final class AppIcons {
   static const trash = Icons.delete_outline_rounded;
   static const sent = Icons.send_rounded;
   static const clock = Icons.schedule_rounded; // aguardando análise
+  static const tocar = Icons.touch_app_rounded; // dica "toque no grifo"
+  static const dica = Icons.lightbulb_outline_rounded; // sugestão da análise
 }

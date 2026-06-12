@@ -139,6 +139,23 @@ item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
 - Modelo novo `Conquista` (`ConquistaPostal`/`ConquistaSelo`) em
   `passaporte/models.dart`; com o backend, virá em `POST /v1/sessoes/{id}/fim`.
 
+### Resultado da redação — análise mockada (12/06) — `features/redacao/`
+- A tela "analisada" deixou de ser placeholder: mostra a **análise de exemplo**
+  (`analise_mock.dart`) como se a IA já tivesse corrigido — telas §8.1.
+- **Texto anotado** (`widgets/texto_anotado.dart`): a *transcrição* com grifos
+  coloridos **tocáveis** por dimensão — vocabulário (`primary`), acentuação
+  (`warn`), pontuação (`error` no padrão suavizado, tint + sublinhado). Toque
+  abre o detalhe (achado + explicação gentil + chips de sugestão).
+- **Estrutura/coesão é nota, não grifo** (é holística — não mapeia a trecho
+  exato; grifar seria impreciso e frágil contra ruído de OCR).
+- Tom do produto: **elogio primeiro** ("Você mandou bem"), depois os ajustes;
+  fecho com **"Da sua redação para a trilha"** (palavras repetidas/fracas →
+  palavras novas, ciclo §4.5).
+- O formato dos dados espelha o futuro `redacao_analise.anotacoes` (JSONB,
+  arquitetura §6): offsets sobre `texto_extraido` → aqui já pré-resolvidos em
+  segmentos. A foto/PDF original **nunca é editada/substituída**.
+  `// TODO(backend): GET /v1/redacoes/{id}/analise` (fatia C).
+
 ### Design system
 - Token **`glass`** (claro = vidro fosco; escuro = painel opaco): `SurfaceCard` e
   a bottom nav desfocam o fundo. `paper` segue opaco (menus/popovers/alternativas).
@@ -247,6 +264,10 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 - **Trilha sem selo "você está aqui"** (decisão revisada): o nó atual em
   destaque + caminho percorrido já comunicam a posição.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo (produto).
+- **Feedback de redação ao aluno é qualitativo** (12/06): texto anotado + notas
+  + palavras novas — **sem nota, percentual ou gráfico** (anti-boletim, produto
+  3.7). Gráficos/dashboards são do **professor**: turma agregada no
+  apresentável; drill-down por aluno individual **avaliado para o completo**.
 - Fontes: Fredoka (display) · Nunito (corpo) · Caveat (só "Passaporte") ·
   Space Mono (micro-rótulos).
 

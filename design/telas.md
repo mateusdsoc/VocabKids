@@ -246,15 +246,27 @@ Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
 
 ### 8.1 Redação (estática) — produto 4.4
 - **Objetivo:** mostrar o **diferencial pedagógico** (redação → vocabulário).
-- **Conteúdo:** o texto do aluno **anotado** com marcações coloridas por dimensão
-  (vocabulário repetido/fraco, acentuação, vírgula/pontuação, estrutura/coesão);
-  área de envio (foto/PDF) **desenhada**, sem OCR/LLM rodando; dashboards de
-  correção (da última redação e do ano) com dados fictícios.
-- **Dados:** `GET /v1/redacoes` (mock estático).
+- **Conteúdo:** a **transcrição** do texto do aluno **anotada** com grifos
+  coloridos tocáveis nas dimensões que mapeiam a trecho exato (vocabulário
+  repetido/fraco, acentuação, vírgula/pontuação); **estrutura/coesão vira nota
+  qualitativa**, sem grifo (é holística). Completam a tela: pontos fortes
+  (elogio primeiro), detalhe da anotação sob toque (achado + explicação +
+  sugestões) e as palavras novas que entram na trilha (ciclo 4.5). Área de
+  envio (foto/PDF) **desenhada**, sem OCR/LLM rodando.
+- **Sem gráficos/dashboards para o aluno** (decisão 12/06): o feedback do aluno
+  é qualitativo — nada de nota, percentual ou gráfico (princípio anti-boletim,
+  produto 3.7). Dashboards de correção são do **professor** (§8.2). A foto/PDF
+  original nunca é editada nem substituída: as anotações vivem sobre a
+  transcrição (`texto_extraido`).
+- **Dados:** `GET /v1/redacoes` (mock estático); análise de exemplo em
+  `features/redacao/analise_mock.dart` (espelha o futuro
+  `redacao_analise.anotacoes`).
 
 ### 8.2 Dashboard escola/professor (estático) — produto 07
 - **Objetivo:** falar com a **coordenação/escola** (quem assina), não só o aluno.
-- **Conteúdo:** telas de acompanhamento de turma/aluno com dados fictícios.
+- **Conteúdo:** acompanhamento de **turma agregada** com dados fictícios
+  (gráficos vivem aqui, não na visão do aluno — decisão 12/06). Drill-down por
+  **aluno individual**: avaliado para o **completo**, não entra no apresentável.
 - **Dados:** `GET /v1/dashboard` (mock estático).
 
 ### 8.3 Report (mock)
