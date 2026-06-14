@@ -56,7 +56,7 @@ class PerfilScreen extends ConsumerWidget {
                 children: [
                   _Header(
                     onBack: () => Navigator.of(context).maybePop(),
-                    onPassaporte: abrirPassaporte,
+                    onConfiguracoes: abrirConfiguracoes,
                   ),
                   Expanded(
                     child: SingleChildScrollView(
@@ -115,8 +115,6 @@ class PerfilScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _ConfiguracoesButton(onTap: abrirConfiguracoes),
                 ],
               ),
             ),
@@ -127,12 +125,13 @@ class PerfilScreen extends ConsumerWidget {
   }
 }
 
-/// Topo: voltar + título "Perfil" centralizado + atalho do **Passaporte**
-/// (o livrinho) à direita — o elo entre o perfil e a coleção.
+/// Topo: voltar + título "Perfil" centralizado + a **engrenagem** de
+/// Configurações à direita. O atalho ao Passaporte (a coleção) vive no corpo,
+/// logo abaixo da carteira de identidade (não duplicamos no topo).
 class _Header extends StatelessWidget {
-  const _Header({required this.onBack, required this.onPassaporte});
+  const _Header({required this.onBack, required this.onConfiguracoes});
   final VoidCallback onBack;
-  final VoidCallback onPassaporte;
+  final VoidCallback onConfiguracoes;
 
   @override
   Widget build(BuildContext context) {
@@ -157,9 +156,8 @@ class _Header extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: _RoundButton(
-              icon: AppIcons.passaporte,
-              onTap: onPassaporte,
-              tint: c.accentStrong,
+              icon: AppIcons.ajustes,
+              onTap: onConfiguracoes,
             ),
           ),
         ],
@@ -168,12 +166,11 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Botão circular de vidro (voltar / abrir passaporte).
+/// Botão circular de vidro (voltar / abrir configurações).
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon, required this.onTap, this.tint});
+  const _RoundButton({required this.icon, required this.onTap});
   final IconData icon;
   final VoidCallback onTap;
-  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +184,7 @@ class _RoundButton extends StatelessWidget {
         child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(icon, size: 23, color: tint ?? c.ink),
+          child: Icon(icon, size: 23, color: c.ink),
         ),
       ),
     );
@@ -241,47 +238,6 @@ class _PassaporteAtalho extends StatelessWidget {
                 ),
               ),
               Icon(AppIcons.chevron, size: 20, color: c.accentStrong),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Entrada de Configurações ao pé do Perfil — discreta, de contorno (mesma
-/// linguagem do antigo botão de sair, agora levando aos ajustes).
-class _ConfiguracoesButton extends StatelessWidget {
-  const _ConfiguracoesButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final radius = BorderRadius.circular(16);
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: radius,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(color: c.line, width: 1),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(AppIcons.ajustes, size: 18, color: c.muted),
-              const SizedBox(width: 9),
-              Text('Configurações',
-                  style: AppType.fredoka(
-                      size: 15.5, weight: FontWeight.w500, color: c.muted)),
             ],
           ),
         ),

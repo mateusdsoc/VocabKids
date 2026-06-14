@@ -46,7 +46,7 @@ abstract final class AppIcons {
   static const palavras = Icons.menu_book_outlined; // palavras dominadas
 
   // --- Perfil / Configurações ---
-  static const ajustes = Icons.tune_rounded; // entrada de configurações
+  static const ajustes = Icons.settings_rounded; // engrenagem = configurações
   static const temaSistema = Icons.brightness_auto_rounded;
   static const temaClaro = Icons.light_mode_rounded;
   static const temaEscuro = Icons.dark_mode_rounded;

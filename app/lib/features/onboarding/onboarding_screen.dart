@@ -70,7 +70,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _irParaApp() {
     Navigator.of(context).pushReplacement(
-      adaptivePageRoute(builder: (_) => const HomeScreen()),
+      adaptivePageRoute(
+        builder: (_) => const HomeScreen(),
+        settings: const RouteSettings(name: HomeScreen.routeName),
+      ),
     );
   }
 

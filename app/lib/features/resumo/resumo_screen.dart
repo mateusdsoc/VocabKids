@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/entrance.dart';
 import '../../core/widgets/primary_button.dart';
+import '../home/home_screen.dart';
 import '../passaporte/conquista_screen.dart';
 import '../passaporte/passaporte_screen.dart';
 import '../trilha/trilha_screen.dart';
@@ -115,10 +116,15 @@ class ResumoScreen extends StatelessWidget {
                 _Footer(
                   // Vindo do Resumo, a Trilha celebra a chegada ao nó
                   // (completar nó: trecho se desenha + pin pipoca + confete).
-                  onTrilha: () => Navigator.of(context).pushReplacement(
+                  // `pushAndRemoveUntil` até a Home: remove o Resumo **e** uma
+                  // eventual Trilha anterior (quando a sessão começou na Trilha),
+                  // deixando a pilha [Home, Trilha] — sem Trilha duplicada presa
+                  // atrás, que obrigava a tocar "Início"/voltar duas vezes.
+                  onTrilha: () => Navigator.of(context).pushAndRemoveUntil(
                     adaptivePageRoute(
                         builder: (_) =>
                             const TrilhaScreen(celebrarChegada: true)),
+                    (r) => r.isFirst || r.settings.name == HomeScreen.routeName,
                   ),
                 ),
               ],

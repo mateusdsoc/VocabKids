@@ -75,6 +75,33 @@ cada tela implementada.
   as posições dos nós escalam com a largura real (`LayoutBuilder`); rótulos e o
   aside "Continuar" clampam nas bordas em vez de recortar em telas estreitas.
 
+### Perfil / Configurações (`features/identidade/`, `features/configuracoes/`)
+- Perfil e Passaporte são **telas distintas** (produto §3.10): o Perfil é
+  identidade/gerência; o Passaporte é coleção/celebração.
+- **Cabeçalho do Perfil (decisão do dono, 14/06):** a engrenagem (⚙) no canto
+  superior direito abre **Configurações**. Antes havia ali o livrinho do
+  Passaporte **e** um botão "Configurações" no rodapé — redundante, porque o
+  Passaporte já tem o atalho "Meu passaporte" no corpo (abaixo da carteira). O
+  livro saiu do topo e o botão de rodapé foi **removido**; sobrou um caminho
+  para cada coisa: engrenagem → Configurações, "Meu passaporte" → coleção.
+  Ícone `AppIcons.ajustes` virou engrenagem (`settings_rounded`) — a mesma do
+  cabeçalho das Configurações.
+
+### Navegação da barra inferior — correções (14/06)
+A barra (`AppBottomNav`) é compartilhada, mas Home/Trilha são **rotas
+empilhadas** (cliente fino, Home é o hub). Dois bugs do dono, corrigidos:
+- **Trilha → Perfil não abria:** a `onSelect` da Trilha só tratava Início e
+  Praticar; a aba Perfil (índice 4) era ignorada. Agora empurra `PerfilScreen`,
+  como na Home.
+- **"Início" exigia dois toques após uma sessão:** o fluxo
+  Home→Trilha→Sessão→Resumo→Trilha empilhava **duas** Trilhas, então o primeiro
+  `pop` só revelava a Trilha de baixo (parecia "trocar e ficar na Trilha"). Duas
+  defesas: (1) o Resumo agora vai à Trilha com `pushAndRemoveUntil` até a Home,
+  removendo a Trilha intermediária (corrige também o "voltar" do sistema); (2) o
+  "Início" da Trilha usa `popUntil` até a Home em vez de `pop` simples. A Home é
+  **nomeada** (`HomeScreen.routeName`) porque no fluxo demo ela é empurrada após
+  o onboarding e não é a rota raiz; em produção é a raiz (`isFirst`).
+
 ### Animações (10/06) — Sessão e Resumo
 Todas curtas e **não-bloqueantes** (princípio 3.7), só com APIs nativas do
 Flutter (nenhuma dependência nova; dados mockados como antes):

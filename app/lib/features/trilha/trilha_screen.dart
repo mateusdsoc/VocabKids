@@ -7,6 +7,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_icons.dart';
+import '../home/home_screen.dart';
+import '../identidade/perfil_screen.dart';
 import '../sessao/session_screen.dart';
 import 'models.dart';
 import 'widgets/country_stamp.dart';
@@ -138,10 +140,19 @@ class _TrilhaScreenState extends State<TrilhaScreen>
                       currentIndex: 1,
                       onSelect: (i) {
                         if (i == 0) {
-                          Navigator.of(context).maybePop();
+                          // "Início": volta direto pra Home num toque. A pilha
+                          // pode ter mais de uma Trilha (Home→Trilha→Sessão→
+                          // Resumo→Trilha), então `popUntil` em vez de `pop`
+                          // evita parar numa Trilha intermediária. Para na Home
+                          // (nomeada no demo) ou na raiz (Home em produção).
+                          Navigator.of(context).popUntil((r) =>
+                              r.isFirst || r.settings.name == HomeScreen.routeName);
                         } else if (i == 2) {
                           Navigator.of(context).push(adaptivePageRoute(
                               builder: (_) => const SessionScreen()));
+                        } else if (i == 4) {
+                          Navigator.of(context).push(adaptivePageRoute(
+                              builder: (_) => const PerfilScreen()));
                         }
                       },
                     ),

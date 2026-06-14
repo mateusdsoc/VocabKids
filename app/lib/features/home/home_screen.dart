@@ -29,6 +29,13 @@ import 'widgets/trilha_ribbon.dart';
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
+  /// Nome da rota da Home. Em produção a Home é a rota raiz (`_Gate`), mas no
+  /// fluxo demo ela é empurrada após o onboarding e **não** é a primeira da
+  /// pilha — por isso a nomeamos, para o "Início" das telas-filhas (Trilha)
+  /// conseguir voltar direto pra cá num toque (`popUntil`), sem depender de
+  /// quantas telas foram empilhadas no caminho.
+  static const routeName = 'home';
+
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }

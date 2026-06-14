@@ -24,8 +24,11 @@ InteractiveInkFeatureFactory get adaptiveSplashFactory =>
 
 /// Rota de página adaptativa: [CupertinoPageRoute] no iOS/macOS (com o gesto de
 /// arrastar para voltar) e [MaterialPageRoute] no resto.
-Route<T> adaptivePageRoute<T>({required WidgetBuilder builder}) {
+Route<T> adaptivePageRoute<T>({
+  required WidgetBuilder builder,
+  RouteSettings? settings,
+}) {
   return isApplePlatform
-      ? CupertinoPageRoute<T>(builder: builder)
-      : MaterialPageRoute<T>(builder: builder);
+      ? CupertinoPageRoute<T>(builder: builder, settings: settings)
+      : MaterialPageRoute<T>(builder: builder, settings: settings);
 }
