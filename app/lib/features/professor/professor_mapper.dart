@@ -47,4 +47,30 @@ abstract final class ProfessorMapper {
   static List<TurmaRef> turmaRefs(List<TurmaResumoDto> dtos) => dtos
       .map((d) => TurmaRef(id: d.id, nome: d.nome, anoEscolar: d.anoEscolar))
       .toList();
+
+  static AlunoDetalhe alunoDetalhe(AlunoDetalheDto dto) => AlunoDetalhe(
+        id: dto.id,
+        nome: dto.nome,
+        turmaNome: dto.turmaNome,
+        anoEscolar: dto.anoEscolar,
+        palavrasSemana: dto.palavrasSemana,
+        metaSemana: dto.metaSemana,
+        palavrasDominadas: dto.palavrasDominadas,
+        palavrasEmProgresso: dto.palavrasEmProgresso,
+        palavras: dto.palavras
+            .map((p) => PalavraAluno(
+                  texto: p.texto,
+                  estado: EstadoPalavra.parse(p.estado),
+                  origem: OrigemPalavra.parse(p.origem),
+                ))
+            .toList(),
+        redacoes: dto.redacoes
+            .map((r) => RedacaoAluno(
+                  id: r.id,
+                  tema: r.tema,
+                  status: StatusRedacao.parse(r.status),
+                  enviadaEm: r.enviadaEm,
+                ))
+            .toList(),
+      );
 }

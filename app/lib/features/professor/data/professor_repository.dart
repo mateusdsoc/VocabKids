@@ -25,4 +25,9 @@ class ProfessorRepository {
     final json = await _api.get('/professor/escola');
     return EscolaPainelDto.fromJson(json as Map<String, dynamic>);
   }
+
+  Future<AlunoDetalheDto> aluno(int alunoId) async {
+    final json = await _api.get('/professor/alunos/$alunoId');
+    return AlunoDetalheDto.fromJson(json as Map<String, dynamic>);
+  }
 }

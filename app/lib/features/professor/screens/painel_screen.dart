@@ -10,12 +10,13 @@ import '../../../core/widgets/surface_card.dart';
 import '../professor_data.dart';
 import '../professor_providers.dart';
 import '../widgets/scope_toggle.dart';
+import 'aluno_screen.dart';
 
 /// **Painel** (telas §8.2) com **toggle de escopo** (produto §3.11):
 /// - **Minha turma** (professor): KPIs + sinal + alunos, com ações de configurar.
 /// - **Escola** (coordenador): agregado por turmas, **só leitura**.
-/// Cliente fino: observa os providers e renderiza; o drill-down por aluno e as
-/// telas de configurar entram nas fases 3–5.
+/// Cliente fino: observa os providers e renderiza. Tocar num aluno abre o
+/// **detalhe** (drill-down — fase 3); as telas de configurar entram nas fases 4–5.
 class PainelScreen extends ConsumerWidget {
   const PainelScreen({super.key});
 
@@ -125,7 +126,11 @@ class _TurmaBody extends ConsumerWidget {
         const SizedBox(height: 20),
         Entrance(
           delay: const Duration(milliseconds: 200),
-          child: _Alunos(alunos: data.alunos),
+          child: _Alunos(
+            alunos: data.alunos,
+            onAbrir: (a) => Navigator.of(context)
+                .push(AlunoDetalheScreen.route(a.id, a.nome)),
+          ),
         ),
       ],
     );
@@ -524,8 +529,9 @@ class _SinalCard extends StatelessWidget {
 }
 
 class _Alunos extends StatelessWidget {
-  const _Alunos({required this.alunos});
+  const _Alunos({required this.alunos, required this.onAbrir});
   final List<AlunoLinha> alunos;
+  final ValueChanged<AlunoLinha> onAbrir;
 
   @override
   Widget build(BuildContext context) {
@@ -546,7 +552,8 @@ class _Alunos extends StatelessWidget {
               ],
             ),
           ),
-          for (final a in alunos) _AlunoRow(aluno: a),
+          for (final a in alunos)
+            _AlunoRow(aluno: a, onTap: () => onAbrir(a)),
         ],
       ),
     );
@@ -554,59 +561,66 @@ class _Alunos extends StatelessWidget {
 }
 
 class _AlunoRow extends StatelessWidget {
-  const _AlunoRow({required this.aluno});
+  const _AlunoRow({required this.aluno, required this.onTap});
   final AlunoLinha aluno;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: c.avatarGradient),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: c.avatarGradient),
+              ),
+              child: Text(aluno.nome.isEmpty ? '?' : aluno.nome[0],
+                  style: AppType.fredoka(size: 15, color: c.onPrimary)),
             ),
-            child: Text(aluno.nome.isEmpty ? '?' : aluno.nome[0],
-                style: AppType.fredoka(size: 15, color: c.onPrimary)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 3,
-            child: Text(aluno.nome,
-                style: AppType.nunito(
-                    size: 14.5, weight: FontWeight.w700, color: c.ink),
-                overflow: TextOverflow.ellipsis),
-          ),
-          Expanded(
-            flex: 4,
-            child: Row(
-              children: [
-                Expanded(
-                  child: ProgressBar(
-                    value: aluno.metaFraction,
-                    color: aluno.metaCumprida ? c.goal : c.primary,
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: Text(aluno.nome,
+                  style: AppType.nunito(
+                      size: 14.5, weight: FontWeight.w700, color: c.ink),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            Expanded(
+              flex: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ProgressBar(
+                      value: aluno.metaFraction,
+                      color: aluno.metaCumprida ? c.goal : c.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 46,
-                  child: Text('${aluno.palavrasSemana}/${aluno.metaSemana}',
-                      textAlign: TextAlign.right,
-                      style: AppType.nunito(
-                          size: 12.5,
-                          weight: FontWeight.w700,
-                          color: c.muted)),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 46,
+                    child: Text('${aluno.palavrasSemana}/${aluno.metaSemana}',
+                        textAlign: TextAlign.right,
+                        style: AppType.nunito(
+                            size: 12.5,
+                            weight: FontWeight.w700,
+                            color: c.muted)),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Icon(AppIcons.chevron, size: 20, color: c.muted),
+          ],
+        ),
       ),
     );
   }

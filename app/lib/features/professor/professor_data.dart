@@ -168,3 +168,277 @@ class EscolaPainelData {
         ],
       );
 }
+
+/// Estado de domínio de uma palavra para o aluno (`aluno_palavra.estado`,
+/// §3.4 — máquina de estados sem regressão). [rank] ordena da mais avançada
+/// para a mais nova na lista do detalhe.
+enum EstadoPalavra {
+  dominada(5, 'Dominada'),
+  nivel4(4, 'Nível 4'),
+  nivel3(3, 'Nível 3'),
+  nivel2(2, 'Nível 2'),
+  nivel1(1, 'Nível 1'),
+  descoberta(0, 'Descoberta');
+
+  const EstadoPalavra(this.rank, this.rotulo);
+  final int rank;
+  final String rotulo;
+
+  bool get isDominada => this == EstadoPalavra.dominada;
+
+  /// Tolerante: string desconhecida cai em [descoberta] (cliente resiliente).
+  static EstadoPalavra parse(String s) => switch (s) {
+        'dominada' => dominada,
+        'nivel_4' => nivel4,
+        'nivel_3' => nivel3,
+        'nivel_2' => nivel2,
+        'nivel_1' => nivel1,
+        _ => descoberta,
+      };
+}
+
+/// Origem da palavra na trilha do aluno (`aluno_palavra.origem`, §3.2/§3.5).
+/// [pessoalRedacao] é o loop redação→vocabulário; [sinalTurma] casa com o
+/// "sinal" do painel.
+enum OrigemPalavra {
+  pessoalRedacao('da redação'),
+  sinalTurma('sinal da turma'),
+  bancoBase('banco');
+
+  const OrigemPalavra(this.rotulo);
+  final String rotulo;
+
+  static OrigemPalavra parse(String s) => switch (s) {
+        'pessoal_redacao' => pessoalRedacao,
+        'sinal_turma' => sinalTurma,
+        _ => bancoBase,
+      };
+}
+
+/// Situação de uma redação do aluno (subconjunto de `redacao.status`).
+enum StatusRedacao {
+  analisada('Analisada'),
+  emAnalise('Em análise'),
+  pendente('Pendente'),
+  rascunho('Rascunho');
+
+  const StatusRedacao(this.rotulo);
+  final String rotulo;
+
+  static StatusRedacao parse(String s) => switch (s) {
+        'analisada' => analisada,
+        'em_analise' => emAnalise,
+        'rascunho' => rascunho,
+        _ => pendente,
+      };
+}
+
+/// Palavra no vocabulário do aluno (item da lista do detalhe).
+class PalavraAluno {
+  const PalavraAluno({
+    required this.texto,
+    required this.estado,
+    required this.origem,
+  });
+
+  final String texto;
+  final EstadoPalavra estado;
+  final OrigemPalavra origem;
+}
+
+/// Redação do aluno (linha da lista do detalhe).
+class RedacaoAluno {
+  const RedacaoAluno({
+    required this.id,
+    required this.tema,
+    required this.status,
+    required this.enviadaEm,
+  });
+
+  final int id;
+  final String tema;
+  final StatusRedacao status;
+
+  /// Data ISO (`yyyy-mm-dd`) ou `null` quando ainda não enviada.
+  final String? enviadaEm;
+
+  /// `dd/mm` para exibição; `null` se não enviada ou data malformada.
+  String? get dataCurta {
+    final iso = enviadaEm;
+    if (iso == null) return null;
+    final p = iso.split('-');
+    return p.length == 3 ? '${p[2]}/${p[1]}' : null;
+  }
+}
+
+/// Dados do **Detalhe do aluno** (drill-down do painel — telas §8.2). Só
+/// leitura. Counters + uma lista limitada de palavras notáveis e as redações
+/// do aluno; o `ProfessorMapper` traduz `GET /v1/professor/alunos/{id}` → isto.
+class AlunoDetalhe {
+  const AlunoDetalhe({
+    required this.id,
+    required this.nome,
+    required this.turmaNome,
+    required this.anoEscolar,
+    required this.palavrasSemana,
+    required this.metaSemana,
+    required this.palavrasDominadas,
+    required this.palavrasEmProgresso,
+    required this.palavras,
+    required this.redacoes,
+  });
+
+  final int id;
+  final String nome;
+  final String turmaNome;
+  final int anoEscolar;
+  final int palavrasSemana;
+  final int metaSemana;
+  final int palavrasDominadas;
+  final int palavrasEmProgresso;
+  final List<PalavraAluno> palavras;
+  final List<RedacaoAluno> redacoes;
+
+  double get metaFraction =>
+      metaSemana == 0 ? 0 : clampDouble(palavrasSemana / metaSemana, 0, 1);
+  bool get metaCumprida => palavrasSemana >= metaSemana;
+
+  /// Palavras que faltam para bater a meta da semana (0 se já cumprida).
+  int get faltamMeta =>
+      metaCumprida ? 0 : metaSemana - palavrasSemana;
+
+  /// Amostra por aluno (espelha o mock do backend). Reusa os campos-base dos
+  /// painéis (`PainelData._amostras`) — fonte única, sem duplicar nome/números.
+  /// Cai no primeiro aluno se o id não existir.
+  factory AlunoDetalhe.sample(int alunoId) {
+    for (final painel in PainelData._amostras.values) {
+      for (final a in painel.alunos) {
+        if (a.id == alunoId) return _montar(painel, a);
+      }
+    }
+    final primeiro = PainelData._amostras[1]!;
+    return _montar(primeiro, primeiro.alunos.first);
+  }
+
+  static AlunoDetalhe _montar(PainelData painel, AlunoLinha a) {
+    final extra = _detalhes[a.id];
+    final palavras = extra?.palavras ?? const [];
+    return AlunoDetalhe(
+      id: a.id,
+      nome: a.nome,
+      turmaNome: painel.turmaNome,
+      anoEscolar: painel.anoEscolar,
+      palavrasSemana: a.palavrasSemana,
+      metaSemana: a.metaSemana,
+      palavrasDominadas: a.palavrasDominadas,
+      palavrasEmProgresso: extra?.emProgresso ??
+          palavras.where((p) => !p.estado.isDominada).length,
+      palavras: palavras,
+      redacoes: extra?.redacoes ?? const [],
+    );
+  }
+
+  /// Só o **extra** por aluno (espelha `_ALUNOS_DETALHE` do backend); base vem
+  /// dos painéis acima.
+  static final Map<int, _DetalheExtra> _detalhes = {
+    1: _DetalheExtra(emProgresso: 7, palavras: [
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'resiliente', estado: EstadoPalavra.dominada, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'meticuloso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'efêmero', estado: EstadoPalavra.nivel3, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'âmbar', estado: EstadoPalavra.nivel2, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'conciso', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.bancoBase),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.analisada, enviadaEm: '2026-06-09'),
+      RedacaoAluno(id: 2, tema: 'Minhas férias dos sonhos', status: StatusRedacao.emAnalise, enviadaEm: '2026-06-14'),
+    ]),
+    2: _DetalheExtra(emProgresso: 5, palavras: [
+      PalavraAluno(texto: 'meticuloso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'próspero', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.nivel3, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'vasto', estado: EstadoPalavra.nivel2, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'sutil', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.bancoBase),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.analisada, enviadaEm: '2026-06-08'),
+    ]),
+    3: _DetalheExtra(emProgresso: 6, palavras: [
+      PalavraAluno(texto: 'nítido', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'eloquente', estado: EstadoPalavra.dominada, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'efêmero', estado: EstadoPalavra.nivel2, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.emAnalise, enviadaEm: '2026-06-13'),
+    ]),
+    4: _DetalheExtra(emProgresso: 4, palavras: [
+      PalavraAluno(texto: 'próspero', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'efêmero', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'conciso', estado: EstadoPalavra.descoberta, origem: OrigemPalavra.bancoBase),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.pendente, enviadaEm: null),
+    ]),
+    5: _DetalheExtra(emProgresso: 8, palavras: [
+      PalavraAluno(texto: 'audacioso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'meticuloso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'lúcido', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'efêmero', estado: EstadoPalavra.nivel4, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'sagaz', estado: EstadoPalavra.nivel2, origem: OrigemPalavra.pessoalRedacao),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.analisada, enviadaEm: '2026-06-07'),
+      RedacaoAluno(id: 2, tema: 'Minhas férias dos sonhos', status: StatusRedacao.analisada, enviadaEm: '2026-06-13'),
+    ]),
+    6: _DetalheExtra(emProgresso: 3, palavras: [
+      PalavraAluno(texto: 'vasto', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'perspicaz', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'meticuloso', estado: EstadoPalavra.descoberta, origem: OrigemPalavra.sinalTurma),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Um herói brasileiro', status: StatusRedacao.pendente, enviadaEm: null),
+    ]),
+    7: _DetalheExtra(emProgresso: 9, palavras: [
+      PalavraAluno(texto: 'pertinente', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'eloquente', estado: EstadoPalavra.dominada, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'conciso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'ínterim', estado: EstadoPalavra.nivel3, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'sagaz', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.bancoBase),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Tecnologia na escola', status: StatusRedacao.analisada, enviadaEm: '2026-06-11'),
+    ]),
+    8: _DetalheExtra(emProgresso: 6, palavras: [
+      PalavraAluno(texto: 'conciso', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'próspero', estado: EstadoPalavra.nivel2, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'pertinente', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Tecnologia na escola', status: StatusRedacao.emAnalise, enviadaEm: '2026-06-12'),
+    ]),
+    9: _DetalheExtra(emProgresso: 5, palavras: [
+      PalavraAluno(texto: 'vasto', estado: EstadoPalavra.dominada, origem: OrigemPalavra.bancoBase),
+      PalavraAluno(texto: 'ínterim', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'pertinente', estado: EstadoPalavra.descoberta, origem: OrigemPalavra.sinalTurma),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Tecnologia na escola', status: StatusRedacao.pendente, enviadaEm: null),
+    ]),
+    10: _DetalheExtra(emProgresso: 7, palavras: [
+      PalavraAluno(texto: 'pertinente', estado: EstadoPalavra.dominada, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'nítido', estado: EstadoPalavra.dominada, origem: OrigemPalavra.pessoalRedacao),
+      PalavraAluno(texto: 'conciso', estado: EstadoPalavra.nivel3, origem: OrigemPalavra.sinalTurma),
+      PalavraAluno(texto: 'sutil', estado: EstadoPalavra.nivel1, origem: OrigemPalavra.bancoBase),
+    ], redacoes: [
+      RedacaoAluno(id: 1, tema: 'Tecnologia na escola', status: StatusRedacao.analisada, enviadaEm: '2026-06-10'),
+    ]),
+  };
+}
+
+/// Bloco "extra" por aluno (campos que não vêm do painel). Privado — só serve
+/// para montar [AlunoDetalhe.sample].
+class _DetalheExtra {
+  const _DetalheExtra({
+    required this.emProgresso,
+    required this.palavras,
+    required this.redacoes,
+  });
+
+  final int emProgresso;
+  final List<PalavraAluno> palavras;
+  final List<RedacaoAluno> redacoes;
+}

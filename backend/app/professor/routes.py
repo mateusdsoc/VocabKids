@@ -74,6 +74,45 @@ class EscolaPainelOut(BaseModel):
     turmas: list[TurmaLinha]
 
 
+class AlunoPalavra(BaseModel):
+    """Uma palavra no vocabulário do aluno (espelha `aluno_palavra`)."""
+
+    texto: str
+    estado: str  # descoberta | nivel_1..4 | dominada (máquina de estados, §3.4)
+    origem: str  # pessoal_redacao | sinal_turma | banco_base (§3.2/§3.5)
+
+
+class AlunoRedacao(BaseModel):
+    """Redação do aluno (espelha `redacao` + `redacao_atribuicao.tema`)."""
+
+    id: int
+    tema: str
+    status: str  # pendente | em_analise | analisada | rascunho
+    enviada_em: str | None
+
+
+class AlunoDetalheOut(BaseModel):
+    """Detalhe do aluno — drill-down do painel (telas §8.2). Só leitura.
+
+    Counters + uma lista **limitada** de palavras notáveis (não o histórico
+    inteiro — produto §3.5: "o contador, não a lista, que ficaria longa demais")
+    e as redações do aluno. Sem % de acerto / tempo (decisões de produto).
+    """
+
+    mock: bool
+    id: int
+    nome: str
+    turma_id: int
+    turma_nome: str
+    ano_escolar: int
+    palavras_semana: int  # dominadas nesta semana (unidade da meta, §3.5)
+    meta_semana: int
+    palavras_dominadas: int  # acumulado histórico (counter)
+    palavras_em_progresso: int  # em nivel_1..4, ainda não dominadas (counter)
+    palavras: list[AlunoPalavra]  # subconjunto notável (recentes/ativas)
+    redacoes: list[AlunoRedacao]
+
+
 # Dados fixos só para a demo (fatia A). A turma 1 espelha o sample do app
 # (`features/professor/professor_data.dart`) para que demo e backend coincidam.
 _TURMAS = [
@@ -135,6 +174,148 @@ _ESCOLA = {
     ],
 }
 
+# Detalhe por aluno (drill-down). Só o **extra** vive aqui (palavras notáveis,
+# redações e o counter de "em progresso"); nome/meta/dominadas saem do painel
+# (`_PAINEIS`) para não duplicar — fonte única, demo e backend coincidem. As
+# palavras misturam as origens de propósito: `pessoal_redacao` mostra o loop
+# redação→vocabulário (§3.2) e `sinal_turma` casa com o "sinal" do painel (§3.5).
+_ALUNOS_DETALHE = {
+    1: {  # Ana Beatriz — forte, meta cumprida (6/5)
+        "palavras_em_progresso": 7,
+        "palavras": [
+            {"texto": "perspicaz", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "resiliente", "estado": "dominada", "origem": "pessoal_redacao"},
+            {"texto": "meticuloso", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "efêmero", "estado": "nivel_3", "origem": "sinal_turma"},
+            {"texto": "âmbar", "estado": "nivel_2", "origem": "pessoal_redacao"},
+            {"texto": "conciso", "estado": "nivel_1", "origem": "banco_base"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "analisada", "enviada_em": "2026-06-09"},
+            {"id": 2, "tema": "Minhas férias dos sonhos", "status": "em_analise", "enviada_em": "2026-06-14"},
+        ],
+    },
+    2: {  # Bruno Carvalho — no ritmo (5/5)
+        "palavras_em_progresso": 5,
+        "palavras": [
+            {"texto": "meticuloso", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "próspero", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "perspicaz", "estado": "nivel_3", "origem": "sinal_turma"},
+            {"texto": "vasto", "estado": "nivel_2", "origem": "pessoal_redacao"},
+            {"texto": "sutil", "estado": "nivel_1", "origem": "banco_base"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "analisada", "enviada_em": "2026-06-08"},
+        ],
+    },
+    3: {  # Carla Dias — semana fraca (3/5), histórico bom
+        "palavras_em_progresso": 6,
+        "palavras": [
+            {"texto": "nítido", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "eloquente", "estado": "dominada", "origem": "pessoal_redacao"},
+            {"texto": "efêmero", "estado": "nivel_2", "origem": "sinal_turma"},
+            {"texto": "perspicaz", "estado": "nivel_1", "origem": "sinal_turma"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "em_analise", "enviada_em": "2026-06-13"},
+        ],
+    },
+    4: {  # Diego Fernandes — em dificuldade (1/5)
+        "palavras_em_progresso": 4,
+        "palavras": [
+            {"texto": "próspero", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "efêmero", "estado": "nivel_1", "origem": "sinal_turma"},
+            {"texto": "perspicaz", "estado": "nivel_1", "origem": "sinal_turma"},
+            {"texto": "conciso", "estado": "descoberta", "origem": "banco_base"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "pendente", "enviada_em": None},
+        ],
+    },
+    5: {  # Elisa Gomes — histórico mais alto da turma (173)
+        "palavras_em_progresso": 8,
+        "palavras": [
+            {"texto": "audacioso", "estado": "dominada", "origem": "pessoal_redacao"},
+            {"texto": "perspicaz", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "meticuloso", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "lúcido", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "efêmero", "estado": "nivel_4", "origem": "sinal_turma"},
+            {"texto": "sagaz", "estado": "nivel_2", "origem": "pessoal_redacao"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "analisada", "enviada_em": "2026-06-07"},
+            {"id": 2, "tema": "Minhas férias dos sonhos", "status": "analisada", "enviada_em": "2026-06-13"},
+        ],
+    },
+    6: {  # Felipe Henrique — sem atividade na semana (0/5)
+        "palavras_em_progresso": 3,
+        "palavras": [
+            {"texto": "vasto", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "perspicaz", "estado": "nivel_1", "origem": "sinal_turma"},
+            {"texto": "meticuloso", "estado": "descoberta", "origem": "sinal_turma"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Um herói brasileiro", "status": "pendente", "enviada_em": None},
+        ],
+    },
+    7: {  # Gabriela Lima (8º C) — superou a meta (7/6)
+        "palavras_em_progresso": 9,
+        "palavras": [
+            {"texto": "pertinente", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "eloquente", "estado": "dominada", "origem": "pessoal_redacao"},
+            {"texto": "conciso", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "ínterim", "estado": "nivel_3", "origem": "sinal_turma"},
+            {"texto": "sagaz", "estado": "nivel_1", "origem": "banco_base"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Tecnologia na escola", "status": "analisada", "enviada_em": "2026-06-11"},
+        ],
+    },
+    8: {  # Heitor Moraes (8º C) — no caminho (4/6)
+        "palavras_em_progresso": 6,
+        "palavras": [
+            {"texto": "conciso", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "próspero", "estado": "nivel_2", "origem": "banco_base"},
+            {"texto": "pertinente", "estado": "nivel_1", "origem": "sinal_turma"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Tecnologia na escola", "status": "em_analise", "enviada_em": "2026-06-12"},
+        ],
+    },
+    9: {  # Isabela Nunes (8º C) — semana fraca (2/6)
+        "palavras_em_progresso": 5,
+        "palavras": [
+            {"texto": "vasto", "estado": "dominada", "origem": "banco_base"},
+            {"texto": "ínterim", "estado": "nivel_1", "origem": "sinal_turma"},
+            {"texto": "pertinente", "estado": "descoberta", "origem": "sinal_turma"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Tecnologia na escola", "status": "pendente", "enviada_em": None},
+        ],
+    },
+    10: {  # João Pedro (8º C) — meta cumprida (6/6)
+        "palavras_em_progresso": 7,
+        "palavras": [
+            {"texto": "pertinente", "estado": "dominada", "origem": "sinal_turma"},
+            {"texto": "nítido", "estado": "dominada", "origem": "pessoal_redacao"},
+            {"texto": "conciso", "estado": "nivel_3", "origem": "sinal_turma"},
+            {"texto": "sutil", "estado": "nivel_1", "origem": "banco_base"},
+        ],
+        "redacoes": [
+            {"id": 1, "tema": "Tecnologia na escola", "status": "analisada", "enviada_em": "2026-06-10"},
+        ],
+    },
+}
+
+
+def _aluno_base(aluno_id: int) -> tuple[dict, dict] | tuple[None, None]:
+    """Acha o aluno nos painéis (fonte única dos campos-base). (painel, aluno)."""
+    for painel in _PAINEIS.values():
+        for aluno in painel["alunos"]:
+            if aluno["id"] == aluno_id:
+                return painel, aluno
+    return None, None
+
 
 @router.get(
     "/professor/turmas",
@@ -164,3 +345,34 @@ async def painel_turma(turma_id: int):
 )
 async def painel_escola():
     return _ESCOLA
+
+
+@router.get(
+    "/professor/alunos/{aluno_id}",
+    response_model=AlunoDetalheOut,
+    summary="Detalhe do aluno — drill-down do painel (MOCK estático na fatia A)",
+)
+async def detalhe_aluno(aluno_id: int):
+    painel, aluno = _aluno_base(aluno_id)
+    if painel is None or aluno is None:
+        raise HTTPException(status_code=404, detail="aluno_nao_encontrado")
+    extra = _ALUNOS_DETALHE.get(aluno_id, {})
+    palavras = extra.get("palavras", [])
+    return {
+        "mock": True,
+        "id": aluno["id"],
+        "nome": aluno["nome"],
+        "turma_id": painel["turma_id"],
+        "turma_nome": painel["turma_nome"],
+        "ano_escolar": painel["ano_escolar"],
+        "palavras_semana": aluno["palavras_semana"],
+        "meta_semana": aluno["meta_semana"],
+        "palavras_dominadas": aluno["palavras_dominadas"],
+        # Sem entrada curada: deriva um counter plausível (>= dominadas na lista).
+        "palavras_em_progresso": extra.get(
+            "palavras_em_progresso",
+            sum(1 for p in palavras if p["estado"] != "dominada"),
+        ),
+        "palavras": palavras,
+        "redacoes": extra.get("redacoes", []),
+    }

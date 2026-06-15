@@ -236,7 +236,16 @@ dono (15/06):
   **esconde as ações de configurar**; clicar numa turma no escopo escola faz
   **drill** para o painel da turma. Seletor de turma no escopo professor.
   Endpoint `GET /v1/professor/escola` + `EscolaPainelData`/mapper/teste.
-- **3** Detalhe do aluno. **4** Atribuir redação. **5** Meta semanal.
+- ✅ **3** Detalhe do aluno (drill-down do painel, **só leitura** — §3.11): meta
+  da semana, palavras dominadas/em progresso (counters), vocabulário recente
+  (estado + **origem**, que evidencia o loop redação→vocabulário) e redações do
+  aluno. Tocar num aluno no painel **empurra** a página (volta com "Voltar ao
+  painel"); o nome chega pelo construtor (cabeçalho sem flash). Endpoint
+  `GET /v1/professor/alunos/{id}` (base do painel = fonte única; só o extra é
+  novo) + `AlunoDetalhe`/DTOs/mapper/provider `family`. Counters, não % de acerto
+  nem tempo (decisões de produto). De passagem: `test_jornada` apontava para o
+  `/dashboard` movido na fase 1 → corrigido para `/professor/turmas/{id}/painel`.
+- **4** Atribuir redação. **5** Meta semanal.
 - **6** Higiene (HANDOFF + verificação visual claro/escuro).
 
 ### Notas técnicas (web)

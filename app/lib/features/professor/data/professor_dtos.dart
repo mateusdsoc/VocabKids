@@ -150,3 +150,88 @@ class EscolaPainelDto {
             .toList(),
       );
 }
+
+class AlunoPalavraDto {
+  AlunoPalavraDto({
+    required this.texto,
+    required this.estado,
+    required this.origem,
+  });
+
+  final String texto;
+  final String estado; // descoberta | nivel_1..4 | dominada
+  final String origem; // pessoal_redacao | sinal_turma | banco_base
+
+  factory AlunoPalavraDto.fromJson(Map<String, dynamic> j) => AlunoPalavraDto(
+        texto: j['texto'] as String,
+        estado: j['estado'] as String,
+        origem: j['origem'] as String,
+      );
+}
+
+class AlunoRedacaoDto {
+  AlunoRedacaoDto({
+    required this.id,
+    required this.tema,
+    required this.status,
+    required this.enviadaEm,
+  });
+
+  final int id;
+  final String tema;
+  final String status; // pendente | em_analise | analisada | rascunho
+  final String? enviadaEm;
+
+  factory AlunoRedacaoDto.fromJson(Map<String, dynamic> j) => AlunoRedacaoDto(
+        id: j['id'] as int,
+        tema: j['tema'] as String,
+        status: j['status'] as String,
+        enviadaEm: j['enviada_em'] as String?,
+      );
+}
+
+class AlunoDetalheDto {
+  AlunoDetalheDto({
+    required this.id,
+    required this.nome,
+    required this.turmaId,
+    required this.turmaNome,
+    required this.anoEscolar,
+    required this.palavrasSemana,
+    required this.metaSemana,
+    required this.palavrasDominadas,
+    required this.palavrasEmProgresso,
+    required this.palavras,
+    required this.redacoes,
+  });
+
+  final int id;
+  final String nome;
+  final int turmaId;
+  final String turmaNome;
+  final int anoEscolar;
+  final int palavrasSemana;
+  final int metaSemana;
+  final int palavrasDominadas;
+  final int palavrasEmProgresso;
+  final List<AlunoPalavraDto> palavras;
+  final List<AlunoRedacaoDto> redacoes;
+
+  factory AlunoDetalheDto.fromJson(Map<String, dynamic> j) => AlunoDetalheDto(
+        id: j['id'] as int,
+        nome: j['nome'] as String,
+        turmaId: j['turma_id'] as int,
+        turmaNome: j['turma_nome'] as String,
+        anoEscolar: j['ano_escolar'] as int,
+        palavrasSemana: j['palavras_semana'] as int,
+        metaSemana: j['meta_semana'] as int,
+        palavrasDominadas: j['palavras_dominadas'] as int,
+        palavrasEmProgresso: j['palavras_em_progresso'] as int,
+        palavras: (j['palavras'] as List)
+            .map((e) => AlunoPalavraDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        redacoes: (j['redacoes'] as List)
+            .map((e) => AlunoRedacaoDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}

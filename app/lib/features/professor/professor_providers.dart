@@ -64,3 +64,12 @@ final painelEscolaProvider =
   final escola = await ref.watch(professorRepositoryProvider).escola();
   return ProfessorMapper.escola(escola);
 });
+
+/// Detalhe de um aluno (drill-down do painel). `family` pelo id — cada aluno
+/// tem o próprio cache; `autoDispose` libera ao fechar a tela.
+final alunoDetalheProvider =
+    FutureProvider.autoDispose.family<AlunoDetalhe, int>((ref, alunoId) async {
+  if (AppConfig.demo) return AlunoDetalhe.sample(alunoId);
+  final dto = await ref.watch(professorRepositoryProvider).aluno(alunoId);
+  return ProfessorMapper.alunoDetalhe(dto);
+});
