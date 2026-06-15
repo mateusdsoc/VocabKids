@@ -64,4 +64,5 @@ abstract final class AppIcons {
   static const trash = Icons.delete_outline_rounded;
   static const sent = Icons.send_rounded;
   static const clock = Icons.schedule_rounded; // aguardando análise
+  static const calendar = Icons.event_outlined; // prazo de redação
 }

@@ -30,4 +30,17 @@ class ProfessorRepository {
     final json = await _api.get('/professor/alunos/$alunoId');
     return AlunoDetalheDto.fromJson(json as Map<String, dynamic>);
   }
+
+  /// Atribui uma redação (tema + prazo) à turma (§4.6). O aluno envia depois.
+  Future<RedacaoAtribuicaoDto> atribuirRedacao({
+    required int turmaId,
+    required String tema,
+    required String? prazo,
+  }) async {
+    final json = await _api.post(
+      '/professor/turmas/$turmaId/redacoes',
+      body: {'tema': tema, 'prazo': prazo},
+    );
+    return RedacaoAtribuicaoDto.fromJson(json as Map<String, dynamic>);
+  }
 }

@@ -9,6 +9,7 @@ import '../../../core/widgets/progress_bar.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../professor_data.dart';
 import '../professor_providers.dart';
+import '../widgets/back_bar.dart';
 
 /// **Detalhe do aluno** (telas §8.2) — drill-down do painel. Só leitura
 /// (ver≠configurar, §3.11): progresso da meta, palavras dominadas/em progresso,
@@ -49,7 +50,8 @@ class AlunoDetalheScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _BackBar(onBack: () => Navigator.of(context).maybePop()),
+                ProfessorBackBar(
+                    onBack: () => Navigator.of(context).maybePop()),
                 Expanded(
                   child: async.when(
                     loading: () => _LoadingBody(nome: alunoNome),
@@ -62,44 +64,6 @@ class AlunoDetalheScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackBar extends StatelessWidget {
-  const _BackBar({required this.onBack});
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final radius = BorderRadius.circular(10);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 24, 6),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: onBack,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(AppIcons.back, size: 22, color: c.primary),
-                  const SizedBox(width: 4),
-                  Text('Voltar ao painel',
-                      style: AppType.nunito(
-                          size: 14, weight: FontWeight.w700, color: c.primary)),
-                ],
-              ),
             ),
           ),
         ),

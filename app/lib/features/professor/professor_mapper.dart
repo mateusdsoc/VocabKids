@@ -6,6 +6,7 @@ import 'professor_data.dart';
 /// telas não conheçam o contrato do servidor (mesmo papel do `HomeMapper`).
 abstract final class ProfessorMapper {
   static PainelData painel(PainelDto dto) => PainelData(
+        turmaId: dto.turmaId,
         turmaNome: dto.turmaNome,
         anoEscolar: dto.anoEscolar,
         alunosAtivos: dto.alunosAtivos,
@@ -72,5 +73,13 @@ abstract final class ProfessorMapper {
                   enviadaEm: r.enviadaEm,
                 ))
             .toList(),
+      );
+
+  static RedacaoAtribuicao redacaoAtribuicao(RedacaoAtribuicaoDto dto) =>
+      RedacaoAtribuicao(
+        id: dto.id,
+        turmaId: dto.turmaId,
+        tema: dto.tema,
+        prazo: dto.prazo,
       );
 }

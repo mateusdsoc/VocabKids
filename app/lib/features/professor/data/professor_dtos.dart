@@ -235,3 +235,26 @@ class AlunoDetalheDto {
             .toList(),
       );
 }
+
+/// Resposta de POST /professor/turmas/{id}/redacoes (espelha `redacao_atribuicao`).
+class RedacaoAtribuicaoDto {
+  RedacaoAtribuicaoDto({
+    required this.id,
+    required this.turmaId,
+    required this.tema,
+    required this.prazo,
+  });
+
+  final int id;
+  final int turmaId;
+  final String tema;
+  final String? prazo;
+
+  factory RedacaoAtribuicaoDto.fromJson(Map<String, dynamic> j) =>
+      RedacaoAtribuicaoDto(
+        id: j['id'] as int,
+        turmaId: j['turma_id'] as int,
+        tema: j['tema'] as String,
+        prazo: j['prazo'] as String?,
+      );
+}

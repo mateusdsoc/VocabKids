@@ -11,6 +11,9 @@ async def test_professor_exige_auth(client):
     assert (await client.get("/v1/professor/turmas/1/painel")).status_code == 401
     assert (await client.get("/v1/professor/escola")).status_code == 401
     assert (await client.get("/v1/professor/alunos/1")).status_code == 401
+    assert (
+        await client.post("/v1/professor/turmas/1/redacoes", json={"tema": "x"})
+    ).status_code == 401
 
 
 @pytest.mark.asyncio
@@ -84,3 +87,54 @@ async def test_detalhe_aluno(client, auth_headers):
 async def test_detalhe_aluno_inexistente(client, auth_headers):
     r = await client.get("/v1/professor/alunos/999", headers=auth_headers)
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_atribuir_redacao(client, auth_headers):
+    r = await client.post(
+        "/v1/professor/turmas/1/redacoes",
+        headers=auth_headers,
+        json={"tema": "  Um herói brasileiro  ", "prazo": "2026-06-30"},
+    )
+    assert r.status_code == 201
+    b = r.json()
+    assert b["mock"] is True
+    assert isinstance(b["id"], int) and b["id"] > 0
+    assert b["turma_id"] == 1
+    assert b["tema"] == "Um herói brasileiro"  # strip server-side
+    assert b["prazo"] == "2026-06-30"
+
+
+@pytest.mark.asyncio
+async def test_atribuir_redacao_sem_prazo(client, auth_headers):
+    r = await client.post(
+        "/v1/professor/turmas/1/redacoes",
+        headers=auth_headers,
+        json={"tema": "Minhas férias dos sonhos"},
+    )
+    assert r.status_code == 201
+    assert r.json()["prazo"] is None
+
+
+@pytest.mark.asyncio
+async def test_atribuir_redacao_turma_inexistente(client, auth_headers):
+    r = await client.post(
+        "/v1/professor/turmas/999/redacoes",
+        headers=auth_headers,
+        json={"tema": "Tema qualquer"},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_atribuir_redacao_tema_vazio_e_prazo_invalido(client, auth_headers):
+    vazio = await client.post(
+        "/v1/professor/turmas/1/redacoes", headers=auth_headers, json={"tema": "   "}
+    )
+    assert vazio.status_code == 422
+    prazo = await client.post(
+        "/v1/professor/turmas/1/redacoes",
+        headers=auth_headers,
+        json={"tema": "Ok", "prazo": "30/06/2026"},
+    )
+    assert prazo.status_code == 422

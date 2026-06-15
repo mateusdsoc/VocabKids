@@ -245,7 +245,15 @@ dono (15/06):
   novo) + `AlunoDetalhe`/DTOs/mapper/provider `family`. Counters, não % de acerto
   nem tempo (decisões de produto). De passagem: `test_jornada` apontava para o
   `/dashboard` movido na fase 1 → corrigido para `/professor/turmas/{id}/painel`.
-- **4** Atribuir redação. **5** Meta semanal.
+- ✅ **4** Atribuir redação (ação **só do professor** — §3.11/§4.6): tela
+  empurrada com **tema** (obrigatório) + **prazo** (opcional, date picker);
+  `POST /v1/professor/turmas/{id}/redacoes` (mock; 404 turma inexistente, 422
+  tema vazio/prazo não-ISO — o backend valida e faz `strip`). Mutação via
+  `AtribuirRedacaoController` (`AsyncNotifier`, mesmo padrão do `AuthController`;
+  DEMO simula o sucesso sem backend). Volta com `Navigator.pop(atribuição)` e o
+  painel confirma por SnackBar. `PainelData` ganhou `turma_id` (DTO já trazia)
+  para a ação saber a turma; `ProfessorBackBar` extraído p/ reuso com a fase 3.
+- **5** Meta semanal.
 - **6** Higiene (HANDOFF + verificação visual claro/escuro).
 
 ### Notas técnicas (web)

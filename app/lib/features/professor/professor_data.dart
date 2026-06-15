@@ -45,6 +45,7 @@ class AlunoLinha {
 /// `ProfessorMapper` traduz `GET /v1/professor/turmas/{id}/painel` → isto.
 class PainelData {
   const PainelData({
+    required this.turmaId,
     required this.turmaNome,
     required this.anoEscolar,
     required this.alunosAtivos,
@@ -55,6 +56,7 @@ class PainelData {
     required this.alunos,
   });
 
+  final int turmaId;
   final String turmaNome;
   final int anoEscolar;
   final int alunosAtivos;
@@ -76,6 +78,7 @@ class PainelData {
 
   static const Map<int, PainelData> _amostras = {
     1: PainelData(
+      turmaId: 1,
       turmaNome: '7º Ano A',
       anoEscolar: 7,
       alunosAtivos: 23,
@@ -93,6 +96,7 @@ class PainelData {
       ],
     ),
     2: PainelData(
+      turmaId: 2,
       turmaNome: '8º Ano C',
       anoEscolar: 8,
       alunosAtivos: 19,
@@ -441,4 +445,31 @@ class _DetalheExtra {
   final int emProgresso;
   final List<PalavraAluno> palavras;
   final List<RedacaoAluno> redacoes;
+}
+
+/// Redação atribuída a uma turma (§4.6) — retorno de
+/// `POST /v1/professor/turmas/{id}/redacoes`. O professor atribui tema + prazo;
+/// o aluno envia depois.
+class RedacaoAtribuicao {
+  const RedacaoAtribuicao({
+    required this.id,
+    required this.turmaId,
+    required this.tema,
+    required this.prazo,
+  });
+
+  final int id;
+  final int turmaId;
+  final String tema;
+
+  /// Data ISO (`yyyy-mm-dd`) ou `null` (sem prazo).
+  final String? prazo;
+
+  /// `dd/mm` para exibição; `null` se sem prazo ou data malformada.
+  String? get prazoCurto {
+    final iso = prazo;
+    if (iso == null) return null;
+    final p = iso.split('-');
+    return p.length == 3 ? '${p[2]}/${p[1]}' : null;
+  }
 }

@@ -73,3 +73,47 @@ final alunoDetalheProvider =
   final dto = await ref.watch(professorRepositoryProvider).aluno(alunoId);
   return ProfessorMapper.alunoDetalhe(dto);
 });
+
+/// Ação de **atribuir redação** (§4.6). `AsyncValue<RedacaoAtribuicao?>`:
+/// `null` = nada enviado ainda; `loading` durante o POST; `data`/`error` no fim
+/// (mesmo padrão do `AuthController`). A decisão DEMO vive aqui, não no widget.
+class AtribuirRedacaoController extends AsyncNotifier<RedacaoAtribuicao?> {
+  @override
+  Future<RedacaoAtribuicao?> build() async => null;
+
+  /// Atribui e devolve a redação criada (ou `null` em erro — o estado guarda o
+  /// erro). [prazo] nulo = sem prazo.
+  Future<RedacaoAtribuicao?> atribuir({
+    required int turmaId,
+    required String tema,
+    required DateTime? prazo,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final temaLimpo = tema.trim();
+      final prazoIso = prazo == null ? null : _isoDate(prazo);
+      if (AppConfig.demo) {
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+        return RedacaoAtribuicao(
+            id: 0, turmaId: turmaId, tema: temaLimpo, prazo: prazoIso);
+      }
+      final dto = await ref.read(professorRepositoryProvider).atribuirRedacao(
+            turmaId: turmaId,
+            tema: temaLimpo,
+            prazo: prazoIso,
+          );
+      return ProfessorMapper.redacaoAtribuicao(dto);
+    });
+    return state.valueOrNull;
+  }
+}
+
+final atribuirRedacaoProvider =
+    AsyncNotifierProvider<AtribuirRedacaoController, RedacaoAtribuicao?>(
+        AtribuirRedacaoController.new);
+
+/// `DateTime` → `yyyy-mm-dd` (data local, sem hora — é um prazo).
+String _isoDate(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';

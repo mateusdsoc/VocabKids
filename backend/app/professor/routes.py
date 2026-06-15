@@ -9,8 +9,11 @@ reescrita depois — os shapes espelham `associacao_turma`, `turma_config` e
 TODO fatia C: exigir papel professor/coordenador + escopo (associação). Hoje só
 exige autenticação, como os demais mocks (report, redação).
 """
+import itertools
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.identidade.auth import get_usuario_atual
 
@@ -111,6 +114,41 @@ class AlunoDetalheOut(BaseModel):
     palavras_em_progresso: int  # em nivel_1..4, ainda não dominadas (counter)
     palavras: list[AlunoPalavra]  # subconjunto notável (recentes/ativas)
     redacoes: list[AlunoRedacao]
+
+
+class AtribuirRedacaoIn(BaseModel):
+    """Corpo de POST /professor/turmas/{id}/redacoes (espelha `redacao_atribuicao`,
+    §4.6): o professor atribui **tema + prazo**; o aluno é quem envia depois."""
+
+    tema: str
+    prazo: str | None = None  # data ISO (yyyy-mm-dd) ou null (sem prazo)
+
+    @field_validator("tema")
+    @classmethod
+    def _tema_nao_vazio(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("tema obrigatório")
+        return v
+
+    @field_validator("prazo")
+    @classmethod
+    def _prazo_iso(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            date.fromisoformat(v)
+        except ValueError as e:
+            raise ValueError("prazo deve ser uma data ISO (yyyy-mm-dd)") from e
+        return v
+
+
+class RedacaoAtribuicaoOut(BaseModel):
+    mock: bool
+    id: int
+    turma_id: int
+    tema: str
+    prazo: str | None
 
 
 # Dados fixos só para a demo (fatia A). A turma 1 espelha o sample do app
@@ -317,6 +355,11 @@ def _aluno_base(aluno_id: int) -> tuple[dict, dict] | tuple[None, None]:
     return None, None
 
 
+# Mock não persiste: gera um id de atribuição por processo (não confiar entre
+# reinícios). Na fatia C vira a PK real de `redacao_atribuicao`.
+_ATRIBUICAO_IDS = itertools.count(101)
+
+
 @router.get(
     "/professor/turmas",
     response_model=TurmasOut,
@@ -375,4 +418,23 @@ async def detalhe_aluno(aluno_id: int):
         ),
         "palavras": palavras,
         "redacoes": extra.get("redacoes", []),
+    }
+
+
+@router.post(
+    "/professor/turmas/{turma_id}/redacoes",
+    response_model=RedacaoAtribuicaoOut,
+    status_code=201,
+    summary="Atribuir redação à turma — tema + prazo (MOCK na fatia A)",
+)
+async def atribuir_redacao(turma_id: int, body: AtribuirRedacaoIn):
+    if turma_id not in _PAINEIS:
+        raise HTTPException(status_code=404, detail="turma_nao_encontrada")
+    # Mock: não persiste; só ecoa a atribuição criada (tema já validado/strip).
+    return {
+        "mock": True,
+        "id": next(_ATRIBUICAO_IDS),
+        "turma_id": turma_id,
+        "tema": body.tema,
+        "prazo": body.prazo,
     }

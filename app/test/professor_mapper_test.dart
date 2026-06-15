@@ -36,6 +36,7 @@ void main() {
 
     test('mapeia os campos da turma', () {
       final p = ProfessorMapper.painel(dto);
+      expect(p.turmaId, 1);
       expect(p.turmaNome, '7º Ano A');
       expect(p.anoEscolar, 7);
       expect(p.alunosAtivos, 23);
@@ -191,6 +192,35 @@ void main() {
     test('id inexistente cai no primeiro aluno (não estoura)', () {
       final a = AlunoDetalhe.sample(99999);
       expect(a.nome, isNotEmpty);
+    });
+  });
+
+  group('ProfessorMapper.redacaoAtribuicao', () {
+    test('mapeia o retorno do POST e formata o prazo', () {
+      final dto = RedacaoAtribuicaoDto.fromJson(const {
+        'mock': true,
+        'id': 101,
+        'turma_id': 1,
+        'tema': 'Um herói brasileiro',
+        'prazo': '2026-06-30',
+      });
+      final a = ProfessorMapper.redacaoAtribuicao(dto);
+      expect(a.id, 101);
+      expect(a.turmaId, 1);
+      expect(a.tema, 'Um herói brasileiro');
+      expect(a.prazoCurto, '30/06');
+    });
+
+    test('prazo nulo fica nulo', () {
+      final dto = RedacaoAtribuicaoDto.fromJson(const {
+        'mock': true,
+        'id': 102,
+        'turma_id': 2,
+        'tema': 'Sem prazo',
+        'prazo': null,
+      });
+      final a = ProfessorMapper.redacaoAtribuicao(dto);
+      expect(a.prazoCurto, isNull);
     });
   });
 }

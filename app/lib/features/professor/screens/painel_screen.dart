@@ -11,12 +11,14 @@ import '../professor_data.dart';
 import '../professor_providers.dart';
 import '../widgets/scope_toggle.dart';
 import 'aluno_screen.dart';
+import 'atribuir_redacao_screen.dart';
 
 /// **Painel** (telas §8.2) com **toggle de escopo** (produto §3.11):
 /// - **Minha turma** (professor): KPIs + sinal + alunos, com ações de configurar.
 /// - **Escola** (coordenador): agregado por turmas, **só leitura**.
 /// Cliente fino: observa os providers e renderiza. Tocar num aluno abre o
-/// **detalhe** (drill-down — fase 3); as telas de configurar entram nas fases 4–5.
+/// **detalhe** (drill-down — fase 3); "Atribuir redação" abre a tela (fase 4);
+/// "Meta semanal" entra na fase 5.
 class PainelScreen extends ConsumerWidget {
   const PainelScreen({super.key});
 
@@ -99,7 +101,10 @@ class _TurmaBody extends ConsumerWidget {
                 size: 14, weight: FontWeight.w600, color: c.muted)),
         const SizedBox(height: 16),
         // Ações de configurar — exclusivas do escopo turma (ver≠configurar, §3.11).
-        const Entrance(delay: Duration(milliseconds: 40), child: _AcoesTurma()),
+        Entrance(
+          delay: const Duration(milliseconds: 40),
+          child: _AcoesTurma(turmaId: data.turmaId, turmaNome: data.turmaNome),
+        ),
         const SizedBox(height: 20),
         Entrance(
           delay: const Duration(milliseconds: 80),
@@ -200,13 +205,14 @@ class _Chip extends StatelessWidget {
 }
 
 class _AcoesTurma extends StatelessWidget {
-  const _AcoesTurma();
+  const _AcoesTurma({required this.turmaId, required this.turmaNome});
+  final int turmaId;
+  final String turmaNome;
 
   @override
   Widget build(BuildContext context) {
-    // As ações abrem telas das fases 4 (atribuir redação) e 5 (meta semanal).
-    // Por ora sinalizam "em breve" — o ponto aqui é que existem no escopo turma
-    // e somem no escopo escola (ver≠configurar).
+    // Ações exclusivas do escopo turma (somem no escopo escola — ver≠configurar).
+    // "Meta semanal" ainda é da fase 5; "Atribuir redação" abre a tela (fase 4).
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -218,9 +224,24 @@ class _AcoesTurma extends StatelessWidget {
         _AcaoChip(
             icon: AppIcons.redacao,
             label: 'Atribuir redação',
-            onTap: () => _emBreve(context, 'Atribuir redação')),
+            onTap: () => _abrirAtribuir(context)),
       ],
     );
+  }
+
+  Future<void> _abrirAtribuir(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final atribuida = await Navigator.of(context).push(
+      AtribuirRedacaoScreen.route(turmaId: turmaId, turmaNome: turmaNome),
+    );
+    if (atribuida == null) return;
+    final prazo = atribuida.prazoCurto;
+    final quando = prazo == null ? 'sem prazo' : 'entrega até $prazo';
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(
+              'Redação "${atribuida.tema}" atribuída a $turmaNome · $quando')));
   }
 }
 

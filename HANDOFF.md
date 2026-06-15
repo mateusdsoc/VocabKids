@@ -34,8 +34,8 @@ Decisão e plano completos em `design/notas-implementacao.md`
 - **Backend:** novo domínio mock `app/professor/` (move o `/dashboard` de
   `redacao/`).
 - **Fases:** ✅0 scaffolding+guard · ✅1 backend mock+wiring · ✅2 painel+toggle ·
-  ✅3 detalhe do aluno · 4 atribuir redação · 5 meta semanal · 6 higiene.
-  **Próxima: fase 4** (atribuir redação — `POST /v1/professor/turmas/{id}/redacoes`).
+  ✅3 detalhe do aluno · ✅4 atribuir redação · 5 meta semanal · 6 higiene.
+  **Próxima: fase 5** (meta semanal — `PUT /v1/professor/turmas/{id}/meta`).
 
 ### Como rodar
 ```bash
