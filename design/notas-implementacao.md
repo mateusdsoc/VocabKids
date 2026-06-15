@@ -261,7 +261,10 @@ dono (15/06):
   reaplica via `PainelData.comMeta` (KPI + meta de cada aluno; frações derivadas
   acompanham) — na fatia C o valor vem persistido do servidor. `ApiClient` ganhou
   `put`. Encerra as ações de configurar do painel.
-- **6** Higiene (HANDOFF + verificação visual claro/escuro).
+- 🔶 **6** Higiene: HANDOFF atualizado + auditoria estática (zero cor hardcoded
+  em `features/professor/`, R1/R2 ok, lints). **Falta a verificação visual
+  claro/escuro** no Chrome (incl. `showDatePicker` e stepper) — não roda em
+  ambiente headless/sem SDK Flutter; comandos no HANDOFF.
 
 ### Notas técnicas (web)
 - Professor **não** usa haptics (no-op na web) nem `image_picker` (atribui, não
@@ -368,11 +371,12 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Superfície do Professor (web)** — em andamento; decisão e fases na seção
-"🧑‍🏫 Professor (web)" acima. É a frente ativa (fatia A do professor, que faltava).
-Depois dela, **wiring com o backend** (`/v1/sessoes` na Sessão; fila de conquistas
-via `/v1/passaporte`; gatilho real do "completar nó" na Trilha). As animações do
-contrato estão todas implementadas; TTS saiu do MVP (11/06).
+**Superfície do Professor (web)** — telas A–D **completas** (fases 0–5); resta a
+**verificação visual claro/escuro** da fase 6 (precisa de Chrome/SDK; comandos no
+HANDOFF). Depois dela, **wiring com o backend** (`/v1/sessoes` na Sessão; fila de
+conquistas via `/v1/passaporte`; gatilho real do "completar nó" na Trilha) e a
+**fatia C** do professor (persistir meta/atribuição, exigir papel+escopo). As
+animações do contrato estão todas implementadas; TTS saiu do MVP (11/06).
 
 > **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
 > exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um
