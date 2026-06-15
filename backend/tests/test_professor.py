@@ -14,6 +14,9 @@ async def test_professor_exige_auth(client):
     assert (
         await client.post("/v1/professor/turmas/1/redacoes", json={"tema": "x"})
     ).status_code == 401
+    assert (
+        await client.put("/v1/professor/turmas/1/meta", json={"meta_semanal": 5})
+    ).status_code == 401
 
 
 @pytest.mark.asyncio
@@ -138,3 +141,39 @@ async def test_atribuir_redacao_tema_vazio_e_prazo_invalido(client, auth_headers
         json={"tema": "Ok", "prazo": "30/06/2026"},
     )
     assert prazo.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_atualizar_meta(client, auth_headers):
+    r = await client.put(
+        "/v1/professor/turmas/1/meta",
+        headers=auth_headers,
+        json={"meta_semanal": 8},
+    )
+    assert r.status_code == 200
+    b = r.json()
+    assert b["mock"] is True
+    assert b["turma_id"] == 1
+    assert b["meta_semanal"] == 8
+
+
+@pytest.mark.asyncio
+async def test_atualizar_meta_turma_inexistente(client, auth_headers):
+    r = await client.put(
+        "/v1/professor/turmas/999/meta",
+        headers=auth_headers,
+        json={"meta_semanal": 5},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_atualizar_meta_fora_da_faixa(client, auth_headers):
+    zero = await client.put(
+        "/v1/professor/turmas/1/meta", headers=auth_headers, json={"meta_semanal": 0}
+    )
+    assert zero.status_code == 422
+    alto = await client.put(
+        "/v1/professor/turmas/1/meta", headers=auth_headers, json={"meta_semanal": 99}
+    )
+    assert alto.status_code == 422

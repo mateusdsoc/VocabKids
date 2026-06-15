@@ -724,6 +724,7 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `GET` | `/v1/redacoes` | tela mockada/estática (A) | redacao |
 | `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` · `/v1/professor/alunos/{id}` | painel do professor/coordenador + detalhe do aluno (mock A) | professor |
 | `POST` | `/v1/professor/turmas/{id}/redacoes` | atribuir redação à turma — tema + prazo (§4.6; mock A) | professor |
+| `PUT` | `/v1/professor/turmas/{id}/meta` | configurar meta semanal da turma (§3.5; mock A) | professor |
 
 A montagem da sessão é **server-side** e a entrega é **híbrida** (decisão #3 ao fim do
 bloco, **revisada em 10/06**): o cliente recebe a **fila planejada em lote** (renderiza +

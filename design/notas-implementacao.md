@@ -253,7 +253,14 @@ dono (15/06):
   DEMO simula o sucesso sem backend). Volta com `Navigator.pop(atribuição)` e o
   painel confirma por SnackBar. `PainelData` ganhou `turma_id` (DTO já trazia)
   para a ação saber a turma; `ProfessorBackBar` extraído p/ reuso com a fase 3.
-- **5** Meta semanal.
+- ✅ **5** Meta semanal (ação **só do professor** — §3.11/§3.5): tela empurrada
+  com stepper (1–30), pré-preenchida com a meta atual; `PUT /v1/professor/turmas/{id}/meta`
+  (mock; 404 turma, 422 fora de 1–50). Mutação via `MetaController` (`AsyncNotifier`).
+  Como a demo roda em `DEMO` (sem backend) e a meta **aparece no painel**, o sucesso
+  registra um **override otimista** (`metaOverridesProvider`) e o `painelTurmaProvider`
+  reaplica via `PainelData.comMeta` (KPI + meta de cada aluno; frações derivadas
+  acompanham) — na fatia C o valor vem persistido do servidor. `ApiClient` ganhou
+  `put`. Encerra as ações de configurar do painel.
 - **6** Higiene (HANDOFF + verificação visual claro/escuro).
 
 ### Notas técnicas (web)

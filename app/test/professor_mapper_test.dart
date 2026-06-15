@@ -223,4 +223,21 @@ void main() {
       expect(a.prazoCurto, isNull);
     });
   });
+
+  group('PainelData.comMeta', () {
+    test('troca a meta do KPI e a de cada aluno; frações acompanham', () {
+      final base = PainelData.sample(1); // meta 5
+      final novo = base.comMeta(8);
+      expect(novo.metaSemanal, 8);
+      expect(novo.turmaId, base.turmaId);
+      expect(novo.alunos.length, base.alunos.length);
+      expect(novo.alunos.every((a) => a.metaSemana == 8), isTrue);
+      // Ana: 6 palavras / meta 8 → deixa de cumprir; fração 0.75 (derivada).
+      final ana = novo.alunos.firstWhere((a) => a.nome == 'Ana Beatriz');
+      expect(ana.metaCumprida, isFalse);
+      expect(ana.metaFraction, closeTo(0.75, 1e-9));
+      // Não muta a fonte original.
+      expect(base.metaSemanal, 5);
+    });
+  });
 }

@@ -52,9 +52,15 @@ final painelTurmaProvider = FutureProvider.autoDispose<PainelData>((ref) async {
   }
   final turmaId = ref.watch(turmaSelecionadaProvider) ?? turmas.first.id;
 
-  if (AppConfig.demo) return PainelData.sample(turmaId);
-  final painel = await ref.watch(professorRepositoryProvider).painel(turmaId);
-  return ProfessorMapper.painel(painel);
+  final painel = AppConfig.demo
+      ? PainelData.sample(turmaId)
+      : ProfessorMapper.painel(
+          await ref.watch(professorRepositoryProvider).painel(turmaId));
+
+  // Reflexão otimista da meta recém-configurada (fase 5). Na fatia A o mock não
+  // persiste; na fatia C o valor já vem do servidor e o override fica redundante.
+  final meta = ref.watch(metaOverridesProvider)[turmaId];
+  return meta == null ? painel : painel.comMeta(meta);
 });
 
 /// Painel agregado da escola (escopo coordenador, só leitura).
@@ -111,6 +117,47 @@ class AtribuirRedacaoController extends AsyncNotifier<RedacaoAtribuicao?> {
 final atribuirRedacaoProvider =
     AsyncNotifierProvider<AtribuirRedacaoController, RedacaoAtribuicao?>(
         AtribuirRedacaoController.new);
+
+/// Metas configuradas nesta sessão (turmaId → meta), para o painel refletir
+/// **otimisticamente** o que o professor acabou de definir (§3.5). Estado de UI;
+/// a verdade persistida vira do servidor na fatia C.
+class MetaOverridesNotifier extends Notifier<Map<int, int>> {
+  @override
+  Map<int, int> build() => const {};
+  void definir(int turmaId, int meta) => state = {...state, turmaId: meta};
+}
+
+final metaOverridesProvider =
+    NotifierProvider<MetaOverridesNotifier, Map<int, int>>(
+        MetaOverridesNotifier.new);
+
+/// Ação de **configurar a meta semanal** (§3.5; só professor). `AsyncValue<int?>`
+/// (`null` = nada enviado). No sucesso, registra o override para o painel
+/// refletir na hora. DEMO simula sem backend.
+class MetaController extends AsyncNotifier<int?> {
+  @override
+  Future<int?> build() async => null;
+
+  /// Define a meta e devolve o valor confirmado (ou `null` em erro).
+  Future<int?> atualizar({required int turmaId, required int metaSemanal}) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      if (AppConfig.demo) {
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        return metaSemanal;
+      }
+      return ref
+          .read(professorRepositoryProvider)
+          .atualizarMeta(turmaId: turmaId, metaSemanal: metaSemanal);
+    });
+    final ok = state.valueOrNull;
+    if (ok != null) ref.read(metaOverridesProvider.notifier).definir(turmaId, ok);
+    return ok;
+  }
+}
+
+final metaProvider =
+    AsyncNotifierProvider<MetaController, int?>(MetaController.new);
 
 /// `DateTime` → `yyyy-mm-dd` (data local, sem hora — é um prazo).
 String _isoDate(DateTime d) =>

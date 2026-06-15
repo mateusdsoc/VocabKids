@@ -42,6 +42,14 @@ class ApiClient {
         ));
   }
 
+  Future<dynamic> put(String path, {Object? body, bool auth = true}) async {
+    return _send(() async => _http.put(
+          _uri(path),
+          headers: await _headers(auth: auth),
+          body: body == null ? null : jsonEncode(body),
+        ));
+  }
+
   /// Executa a requisição e normaliza o resultado: decodifica JSON no sucesso,
   /// lança [ApiException] em erro de API ou de rede.
   Future<dynamic> _send(Future<http.Response> Function() request) async {

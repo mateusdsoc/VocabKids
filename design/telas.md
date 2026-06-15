@@ -270,11 +270,10 @@ Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
   - **Atribuir redação** — tema + prazo à turma (§4.6); é o gatilho da fonte
     pessoal do aluno (fecha o loop redação→vocabulário).
   - **Meta semanal** — configurar a meta da turma (§3.5; só professor configura).
-- **Dados (mock fatia A):** `GET /v1/professor/turmas`,
+- **Dados (mock fatia A, todos já existem):** `GET /v1/professor/turmas`,
   `GET /v1/professor/turmas/{id}/painel`, `GET /v1/professor/escola`,
-  `GET /v1/professor/alunos/{id}` e `POST /v1/professor/turmas/{id}/redacoes`
-  (já existem); e, na próxima fase, `PUT /v1/professor/turmas/{id}/meta`.
-  Viram reais na fatia C.
+  `GET /v1/professor/alunos/{id}`, `POST /v1/professor/turmas/{id}/redacoes` e
+  `PUT /v1/professor/turmas/{id}/meta`. Viram reais na fatia C.
 - **Deferidos** (fast-follow pós-feedback das escolas): redações da turma
   agregadas por dimensão; preset de rigor de redação (§4.3).
 

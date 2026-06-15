@@ -71,6 +71,30 @@ class PainelData {
 
   final List<AlunoLinha> alunos;
 
+  /// Cópia com a meta semanal trocada (KPI + a meta de cada aluno; as frações de
+  /// progresso são derivadas, então acompanham). Usada na reflexão otimista após
+  /// o professor configurar a meta (§3.5) — na fatia C o valor vem persistido.
+  PainelData comMeta(int meta) => PainelData(
+        turmaId: turmaId,
+        turmaNome: turmaNome,
+        anoEscolar: anoEscolar,
+        alunosAtivos: alunosAtivos,
+        alunosTotal: alunosTotal,
+        palavrasDominadasSemana: palavrasDominadasSemana,
+        metaSemanal: meta,
+        sinalTurma: sinalTurma,
+        alunos: [
+          for (final a in alunos)
+            AlunoLinha(
+              id: a.id,
+              nome: a.nome,
+              palavrasSemana: a.palavrasSemana,
+              metaSemana: meta,
+              palavrasDominadas: a.palavrasDominadas,
+            ),
+        ],
+      );
+
   /// Dados de exemplo por turma (espelham o mock do backend) — para
   /// `AppConfig.demo`, previews e testes. Cai na turma 1 se o id não existir.
   factory PainelData.sample([int turmaId = 1]) =>

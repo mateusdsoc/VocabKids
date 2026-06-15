@@ -43,4 +43,16 @@ class ProfessorRepository {
     );
     return RedacaoAtribuicaoDto.fromJson(json as Map<String, dynamic>);
   }
+
+  /// Configura a meta semanal da turma (§3.5). Devolve a meta confirmada.
+  Future<int> atualizarMeta({
+    required int turmaId,
+    required int metaSemanal,
+  }) async {
+    final json = await _api.put(
+      '/professor/turmas/$turmaId/meta',
+      body: {'meta_semanal': metaSemanal},
+    );
+    return (json as Map<String, dynamic>)['meta_semanal'] as int;
+  }
 }

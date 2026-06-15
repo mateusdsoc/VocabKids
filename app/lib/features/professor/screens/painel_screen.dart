@@ -12,13 +12,14 @@ import '../professor_providers.dart';
 import '../widgets/scope_toggle.dart';
 import 'aluno_screen.dart';
 import 'atribuir_redacao_screen.dart';
+import 'meta_semanal_screen.dart';
 
 /// **Painel** (telas §8.2) com **toggle de escopo** (produto §3.11):
 /// - **Minha turma** (professor): KPIs + sinal + alunos, com ações de configurar.
 /// - **Escola** (coordenador): agregado por turmas, **só leitura**.
 /// Cliente fino: observa os providers e renderiza. Tocar num aluno abre o
-/// **detalhe** (drill-down — fase 3); "Atribuir redação" abre a tela (fase 4);
-/// "Meta semanal" entra na fase 5.
+/// **detalhe** (drill-down — fase 3); "Atribuir redação" (fase 4) e "Meta
+/// semanal" (fase 5) abrem suas telas de configurar (só no escopo turma).
 class PainelScreen extends ConsumerWidget {
   const PainelScreen({super.key});
 
@@ -103,7 +104,11 @@ class _TurmaBody extends ConsumerWidget {
         // Ações de configurar — exclusivas do escopo turma (ver≠configurar, §3.11).
         Entrance(
           delay: const Duration(milliseconds: 40),
-          child: _AcoesTurma(turmaId: data.turmaId, turmaNome: data.turmaNome),
+          child: _AcoesTurma(
+            turmaId: data.turmaId,
+            turmaNome: data.turmaNome,
+            metaAtual: data.metaSemanal,
+          ),
         ),
         const SizedBox(height: 20),
         Entrance(
@@ -205,14 +210,18 @@ class _Chip extends StatelessWidget {
 }
 
 class _AcoesTurma extends StatelessWidget {
-  const _AcoesTurma({required this.turmaId, required this.turmaNome});
+  const _AcoesTurma({
+    required this.turmaId,
+    required this.turmaNome,
+    required this.metaAtual,
+  });
   final int turmaId;
   final String turmaNome;
+  final int metaAtual;
 
   @override
   Widget build(BuildContext context) {
     // Ações exclusivas do escopo turma (somem no escopo escola — ver≠configurar).
-    // "Meta semanal" ainda é da fase 5; "Atribuir redação" abre a tela (fase 4).
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -220,13 +229,27 @@ class _AcoesTurma extends StatelessWidget {
         _AcaoChip(
             icon: AppIcons.meta,
             label: 'Meta semanal',
-            onTap: () => _emBreve(context, 'Configurar meta semanal')),
+            onTap: () => _abrirMeta(context)),
         _AcaoChip(
             icon: AppIcons.redacao,
             label: 'Atribuir redação',
             onTap: () => _abrirAtribuir(context)),
       ],
     );
+  }
+
+  Future<void> _abrirMeta(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nova = await Navigator.of(context).push(
+      MetaSemanalScreen.route(
+          turmaId: turmaId, turmaNome: turmaNome, metaAtual: metaAtual),
+    );
+    if (nova == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(
+              'Meta de $turmaNome atualizada para $nova palavras/semana')));
   }
 
   Future<void> _abrirAtribuir(BuildContext context) async {
@@ -675,10 +698,4 @@ class _Erro extends StatelessWidget {
       ),
     );
   }
-}
-
-void _emBreve(BuildContext context, String label) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text('$label — em breve')));
 }

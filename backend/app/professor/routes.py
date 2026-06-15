@@ -13,7 +13,7 @@ import itertools
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.identidade.auth import get_usuario_atual
 
@@ -149,6 +149,19 @@ class RedacaoAtribuicaoOut(BaseModel):
     turma_id: int
     tema: str
     prazo: str | None
+
+
+class AtualizarMetaIn(BaseModel):
+    """Corpo de PUT /professor/turmas/{id}/meta (espelha `turma_config.meta_semanal`,
+    §3.5): meta em **palavras dominadas por semana, por aluno**. Só professor."""
+
+    meta_semanal: int = Field(ge=1, le=50)
+
+
+class MetaTurmaOut(BaseModel):
+    mock: bool
+    turma_id: int
+    meta_semanal: int
 
 
 # Dados fixos só para a demo (fatia A). A turma 1 espelha o sample do app
@@ -438,3 +451,16 @@ async def atribuir_redacao(turma_id: int, body: AtribuirRedacaoIn):
         "tema": body.tema,
         "prazo": body.prazo,
     }
+
+
+@router.put(
+    "/professor/turmas/{turma_id}/meta",
+    response_model=MetaTurmaOut,
+    summary="Configurar meta semanal da turma — §3.5 (MOCK na fatia A)",
+)
+async def atualizar_meta(turma_id: int, body: AtualizarMetaIn):
+    if turma_id not in _PAINEIS:
+        raise HTTPException(status_code=404, detail="turma_nao_encontrada")
+    # Mock: não persiste (a faixa já foi validada). Ecoa a nova meta; na fatia C
+    # grava `turma_config.meta_semanal`. O app reflete otimisticamente.
+    return {"mock": True, "turma_id": turma_id, "meta_semanal": body.meta_semanal}

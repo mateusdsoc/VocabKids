@@ -61,6 +61,7 @@ abstract final class AppIcons {
   static const gallery = Icons.photo_library_outlined;
   static const pdf = Icons.picture_as_pdf_outlined;
   static const add = Icons.add_rounded;
+  static const minus = Icons.remove_rounded;
   static const trash = Icons.delete_outline_rounded;
   static const sent = Icons.send_rounded;
   static const clock = Icons.schedule_rounded; // aguardando análise
