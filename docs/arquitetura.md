@@ -638,7 +638,9 @@ stack já decidida (seção 12 do produto): Flutter, FastAPI, PostgreSQL/Neon, f
         Google Vision · LLM (em aberto)                      ▼
                                                       Cloudflare R2 (redações, C)
 
-   Web React/Next (dashboards) — codebase SEPARADO, fatia C; fala a MESMA API.
+   App do professor (dashboards): Flutter web, MESMO codebase, entrypoint
+   separado (main_professor.dart), apresentável. Fala a MESMA API. (Plano antigo
+   previa React/Next em C — revisado 15/06; ver telas §8.2 e notas.)
 ```
 
 Um único codebase de backend serve as duas fatias; a fila/worker e o R2 só entram em
@@ -684,9 +686,10 @@ Organização **por domínio** (não por camada técnica), espelhando o Bloco 1:
 | `trilha` | catálogo `pais/destino/trilha_no/colecionavel`; passaporte (`aluno_colecionavel`) | A |
 | `redacao` | atribuição/envio + orquestração do pipeline (Bloco 2b) | C (mock em A) |
 | `report` | `report_questao`, auto-ocultar, anti-abuso (Bloco 2b/QA) | C (mock em A) |
+| `professor` | painel de turma/aluno, meta semanal, atribuição de redação (telas §8.2, §3.11) | C (mock em A) |
 | `telemetria` | `sessao`/`evento` (analytics agregada, seção 07) | C |
 
-> No apresentável, `redacao`/`report` existem como **rotas mockadas** (devolvem dados
+> No apresentável, `redacao`/`report`/`professor` existem como **rotas mockadas** (devolvem dados
 > fixos) — a tela é real, o backend não grava (decisão "schema único", Bloco 1).
 
 ### Fronteira síncrono × assíncrono
@@ -718,7 +721,8 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `GET` | `/v1/trilha` | mapa: nó atual, destinos, "você está aqui" | trilha |
 | `GET` | `/v1/passaporte` | coleção (até 28), modos Conquista/Exploração | trilha |
 | `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
-| `GET` | `/v1/redacoes` · `/v1/dashboard` | telas mockadas/estáticas (A) | redacao |
+| `GET` | `/v1/redacoes` | tela mockada/estática (A) | redacao |
+| `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` | painel do professor/coordenador (mock A) | professor |
 
 A montagem da sessão é **server-side** e a entrega é **híbrida** (decisão #3 ao fim do
 bloco, **revisada em 10/06**): o cliente recebe a **fila planejada em lote** (renderiza +
@@ -741,7 +745,8 @@ fino, então o peso é baixo. Telas mapeadas ao produto (seção 3.7/3.10):
 | **Trilha (mapa)** | aterrissagem pós-sessão; "você está aqui" | 3.7 |
 | **Passaporte** | perfil + coleção; Conquista (animado) / Exploração (estático) | 3.10 / `referencia_arte.md` |
 | **Onboarding** | código de turma → boas-vindas → 2 demos → diagnóstico → 1ª palavra | 3.5 |
-| **Redação / Dashboard / Report** | **mockadas/estáticas** no apresentável | seção 08 |
+| **Redação / Report** | **mockadas/estáticas** no apresentável | seção 08 |
+| **Professor (web)** | app web separado (`main_professor.dart`): painel turma/aluno, meta, atribuir redação | §8.2 / 3.11 |
 
 A animação (passaporte, confete de nó) segue `referencia_arte.md`; ferramenta em aberto
 (teste da peça-âncora) **não bloqueia** a estrutura — é camada de movimento sobre telas
@@ -784,8 +789,9 @@ que já existem.
    pipeline de redação e o sinal de turma.
 4. **API REST/JSON sob `/v1`, auth-agnóstica** (entrada por `codigo_turma`); sessão
    montada no servidor, sem vazar resposta correta.
-5. **App Flutter feature-first, mobile-only (A)**; telas mockadas para redação/dashboard/
-   report; animação como camada sobre telas prontas.
+5. **App Flutter feature-first**; aluno em mobile, **professor em Flutter web** (entrypoint
+   separado `main_professor.dart`, mesmo codebase/design system, sem pesar o app do aluno);
+   telas mockadas para redação/report/professor; animação como camada sobre telas prontas.
 6. **Isolamento por escola no repositório** (escopo em toda query de aluno), RLS opcional;
    permissão resolvida como dependency, não tabela.
 7. **Fase por configuração** (worker/R2/provedores ligam em C), mesmo schema; banco

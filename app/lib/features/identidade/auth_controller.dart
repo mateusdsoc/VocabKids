@@ -1,18 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api_client.dart';
 import '../../core/api_exception.dart';
-import '../../core/token_store.dart';
+import '../../core/api_providers.dart';
 import 'models.dart';
 import 'repository.dart';
 
-// --- Providers de infraestrutura (substituíveis em teste) ---
-
-final tokenStoreProvider = Provider<TokenStore>((ref) => TokenStore());
-
-final apiClientProvider = Provider<ApiClient>(
-  (ref) => ApiClient(tokenStore: ref.watch(tokenStoreProvider)),
-);
+// Providers de infra agora vivem em `core/api_providers.dart` (compartilhados com
+// a superfície do professor). Re-exportados aqui para não quebrar quem já os
+// importava da identidade.
+export '../../core/api_providers.dart' show tokenStoreProvider, apiClientProvider;
 
 final identidadeRepositoryProvider = Provider<IdentidadeRepository>(
   (ref) => IdentidadeRepository(
