@@ -156,7 +156,9 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
                 slots.append(slot_questao(q4, c.palavra_id, 4, is_revisao=True))
                 n_questoes += 1
 
-    # Persistência: abre a sessão e introduz as novas (card a ser visto = descoberta).
+    # Persistência: encerra sessão aberta abandonada (no máx. uma ativa por aluno),
+    # abre a nova e introduz as novas palavras (card a ser visto = descoberta).
+    await repo.encerrar_sessoes_abertas(conn, usuario_id)
     sessao_id = await repo.abrir_sessao(conn, usuario_id)
     await repo.zerar_combo(conn, usuario_id)  # combo é por sessão (3.7)
     await repo.salvar_fila(conn, sessao_id, slots)  # servidor é o dono da ordem
@@ -387,7 +389,7 @@ async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> d
 
     # Adaptação contínua.
     janela = await repo.ler_acertos_primeira_no_nivel(
-        conn, usuario_id, nivel_anterior, adaptacao.JANELA
+        conn, usuario_id, nivel_anterior, adaptacao.JANELA, adaptacao.NIVEL_TOLERANCIA_SINAL
     )
     amostra = len(janela)
     acuracia = (sum(1 for ok in janela if ok) / amostra) if amostra else None

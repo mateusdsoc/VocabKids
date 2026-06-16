@@ -10,6 +10,12 @@ não inflar o número (aproximada aqui pelo filtro de nível — ver `service`).
 
 Histerese: só move com a **janela cheia**; um nível por vez; **cooldown** de 1
 sessão após mover. Limiares/janela/cooldown são configuráveis (telemetria calibra).
+
+Tolerância de nível (`NIVEL_TOLERANCIA_SINAL`): quando o banco não tem palavras
+no nível exato, a seleção puxa vizinhos (`selecionar_palavras_novas` ordena por
+distância). Sem isso, a janela do sinal — que filtra pelo nível — ficaria vazia
+e a adaptação nunca dispararia (fome de janela). A janela conta o nível ±N para
+acompanhar a mesma banda que a seleção usa.
 """
 JANELA = 10
 LIMIAR_SOBE = 0.90
@@ -17,6 +23,7 @@ LIMIAR_DESCE = 0.50
 COOLDOWN_SESSOES = 1
 NIVEL_MIN = 1
 NIVEL_MAX = 10
+NIVEL_TOLERANCIA_SINAL = 1  # conta o nível ±1 no sinal (banco esparso → vizinhos)
 
 
 def decidir(
