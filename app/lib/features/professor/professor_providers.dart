@@ -110,7 +110,7 @@ class AtribuirRedacaoController extends AsyncNotifier<RedacaoAtribuicao?> {
           );
       return ProfessorMapper.redacaoAtribuicao(dto);
     });
-    return state.valueOrNull;
+    return state.value;
   }
 }
 
@@ -150,7 +150,7 @@ class MetaController extends AsyncNotifier<int?> {
           .read(professorRepositoryProvider)
           .atualizarMeta(turmaId: turmaId, metaSemanal: metaSemanal);
     });
-    final ok = state.valueOrNull;
+    final ok = state.value;
     if (ok != null) ref.read(metaOverridesProvider.notifier).definir(turmaId, ok);
     return ok;
   }
