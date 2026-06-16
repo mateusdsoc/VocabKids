@@ -184,6 +184,97 @@ item com transforms sob `RepaintBoundary`, sem `BackdropFilter`):
 
 ---
 
+## 🧑‍🏫 Professor (web) — decisão de plataforma e plano (15/06)
+
+Até aqui o desenvolvimento focou **só no aluno**. A superfície do
+professor/coordenação (quem assina) ainda não existia. Decisões tomadas com o
+dono (15/06):
+
+### Plataforma: web-first, entrypoint separado (não pesa no app do aluno)
+- O professor vira um **segundo entrypoint Flutter** (`app/lib/main_professor.dart`)
+  no **mesmo projeto**, compilado pra **web** (`flutter build web -t
+  lib/main_professor.dart`). Mesmo código, mesmo design system, build separado.
+- **Por que web e não dentro do app do aluno:** o trabalho do professor é de tela
+  grande (tabelas, dashboards, revisão de redação) e o comprador vê a demo no
+  laptop. **Mobile do professor fica deferido até validar com as escolas** — a
+  arquitetura compartilhada permite compilar pra mobile depois sem reescrever.
+- **Garantia de "zero peso" no app do aluno** por duas regras de import, com
+  **teste de guard** (`app/test/arquitetura_professor_test.dart`) que falha o
+  `flutter test` se violadas:
+  - **R1:** `main.dart`/`features/<aluno>` **nunca** importam `features/professor/`
+    → tree-shaking do compilador Dart remove o professor do APK/IPA do aluno.
+  - **R2:** `features/professor/` importa **só** `core/` + a própria subárvore.
+
+### Escopo da demo: A + B + C + D (E/F deferidos)
+- **A** Painel da turma (+ **toggle de escopo** turma↔escola: mostra a visão do
+  coordenador e **esconde "configurar"** — ver≠configurar, produto §3.11).
+- **B** Detalhe do aluno (drill-down).
+- **C** Configurar meta semanal (produto §3.5).
+- **D** Atribuir redação (tema+prazo, produto §4.6) — **fecha o loop** com a demo
+  do aluno (redação→vocabulário).
+- **Deferidos** (fast-follow pós-feedback): **E** (redações da turma agregadas por
+  dimensão), **F** (preset de rigor §4.3).
+- **Coordenador não é tela separada** (produto §3.11): mesmos dashboards, escopo
+  escola, view-only → resolvido pelo toggle de escopo.
+
+### Backend: domínio `professor` (mock fatia A)
+- Criar `backend/app/professor/routes.py` (mock) e **mover** pra lá o
+  `GET /v1/dashboard` hoje mal-alocado em `redacao/routes.py` (o app não consome
+  ainda → migração segura; redação volta a tratar só de redação).
+- Rotas (shapes espelham `arquitetura.md`: `associacao_turma`, `redacao_atribuicao`
+  "C (mock em A)", `turma_config`): `GET /professor/turmas`,
+  `/professor/turmas/{id}/alunos`, `/professor/alunos/{id}`, `/professor/escola`,
+  `POST /professor/turmas/{id}/redacoes`, `PUT /professor/turmas/{id}/meta`.
+
+### Fases (cada fase = commit; docs contratuais no mesmo commit)
+- ✅ **0** Scaffolding + shell responsivo + teste de guard R1/R2 (roda em `*.sample`).
+- ✅ **1** Backend mock (`app/professor/`, move o `/dashboard` de `redacao`) +
+  DTOs/repositório/mapper; `apiClient`/`tokenStore` promovidos a `core/api_providers.dart`
+  (re-exportados pela identidade); `painelDataProvider` busca o backend fora do `DEMO`.
+  Testes: `tests/test_professor.py` (backend) + `professor_mapper_test.dart` (app).
+- ✅ **2** Painel + **toggle de escopo** (turma↔escola): escola é só leitura e
+  **esconde as ações de configurar**; clicar numa turma no escopo escola faz
+  **drill** para o painel da turma. Seletor de turma no escopo professor.
+  Endpoint `GET /v1/professor/escola` + `EscolaPainelData`/mapper/teste.
+- ✅ **3** Detalhe do aluno (drill-down do painel, **só leitura** — §3.11): meta
+  da semana, palavras dominadas/em progresso (counters), vocabulário recente
+  (estado + **origem**, que evidencia o loop redação→vocabulário) e redações do
+  aluno. Tocar num aluno no painel **empurra** a página (volta com "Voltar ao
+  painel"); o nome chega pelo construtor (cabeçalho sem flash). Endpoint
+  `GET /v1/professor/alunos/{id}` (base do painel = fonte única; só o extra é
+  novo) + `AlunoDetalhe`/DTOs/mapper/provider `family`. Counters, não % de acerto
+  nem tempo (decisões de produto). De passagem: `test_jornada` apontava para o
+  `/dashboard` movido na fase 1 → corrigido para `/professor/turmas/{id}/painel`.
+- ✅ **4** Atribuir redação (ação **só do professor** — §3.11/§4.6): tela
+  empurrada com **tema** (obrigatório) + **prazo** (opcional, date picker);
+  `POST /v1/professor/turmas/{id}/redacoes` (mock; 404 turma inexistente, 422
+  tema vazio/prazo não-ISO — o backend valida e faz `strip`). Mutação via
+  `AtribuirRedacaoController` (`AsyncNotifier`, mesmo padrão do `AuthController`;
+  DEMO simula o sucesso sem backend). Volta com `Navigator.pop(atribuição)` e o
+  painel confirma por SnackBar. `PainelData` ganhou `turma_id` (DTO já trazia)
+  para a ação saber a turma; `ProfessorBackBar` extraído p/ reuso com a fase 3.
+- ✅ **5** Meta semanal (ação **só do professor** — §3.11/§3.5): tela empurrada
+  com stepper (1–30), pré-preenchida com a meta atual; `PUT /v1/professor/turmas/{id}/meta`
+  (mock; 404 turma, 422 fora de 1–50). Mutação via `MetaController` (`AsyncNotifier`).
+  Como a demo roda em `DEMO` (sem backend) e a meta **aparece no painel**, o sucesso
+  registra um **override otimista** (`metaOverridesProvider`) e o `painelTurmaProvider`
+  reaplica via `PainelData.comMeta` (KPI + meta de cada aluno; frações derivadas
+  acompanham) — na fatia C o valor vem persistido do servidor. `ApiClient` ganhou
+  `put`. Encerra as ações de configurar do painel.
+- 🔶 **6** Higiene: HANDOFF atualizado + auditoria estática (zero cor hardcoded
+  em `features/professor/`, R1/R2 ok, lints). **Falta a verificação visual
+  claro/escuro** no Chrome (incl. `showDatePicker` e stepper) — não roda em
+  ambiente headless/sem SDK Flutter; comandos no HANDOFF.
+
+### Notas técnicas (web)
+- Professor **não** usa haptics (no-op na web) nem `image_picker` (atribui, não
+  envia) — confirma a separação de deps.
+- Google Fonts busca fontes em runtime na web → **recomendado empacotar as 4
+  famílias como assets** antes do pitch (wifi de escola instável); passo
+  deliberado, beneficia o app do aluno também.
+
+---
+
 ## ⏳ A fazer (adiado de propósito)
 
 ### Áudio
@@ -280,11 +371,12 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Dashboard escola/professor** (`telas.md` §8.2 — única tela da fatia A ainda
-não implementada; mock estático, fala com quem assina) ou **wiring com o
-backend** (`/v1/sessoes` na Sessão; fila de conquistas via `/v1/passaporte`;
-gatilho real do "completar nó" na Trilha). As animações do contrato estão
-todas implementadas; TTS saiu do MVP (11/06).
+**Superfície do Professor (web)** — telas A–D **completas** (fases 0–5); resta a
+**verificação visual claro/escuro** da fase 6 (precisa de Chrome/SDK; comandos no
+HANDOFF). Depois dela, **wiring com o backend** (`/v1/sessoes` na Sessão; fila de
+conquistas via `/v1/passaporte`; gatilho real do "completar nó" na Trilha) e a
+**fatia C** do professor (persistir meta/atribuição, exigir papel+escopo). As
+animações do contrato estão todas implementadas; TTS saiu do MVP (11/06).
 
 > **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
 > exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um

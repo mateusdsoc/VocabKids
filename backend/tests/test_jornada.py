@@ -113,8 +113,9 @@ async def test_jornada_completa_do_apresentavel(client):
     # 9. Telas mockadas da fatia A respondem.
     redacoes = (await client.get("/v1/redacoes", headers=h)).json()
     assert redacoes["mock"] is True and len(redacoes["itens"]) >= 1
-    dash = (await client.get("/v1/dashboard", headers=h)).json()
-    assert dash["mock"] is True
+    # O painel saiu de /dashboard para o domínio professor (telas §8.2).
+    painel = (await client.get("/v1/professor/turmas/1/painel", headers=h)).json()
+    assert painel["mock"] is True
     rep = await client.post(
         f"/v1/questoes/{questoes[0]['questao_id']}/report",
         headers=h,

@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.diagnostico.routes import router as diagnostico_router
 from app.identidade.routes import router as identidade_router
+from app.professor.routes import router as professor_router
 from app.redacao.routes import router as redacao_router
 from app.report.routes import router as report_router
 from app.sessao.routes import router as sessao_router
@@ -21,3 +22,4 @@ api_router.include_router(trilha_router)
 # Mockados na fatia A (telas reais, backend fixo) — viram reais na fatia C.
 api_router.include_router(report_router)
 api_router.include_router(redacao_router)
+api_router.include_router(professor_router)

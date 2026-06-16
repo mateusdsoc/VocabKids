@@ -144,6 +144,39 @@ async def test_nao_reintroduz_as_mesmas_palavras(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_montar_encerra_sessao_aberta_anterior(client, aluno):
+    """Achado 2: abrir uma nova sessão encerra a anterior aberta (no máx. uma
+    sessão ativa por aluno). A sessão velha abandonada não aceita mais respostas;
+    a nova funciona normalmente."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    s1 = (await client.post("/v1/sessoes", headers=h)).json()
+    s2 = (await client.post("/v1/sessoes", headers=h)).json()
+    assert s2["sessao_id"] != s1["sessao_id"]
+
+    # A sessão antiga foi encerrada ao montar a nova → 409 sessao_encerrada.
+    q1 = _primeira_questao(s1["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+    r = await client.post(
+        f"/v1/sessoes/{s1['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": q1["questao_id"], "opcao": correta},
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "sessao_encerrada"
+
+    # A nova sessão responde normalmente.
+    q2 = _primeira_questao(s2["slots"], nivel=1)
+    correta2 = await _resposta_correta(q2["questao_id"])
+    ok = await client.post(
+        f"/v1/sessoes/{s2['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": q2["questao_id"], "opcao": correta2},
+    )
+    assert ok.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_revisao_escolhe_n2_da_palavra_em_progresso(client, aluno):
     await seed_vocabulario()
     mapa = await _mapa_palavras(client, aluno["headers"])
@@ -298,6 +331,43 @@ async def test_acerto_na_segunda_tentativa_vale_70(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_respostas_concorrentes_nao_duplicam_xp(client, aluno):
+    """Achado 1: o row lock no `responder` serializa respostas concorrentes do
+    mesmo aluno. Duas respostas simultâneas à mesma questão → exatamente uma
+    pontua (200), a outra cai na guarda de idempotência (409). Sem o lock, ambas
+    leem `aluno_questao` vazio e contam XP/combo em dobro."""
+    import asyncio
+
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+
+    corpo = {"questao_id": q1["questao_id"], "opcao": correta}
+    r1, r2 = await asyncio.gather(
+        client.post(f"/v1/sessoes/{sid}/respostas", headers=h, json=corpo),
+        client.post(f"/v1/sessoes/{sid}/respostas", headers=h, json=corpo),
+    )
+
+    assert sorted([r1.status_code, r2.status_code]) == [200, 409], (
+        r1.status_code,
+        r2.status_code,
+    )
+    ok = r1 if r1.status_code == 200 else r2
+    falha = r2 if r1.status_code == 200 else r1
+    assert ok.json()["xp_total"] == 120  # contou uma vez (120), não 240
+    assert ok.json()["combo_atual"] == 1
+    assert falha.json()["error"]["code"] == "questao_ja_respondida"
+
+    # O XP atribuído à sessão também conta uma só vez (somar_xp_sessao é relativo).
+    fim = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert fim["xp_ganho"] == 120
+    assert fim["xp_total"] == 120
+
+
+@pytest.mark.asyncio
 async def test_nao_repergunta_variacao_ja_acertada(client, aluno):
     await seed_vocabulario()
     h = aluno["headers"]
@@ -424,6 +494,25 @@ async def test_adaptacao_nao_move_com_janela_incompleta(client, aluno):
     b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
     assert b["nivel_mudou"] is False
     assert b["nivel_atual"] == 2  # histerese: janela < 10 não move
+
+
+@pytest.mark.asyncio
+async def test_adaptacao_conta_nivel_vizinho_quando_banco_esparso(client, aluno):
+    """Achado 3: com o banco esparso a seleção puxa palavras de nível vizinho; o
+    sinal conta o nível ±1 (tolerância) para não morrer de fome. Aluno no nível 3
+    com 10 acertos de 1ª em questões de nível 2 (vizinho) sobe para 4. Sem a
+    tolerância, o filtro de nível exato deixaria a janela vazia e nada mudaria."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 3)
+    await _semear_respostas_no_nivel(aluno["usuario_id"], nivel=2, acertos=10, total=10)
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_anterior"] == 3
+    assert b["nivel_mudou"] is True
+    assert b["nivel_atual"] == 4  # o nível vizinho (2) contou no sinal
 
 
 @pytest.mark.asyncio

@@ -252,10 +252,30 @@ Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
   correção (da última redação e do ano) com dados fictícios.
 - **Dados:** `GET /v1/redacoes` (mock estático).
 
-### 8.2 Dashboard escola/professor (estático) — produto 07
+### 8.2 Superfície do Professor (web) — produto 07 + §3.11
+- **Plataforma:** app **web** separado (entrypoint `app/lib/main_professor.dart`),
+  reusando o design system; **não entra no bundle do aluno** (regras de isolamento
+  em `notas-implementacao.md` → "Professor (web)"). "Professor mobile" é deferido
+  até validar com as escolas.
 - **Objetivo:** falar com a **coordenação/escola** (quem assina), não só o aluno.
-- **Conteúdo:** telas de acompanhamento de turma/aluno com dados fictícios.
-- **Dados:** `GET /v1/dashboard` (mock estático).
+- **Quem vê o quê (§3.11):** professor vê *e configura* as próprias turmas;
+  coordenador vê a escola inteira, **só leitura** — **mesmas telas**, via **toggle
+  de escopo** (turma↔escola); não há telas separadas de coordenador.
+- **Telas:**
+  - **Painel da turma** — KPIs (alunos ativos, palavras dominadas na semana, meta
+    semanal), **sinal de turma** (palavras fracas recorrentes, §3.5) e lista de
+    alunos com o progresso da meta. Inclui o toggle de escopo turma↔escola.
+  - **Detalhe do aluno** — drill-down a partir do painel (progresso, palavras
+    dominadas, redações do aluno).
+  - **Atribuir redação** — tema + prazo à turma (§4.6); é o gatilho da fonte
+    pessoal do aluno (fecha o loop redação→vocabulário).
+  - **Meta semanal** — configurar a meta da turma (§3.5; só professor configura).
+- **Dados (mock fatia A, todos já existem):** `GET /v1/professor/turmas`,
+  `GET /v1/professor/turmas/{id}/painel`, `GET /v1/professor/escola`,
+  `GET /v1/professor/alunos/{id}`, `POST /v1/professor/turmas/{id}/redacoes` e
+  `PUT /v1/professor/turmas/{id}/meta`. Viram reais na fatia C.
+- **Deferidos** (fast-follow pós-feedback das escolas): redações da turma
+  agregadas por dimensão; preset de rigor de redação (§4.3).
 
 ### 8.3 Report (mock)
 - Já vive **dentro da Sessão** (item 4): caixa de motivo predefinido, sem

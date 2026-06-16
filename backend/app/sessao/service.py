@@ -156,7 +156,9 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
                 slots.append(slot_questao(q4, c.palavra_id, 4, is_revisao=True))
                 n_questoes += 1
 
-    # Persistência: abre a sessão e introduz as novas (card a ser visto = descoberta).
+    # Persistência: encerra sessão aberta abandonada (no máx. uma ativa por aluno),
+    # abre a nova e introduz as novas palavras (card a ser visto = descoberta).
+    await repo.encerrar_sessoes_abertas(conn, usuario_id)
     sessao_id = await repo.abrir_sessao(conn, usuario_id)
     await repo.zerar_combo(conn, usuario_id)  # combo é por sessão (3.7)
     await repo.salvar_fila(conn, sessao_id, slots)  # servidor é o dono da ordem
@@ -216,8 +218,13 @@ async def responder(
     de erro também (decisão #3 revisada): a fila persistida é reordenada aqui e
     devolvida na resposta — o app só renderiza. A resposta correta é revelada
     só APÓS responder.
+
+    Trava a linha da sessão (`para_update`) antes de ler/escrever: XP, combo e
+    fila são read-modify-write, então respostas concorrentes do mesmo aluno
+    precisam ser serializadas para não se perderem (sem isso, a guarda de
+    `questao_ja_respondida` só protege após o 1º commit).
     """
-    sessao = await repo.buscar_sessao(conn, sessao_id)
+    sessao = await repo.buscar_sessao(conn, sessao_id, para_update=True)
     if sessao is None:
         raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
     if sessao.usuario_id != usuario_id:
@@ -361,8 +368,12 @@ async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> d
 
     A adaptação lê o sinal limpo (acurácia de 1ª tentativa no nível atual, janela
     móvel) e move o nível em ±1 com histerese e cooldown (Bloco 2a).
+
+    Trava a linha da sessão (`para_update`) para serializar com um `responder`
+    concorrente: sem isso, uma resposta poderia passar pela checagem de
+    `finalizada_em` e escrever depois do encerramento.
     """
-    sessao = await repo.buscar_sessao(conn, sessao_id)
+    sessao = await repo.buscar_sessao(conn, sessao_id, para_update=True)
     if sessao is None:
         raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
     if sessao.usuario_id != usuario_id:
@@ -378,7 +389,7 @@ async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> d
 
     # Adaptação contínua.
     janela = await repo.ler_acertos_primeira_no_nivel(
-        conn, usuario_id, nivel_anterior, adaptacao.JANELA
+        conn, usuario_id, nivel_anterior, adaptacao.JANELA, adaptacao.NIVEL_TOLERANCIA_SINAL
     )
     amostra = len(janela)
     acuracia = (sum(1 for ok in janela if ok) / amostra) if amostra else None

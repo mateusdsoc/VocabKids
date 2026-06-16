@@ -127,6 +127,19 @@ async def ler_sinonimos(
     return dict(por_palavra)
 
 
+async def encerrar_sessoes_abertas(conn: AsyncConnection, usuario_id: int) -> None:
+    """Fecha sessões abertas anteriores do aluno (abandono) ao montar uma nova:
+    garante no máximo uma sessão ativa por aluno. Não roda adaptação nem conta
+    `sessoes_total` — a sessão foi abandonada, não concluída; as respostas já
+    dadas permanecem em `aluno_questao` e seguem valendo para o sinal."""
+    s = schema.sessao
+    await conn.execute(
+        update(s)
+        .where(s.c.usuario_id == usuario_id, s.c.finalizada_em.is_(None))
+        .values(finalizada_em=func.now())
+    )
+
+
 async def abrir_sessao(conn: AsyncConnection, usuario_id: int) -> int:
     return (
         await conn.execute(
@@ -160,15 +173,20 @@ async def introduzir_palavras(
 # ─────────────────────────────── responder ───────────────────────────────
 
 
-async def buscar_sessao(conn: AsyncConnection, sessao_id: int) -> Row | None:
+async def buscar_sessao(
+    conn: AsyncConnection, sessao_id: int, *, para_update: bool = False
+) -> Row | None:
     s = schema.sessao
-    return (
-        await conn.execute(
-            select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho, s.c.fila).where(
-                s.c.id == sessao_id
-            )
-        )
-    ).first()
+    stmt = select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho, s.c.fila).where(
+        s.c.id == sessao_id
+    )
+    if para_update:
+        # Serializa as escritas da sessão (XP/combo/fila são read-modify-write):
+        # respostas concorrentes do mesmo aluno (toque duplo, retry de rede) esperam
+        # no lock do banco em vez de sobrescreverem umas às outras (lost-update). O
+        # lock é liberado no commit/rollback da transação do request.
+        stmt = stmt.with_for_update()
+    return (await conn.execute(stmt)).first()
 
 
 async def salvar_fila(
@@ -390,11 +408,15 @@ async def finalizar_sessao(conn: AsyncConnection, sessao_id: int) -> None:
 
 
 async def ler_acertos_primeira_no_nivel(
-    conn: AsyncConnection, usuario_id: int, nivel: int, janela: int
+    conn: AsyncConnection, usuario_id: int, nivel: int, janela: int, tolerancia: int = 0
 ) -> list[bool]:
     """Janela móvel do sinal limpo: `acertou_primeira` das últimas respostas de
     INTRODUÇÃO (`conta_sinal`) de palavras no nível dado — revisão fica de fora
-    para não inflar a acurácia (Bloco 2a)."""
+    para não inflar a acurácia (Bloco 2a).
+
+    `tolerancia` alarga a faixa para o nível ±N: quando o banco é esparso, a
+    seleção puxa palavras de níveis vizinhos, e sem esse alargamento a janela
+    ficaria vazia (a adaptação nunca dispararia)."""
     aq, q, p = schema.aluno_questao, schema.questao, schema.palavra
     juncao = aq.join(q, q.c.id == aq.c.questao_id).join(
         p, p.c.id == q.c.palavra_id
@@ -405,7 +427,7 @@ async def ler_acertos_primeira_no_nivel(
         .where(
             aq.c.usuario_id == usuario_id,
             aq.c.conta_sinal.is_(True),
-            p.c.nivel_dificuldade == nivel,
+            func.abs(p.c.nivel_dificuldade - nivel) <= tolerancia,
             aq.c.respondida_em.isnot(None),
         )
         .order_by(aq.c.respondida_em.desc())
