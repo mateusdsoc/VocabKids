@@ -298,6 +298,43 @@ async def test_acerto_na_segunda_tentativa_vale_70(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_respostas_concorrentes_nao_duplicam_xp(client, aluno):
+    """Achado 1: o row lock no `responder` serializa respostas concorrentes do
+    mesmo aluno. Duas respostas simultâneas à mesma questão → exatamente uma
+    pontua (200), a outra cai na guarda de idempotência (409). Sem o lock, ambas
+    leem `aluno_questao` vazio e contam XP/combo em dobro."""
+    import asyncio
+
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    sid = sessao["sessao_id"]
+    q1 = _primeira_questao(sessao["slots"], nivel=1)
+    correta = await _resposta_correta(q1["questao_id"])
+
+    corpo = {"questao_id": q1["questao_id"], "opcao": correta}
+    r1, r2 = await asyncio.gather(
+        client.post(f"/v1/sessoes/{sid}/respostas", headers=h, json=corpo),
+        client.post(f"/v1/sessoes/{sid}/respostas", headers=h, json=corpo),
+    )
+
+    assert sorted([r1.status_code, r2.status_code]) == [200, 409], (
+        r1.status_code,
+        r2.status_code,
+    )
+    ok = r1 if r1.status_code == 200 else r2
+    falha = r2 if r1.status_code == 200 else r1
+    assert ok.json()["xp_total"] == 120  # contou uma vez (120), não 240
+    assert ok.json()["combo_atual"] == 1
+    assert falha.json()["error"]["code"] == "questao_ja_respondida"
+
+    # O XP atribuído à sessão também conta uma só vez (somar_xp_sessao é relativo).
+    fim = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert fim["xp_ganho"] == 120
+    assert fim["xp_total"] == 120
+
+
+@pytest.mark.asyncio
 async def test_nao_repergunta_variacao_ja_acertada(client, aluno):
     await seed_vocabulario()
     h = aluno["headers"]

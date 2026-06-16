@@ -160,15 +160,20 @@ async def introduzir_palavras(
 # ─────────────────────────────── responder ───────────────────────────────
 
 
-async def buscar_sessao(conn: AsyncConnection, sessao_id: int) -> Row | None:
+async def buscar_sessao(
+    conn: AsyncConnection, sessao_id: int, *, para_update: bool = False
+) -> Row | None:
     s = schema.sessao
-    return (
-        await conn.execute(
-            select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho, s.c.fila).where(
-                s.c.id == sessao_id
-            )
-        )
-    ).first()
+    stmt = select(s.c.usuario_id, s.c.finalizada_em, s.c.xp_ganho, s.c.fila).where(
+        s.c.id == sessao_id
+    )
+    if para_update:
+        # Serializa as escritas da sessão (XP/combo/fila são read-modify-write):
+        # respostas concorrentes do mesmo aluno (toque duplo, retry de rede) esperam
+        # no lock do banco em vez de sobrescreverem umas às outras (lost-update). O
+        # lock é liberado no commit/rollback da transação do request.
+        stmt = stmt.with_for_update()
+    return (await conn.execute(stmt)).first()
 
 
 async def salvar_fila(

@@ -216,8 +216,13 @@ async def responder(
     de erro também (decisão #3 revisada): a fila persistida é reordenada aqui e
     devolvida na resposta — o app só renderiza. A resposta correta é revelada
     só APÓS responder.
+
+    Trava a linha da sessão (`para_update`) antes de ler/escrever: XP, combo e
+    fila são read-modify-write, então respostas concorrentes do mesmo aluno
+    precisam ser serializadas para não se perderem (sem isso, a guarda de
+    `questao_ja_respondida` só protege após o 1º commit).
     """
-    sessao = await repo.buscar_sessao(conn, sessao_id)
+    sessao = await repo.buscar_sessao(conn, sessao_id, para_update=True)
     if sessao is None:
         raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
     if sessao.usuario_id != usuario_id:
@@ -361,8 +366,12 @@ async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> d
 
     A adaptação lê o sinal limpo (acurácia de 1ª tentativa no nível atual, janela
     móvel) e move o nível em ±1 com histerese e cooldown (Bloco 2a).
+
+    Trava a linha da sessão (`para_update`) para serializar com um `responder`
+    concorrente: sem isso, uma resposta poderia passar pela checagem de
+    `finalizada_em` e escrever depois do encerramento.
     """
-    sessao = await repo.buscar_sessao(conn, sessao_id)
+    sessao = await repo.buscar_sessao(conn, sessao_id, para_update=True)
     if sessao is None:
         raise ApiError(404, "sessao_nao_encontrada", "Sessão não encontrada.")
     if sessao.usuario_id != usuario_id:
