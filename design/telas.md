@@ -244,13 +244,25 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 
 Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
 
-### 8.1 Redação (estática) — produto 4.4
+### 8.1 Redação — produto 4.4 (correção **viva** no apresentável; ingestão mock)
 - **Objetivo:** mostrar o **diferencial pedagógico** (redação → vocabulário).
-- **Conteúdo:** o texto do aluno **anotado** com marcações coloridas por dimensão
-  (vocabulário repetido/fraco, acentuação, vírgula/pontuação, estrutura/coesão);
-  área de envio (foto/PDF) **desenhada**, sem OCR/LLM rodando; dashboards de
-  correção (da última redação e do ano) com dados fictícios.
-- **Dados:** `GET /v1/redacoes` (mock estático).
+- **Decisão (19/06, dono):** a **correção** deixou de ser placeholder e passou ao
+  apresentável — sem ela não há como demonstrar o diferencial. É **dado mockado**
+  rodando na **tela real** (mesmo contrato da fatia C, sem reescrita). A
+  **ingestão** (OCR de foto / extração de PDF) segue **desenhada**, fatia C.
+- **Tela de resultado (`ResultadoScreen`):**
+  - **Texto anotado:** a redação do aluno com **sublinhado colorido por dimensão**
+    (decisão de 19/06: sublinhado inline, não marca-texto nem lista lateral),
+    uma cor por dimensão (vocabulário/acentuação/pontuação/coesão); tocar num
+    trecho abre uma **folha de dica** (comentário + sugestões). As âncoras são
+    `(início, fim)` já resolvidas pelo servidor — o app só recorta.
+  - **Resumo da correção:** contagem de pontos por dimensão — **sem nota, sem %,
+    sem tempo** (decisões travadas). Coesão positiva entra como **nota geral**.
+  - **Pontos fortes** e **“palavras que você ganhou”** (gatilho → palavra), que
+    tornam visível o loop redação→vocabulário (produto 3.2).
+- **Dados:** `GET /v1/redacoes` (lista) e `GET /v1/redacoes/{id}/analise`
+  (correção) — mock estático na fatia A; viram reais (OCR→LLM) na fatia C.
+- **Envio (foto/PDF):** área **desenhada**, sem OCR/LLM rodando.
 
 ### 8.2 Superfície do Professor (web) — produto 07 + §3.11
 - **Plataforma:** app **web** separado (entrypoint `app/lib/main_professor.dart`),

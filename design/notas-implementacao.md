@@ -47,6 +47,35 @@ cada tela implementada.
 - Demo navegável: em `DEMO`, o app começa em **Entrada → Onboarding → Home**;
   "Embarcar" pula o backend e abre o onboarding com o nome digitado.
 
+### Redação — correção viva no apresentável (`features/redacao/`)
+- **Decisão do dono (19/06):** trazer a **correção** da redação para o
+  apresentável. Motivo: é **o diferencial** do produto (redação→vocabulário) e
+  não dava para apresentar a escolas com a tela em placeholder ("entra com o
+  motor de correção"). O que entrou é **dado mockado na tela real** — a
+  **ingestão** (OCR de foto / extração de PDF) continua **desenhada** (fatia C).
+  Docs contratuais atualizados no mesmo commit (`design/telas.md §8.1`).
+- **Como ficou (`ResultadoScreen`, agora `ConsumerWidget`):**
+  - Texto do aluno com **sublinhado colorido por dimensão** (escolha do dono em
+    19/06: sublinhado inline, e não marca-texto nem lista lateral). Tocar num
+    trecho abre uma **folha de dica** (comentário + sugestões).
+  - **Resumo da correção** por dimensão (contagem) — **sem nota/%/tempo** (regras
+    travadas); coesão positiva vira **nota geral**; **pontos fortes**; e
+    **“palavras que você ganhou”** (gatilho→palavra), o payoff visível do loop.
+- **Arquitetura (cliente fino, sem reescrita na fatia C):**
+  - `analise.dart` espelha `AnaliseOut` do backend; `AnaliseRedacao.demo(id)`
+    serve a redação "Um herói brasileiro" (id 2) no modo `DEMO`, **resolvendo as
+    âncoras (trecho, ocorrência)→offsets igual ao servidor** — sem offset mágico.
+  - `redacao_providers.dart`: `analiseRedacaoProvider` (`FutureProvider.family`,
+    mesmo padrão do `alunoDetalheProvider` do professor) → em `DEMO` usa a
+    amostra; ligado, lê `GET /v1/redacoes/{id}/analise`.
+  - Tokens de cor por dimensão no `AppColors` (`dimVocabulario/Acentuacao/`
+    `Pontuacao/Coesao`), distintos do vermelho de resposta (aqui não há erro
+    punitivo). Nada hardcoded.
+  - Teste `test/redacao_analise_test.dart`: trava a resolução de âncoras e o
+    `fromJson` (contrato do backend).
+- **Pendente (fatia C):** ingestão real (OCR/PDF→`texto_extraido`), análise por
+  LLM e atribuição das palavras na trilha. As telas e o contrato já estão prontos.
+
 ### Resumo de sessão (`features/resumo/`)
 - Porte fiel do design `Resumo de sessão`, claro/escuro, com variante **com
   conquista** (teaser dourado "Novo no Passaporte!"). Card de XP em **vidro**.

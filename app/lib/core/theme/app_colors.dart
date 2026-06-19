@@ -33,6 +33,10 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.ring,
     required this.homeIndicator,
     required this.avatarGradient,
+    required this.dimVocabulario,
+    required this.dimAcentuacao,
+    required this.dimPontuacao,
+    required this.dimCoesao,
   });
 
   /// Fundo da tela (canvas areia / navy).
@@ -100,6 +104,15 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Gradiente do avatar (top-left → bottom-right).
   final List<Color> avatarGradient;
 
+  /// Cores da **correção de redação** (produto 4.4): cada dimensão de análise
+  /// tem um grifo próprio no texto anotado. Distintas entre si e do vermelho de
+  /// resposta ([error]) — aqui não há "erro punitivo", são pontos a enriquecer.
+  /// Vocabulário usa o azul da marca (é a dimensão que vira questão na trilha).
+  final Color dimVocabulario;
+  final Color dimAcentuacao;
+  final Color dimPontuacao;
+  final Color dimCoesao;
+
   /// CLARO — Tela 01 · Azul Brilhante (areia + azul vivo).
   ///
   /// [glass] é translúcido de propósito: os cards do claro são "vidro fosco"
@@ -127,6 +140,10 @@ class AppColors extends ThemeExtension<AppColors> {
     ring: Color(0x801E7FD6), // primary @ 50%
     homeIndicator: Color(0x47000000), // rgba(0,0,0,.28)
     avatarGradient: [Color(0xFF1E7FD6), Color(0xFF52AEF0)],
+    dimVocabulario: Color(0xFF1E7FD6), // azul da marca (vira questão na trilha)
+    dimAcentuacao: Color(0xFFC9821C), // âmbar
+    dimPontuacao: Color(0xFF8A5CD0), // violeta
+    dimCoesao: Color(0xFF16A971), // verde
   );
 
   /// ESCURO — Tela 03 · Capa do Passaporte (navy + dourado champanhe).
@@ -151,6 +168,10 @@ class AppColors extends ThemeExtension<AppColors> {
     ring: Color(0x8C5FA9E0), // primary @ 55%
     homeIndicator: Color(0x66FFFFFF), // rgba(255,255,255,.4)
     avatarGradient: [Color(0xFF5FA9E0), Color(0xFF3F86BD)],
+    dimVocabulario: Color(0xFF5FA9E0), // azul claro sobre o navy
+    dimAcentuacao: Color(0xFFE0A24E), // âmbar
+    dimPontuacao: Color(0xFFB79BEA), // violeta claro
+    dimCoesao: Color(0xFF3FB97E), // verde
   );
 
   @override
@@ -175,6 +196,10 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? ring,
     Color? homeIndicator,
     List<Color>? avatarGradient,
+    Color? dimVocabulario,
+    Color? dimAcentuacao,
+    Color? dimPontuacao,
+    Color? dimCoesao,
   }) {
     return AppColors(
       bg: bg ?? this.bg,
@@ -197,6 +222,10 @@ class AppColors extends ThemeExtension<AppColors> {
       ring: ring ?? this.ring,
       homeIndicator: homeIndicator ?? this.homeIndicator,
       avatarGradient: avatarGradient ?? this.avatarGradient,
+      dimVocabulario: dimVocabulario ?? this.dimVocabulario,
+      dimAcentuacao: dimAcentuacao ?? this.dimAcentuacao,
+      dimPontuacao: dimPontuacao ?? this.dimPontuacao,
+      dimCoesao: dimCoesao ?? this.dimCoesao,
     );
   }
 
@@ -227,6 +256,10 @@ class AppColors extends ThemeExtension<AppColors> {
         Color.lerp(avatarGradient.first, other.avatarGradient.first, t)!,
         Color.lerp(avatarGradient.last, other.avatarGradient.last, t)!,
       ],
+      dimVocabulario: Color.lerp(dimVocabulario, other.dimVocabulario, t)!,
+      dimAcentuacao: Color.lerp(dimAcentuacao, other.dimAcentuacao, t)!,
+      dimPontuacao: Color.lerp(dimPontuacao, other.dimPontuacao, t)!,
+      dimCoesao: Color.lerp(dimCoesao, other.dimCoesao, t)!,
     );
   }
 }

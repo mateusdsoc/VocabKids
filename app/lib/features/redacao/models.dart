@@ -1,9 +1,10 @@
 /// Modelos da área de Redação (produto §4.6).
 ///
 /// O professor **atribui** uma redação (tema + prazo); o aluno **envia** em
-/// resposta (foto manuscrita → OCR, ou PDF). Aqui só o que a UI precisa — o
-/// pipeline real (OCR → análise → atribuição de palavras) é da fatia C; por
-/// isso o resultado fica num placeholder honesto, sem métricas inventadas.
+/// resposta (foto manuscrita → OCR, ou PDF). Aqui só o que a UI precisa do
+/// *item* da lista — a **correção** (texto anotado, dimensões, palavras novas)
+/// vive em `analise.dart` (`GET /redacoes/{id}/analise`). A ingestão real
+/// (OCR/PDF) ainda é fatia C; o que está vivo no apresentável é a correção.
 ///
 /// Espelha `backend/app/redacao/routes.py` (`GET /redacoes`, hoje mockado):
 /// `tema`, `prazo`, `status`.
@@ -14,10 +15,10 @@ enum RedacaoStatus {
   /// Atribuída pelo professor, ainda não enviada — é o "herói" da tela.
   aberta,
 
-  /// Enviada; aguardando a análise (fatia C). Sem resultado ainda.
+  /// Enviada; aguardando a análise. Sem resultado ainda.
   emAnalise,
 
-  /// Análise concluída — resultado disponível.
+  /// Análise concluída — correção disponível (texto anotado + palavras novas).
   analisada,
 }
 

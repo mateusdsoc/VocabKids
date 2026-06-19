@@ -8,8 +8,8 @@ import '../format.dart';
 import '../models.dart';
 import 'status_chip.dart';
 
-/// Linha compacta do histórico de redações enviadas. Toca → resultado (hoje,
-/// placeholder honesto, pois a análise é fatia C).
+/// Linha compacta do histórico de redações enviadas. Toca → a correção
+/// (texto anotado) se já analisada, senão o aguardo "em análise".
 class SentRedacaoRow extends StatelessWidget {
   const SentRedacaoRow({super.key, required this.redacao, required this.onTap});
 
