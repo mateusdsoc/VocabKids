@@ -6,14 +6,21 @@
 
 ---
 
-## Estado atual (15/06)
+## Estado atual (05/07)
 
-**App do aluno (Flutter, mobile) — fatia A praticamente completa.** Todas as
-telas portadas, claro+escuro, com animações: Home, Sessão, Resumo, Trilha,
-Passaporte (Modo Conquista), Onboarding (diagnóstico jogável mock), Perfil,
-Configurações, Redação. Build OK — o antigo bloqueio do riverpod (`valueOrNull`)
-foi resolvido e as deps são exatas no `pubspec.yaml`. As telas rodam em
-`*.sample`/mock; **só Home + auth** consomem o backend de verdade.
+**App do aluno (Flutter, mobile) — fatia A completa + Sessão integrada.**
+Todas as telas portadas, claro+escuro, com animações. **Home + auth + Sessão →
+Resumo** consomem o backend real (fora de `DEMO`); Trilha/Passaporte/demais
+ainda em mock/sample. A Sessão segue o padrão da Home: DTOs
+(`features/sessao/data/`) → `SessaoMapper` → `SessaoController`
+(AsyncNotifier); correção, XP/combo e re-queue do erro são 100% server-side —
+o app só renderiza a fila devolvida. Detalhes e pendências na seção "🔌
+Wiring" de `design/notas-implementacao.md`.
+
+> ⚠️ **Pendência de verificação (sem SDK no container):** rodar
+> `cd app && flutter analyze && flutter test` (inclui `sessao_mapper_test.dart`
+> novo) e um teste manual da Sessão contra o backend local
+> (`uv run uvicorn app.main:app` + seeds; app SEM `--dart-define=DEMO`).
 
 **Superfície do Professor (web, Flutter) — fatia A completa (telas A–D).**
 Entrypoint separado, mesmo design system, **sem pesar** o app do aluno. Painel
@@ -93,9 +100,10 @@ cd app && flutter build web -t lib/main_professor.dart
 
 ## Pendências conhecidas (fora do professor)
 
-- **Wiring app↔backend** do aluno: Sessão server-side (`/v1/sessoes`,
-  `/respostas`), fila de conquistas via `/v1/passaporte`, gatilho real do
-  "completar nó" na Trilha.
+- ~~Sessão server-side~~ **feita (05/07)** — ver "🔌 Wiring" nas notas.
+- **Wiring restante do aluno:** Passaporte via `/v1/passaporte` (+ reveal de
+  carimbo/selo), Trilha lendo `/v1/trilha` na própria tela (o avanço de nó já
+  é server-side), diagnóstico do onboarding (`POST /v1/onboarding/diagnostico`).
 - **Revisão pedagógica do diagnóstico** (professor — não é tarefa de código).
 - **Opcional pré-pitch:** empacotar as fontes da marca como assets
   (confiabilidade da web em wifi instável).

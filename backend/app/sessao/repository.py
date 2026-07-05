@@ -89,14 +89,15 @@ async def ler_questoes_do_aluno(
     """
     if not palavra_ids:
         return []
-    q, aq = schema.questao, schema.aluno_questao
+    q, aq, p = schema.questao, schema.aluno_questao, schema.palavra
     juncao = q.outerjoin(
         aq, and_(aq.c.questao_id == q.c.id, aq.c.usuario_id == usuario_id)
-    )
+    ).join(p, p.c.id == q.c.palavra_id)
     stmt = (
         select(
             q.c.id,
             q.c.palavra_id,
+            p.c.lema,
             q.c.nivel,
             q.c.variacao,
             q.c.enunciado,
@@ -209,12 +210,12 @@ async def outra_variacao_nao_acertada(
     Prioriza variação nunca usada; nunca devolve uma já acertada. `None` →
     não há outra (o retry repete a própria questão errada).
     """
-    q, aq = schema.questao, schema.aluno_questao
+    q, aq, p = schema.questao, schema.aluno_questao, schema.palavra
     juncao = q.outerjoin(
         aq, and_(aq.c.questao_id == q.c.id, aq.c.usuario_id == usuario_id)
-    )
+    ).join(p, p.c.id == q.c.palavra_id)
     stmt = (
-        select(q.c.id, q.c.palavra_id, q.c.nivel, q.c.enunciado, q.c.opcoes)
+        select(q.c.id, q.c.palavra_id, p.c.lema, q.c.nivel, q.c.enunciado, q.c.opcoes)
         .select_from(juncao)
         .where(
             q.c.palavra_id == palavra_id,
@@ -237,18 +238,21 @@ async def somar_xp_sessao(conn: AsyncConnection, sessao_id: int, xp: int) -> Non
 
 
 async def buscar_questao(conn: AsyncConnection, questao_id: int) -> Row | None:
-    q = schema.questao
+    q, p = schema.questao, schema.palavra
     return (
         await conn.execute(
             select(
                 q.c.id,
                 q.c.palavra_id,
+                p.c.lema,
                 q.c.nivel,
                 q.c.enunciado,
                 q.c.opcoes,
                 q.c.resposta_correta,
                 q.c.status,
-            ).where(q.c.id == questao_id)
+            )
+            .select_from(q.join(p, p.c.id == q.c.palavra_id))
+            .where(q.c.id == questao_id)
         )
     ).first()
 

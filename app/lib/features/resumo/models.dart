@@ -5,6 +5,8 @@
 /// com o backend troque só a fonte, não os widgets.
 library;
 
+import 'dart:ui' show clampDouble;
+
 import '../passaporte/models.dart';
 
 /// Como uma palavra trabalhada na sessão evoluiu.
@@ -87,8 +89,12 @@ class SessionSummary {
   /// Item novo no Passaporte; `null` → resumo padrão (sem conquista).
   final SummaryAchievement? achievement;
 
-  double get baseFraction => xpTarget == 0 ? 0 : xpFrom / xpTarget;
-  double get gainFraction => xpTarget == 0 ? 0 : xpTo / xpTarget;
+  // Clampadas: quando um nó da trilha é cruzado no meio da sessão, o XP passa
+  // do teto capturado na abertura — a barra satura em cheia, sem estourar.
+  double get baseFraction =>
+      xpTarget == 0 ? 0 : clampDouble(xpFrom / xpTarget, 0, 1);
+  double get gainFraction =>
+      xpTarget == 0 ? 0 : clampDouble(xpTo / xpTarget, 0, 1);
 
   /// Exemplo que espelha os frames do design (Rio · Lição 3).
   static const SessionSummary sample = SessionSummary(

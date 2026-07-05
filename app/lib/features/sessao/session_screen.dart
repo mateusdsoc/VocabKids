@@ -1,12 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/api_exception.dart';
 import '../../core/platform/adaptive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/primary_button.dart';
-import '../passaporte/conquista_queue.dart';
-import '../resumo/models.dart';
 import '../resumo/resumo_screen.dart';
 import 'models.dart';
+import 'sessao_controller.dart';
 import 'widgets/discovery_card.dart';
 import 'widgets/feedback_bar.dart';
 import 'widgets/option_tile.dart';
@@ -17,181 +22,284 @@ import 'widgets/session_top_bar.dart';
 
 /// Sessão — núcleo da prática (produto 3.2 / 3.4).
 ///
-/// Hoje roda uma sessão de exemplo ([sampleSession]) com uma máquina de estados
-/// local (selecionar → confirmar → feedback → continuar), para validar todos os
-/// estados do design. O wiring com `/v1/sessoes` (correção server-side, fila,
-/// re-queue do erro) entra depois — ver `design/notas-implementacao.md`.
-class SessionScreen extends StatefulWidget {
-  const SessionScreen({super.key, this.steps = sampleSession});
-
-  final List<SessionStep> steps;
+/// Cliente fino de verdade: a fila, a correção, o XP e o combo vêm do
+/// [SessaoController] (servidor autoritativo; em `DEMO`, a amostra local).
+/// Aqui vive só o estado efêmero de interação — alternativa selecionada e o
+/// popover de report.
+class SessionScreen extends ConsumerStatefulWidget {
+  const SessionScreen({super.key});
 
   @override
-  State<SessionScreen> createState() => _SessionScreenState();
+  ConsumerState<SessionScreen> createState() => _SessionScreenState();
 }
 
-class _SessionScreenState extends State<SessionScreen> {
+class _SessionScreenState extends ConsumerState<SessionScreen> {
+  /// Rótulos do popover (brief visual) → motivo do contrato de report.
   static const _reasons = [
-    'A resposta parece errada',
-    'Não entendi a palavra',
-    'Tem um erro de digitação',
-    'Outro',
+    ('A resposta parece errada', 'resposta_errada'),
+    ('Não entendi a palavra', 'nao_entendi'),
+    ('Tem um erro de digitação', 'outro'),
+    ('Outro', 'outro'),
   ];
 
-  int _index = 0;
   int? _selected;
-  AnswerOutcome? _outcome;
-  int _combo = 3; // demo: começa com combo aceso, como no mockup
   bool _reportOpen = false;
+  bool _finalizando = false;
+  bool _erroFinalizar = false;
 
-  /// Erros acumulados por palavra na sessão. No 2º erro da mesma palavra, o
-  /// card de descoberta reabre antes da próxima tentativa ("errar é aprender":
-  /// dá material para acertar de verdade, sem revelar a resposta).
-  final Map<String, int> _wrongByWord = {};
+  SessaoController get _controller =>
+      ref.read(sessaoControllerProvider.notifier);
 
-  /// Card a reexibir ao continuar (setado no 2º erro da palavra).
-  SessionDiscovery? _reviewCard;
-
-  SessionStep get _step => widget.steps[_index];
-
-  /// Card de descoberta da palavra, procurado nos passos da própria sessão.
-  SessionDiscovery? _cardOf(String word) {
-    for (final step in widget.steps) {
-      if (step is DiscoveryStep && step.card.word == word) return step.card;
+  Future<void> _confirm() async {
+    final selected = _selected;
+    if (selected == null) return;
+    try {
+      await _controller.responder(selected);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // 409 = estado dessincronizado (resposta perdida que chegou, sessão
+      // encerrada por outra abertura): recomeça com uma sessão nova — o
+      // servidor encerra a antiga e nada de progresso se perde.
+      if (e.statusCode == 409) {
+        _selected = null;
+        ref.invalidate(sessaoControllerProvider);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+              content: Text('Essa sessão expirou — montamos uma nova.')));
+        return;
+      }
+      _snackTentarDeNovo();
+    } catch (_) {
+      if (!mounted) return;
+      _snackTentarDeNovo();
     }
-    return null;
   }
 
-  void _confirm(SessionQuestion q) {
-    final correctIndex = q.options.indexWhere((o) => o.correct);
-    final ok = _selected == correctIndex;
-    setState(() {
-      _outcome = ok ? AnswerOutcome.correct : AnswerOutcome.wrong;
-      if (ok) {
-        _combo += 1;
-      } else {
-        _combo = 0;
-        final word = q.effectiveWord;
-        if (word != null) {
-          final wrongs = (_wrongByWord[word] = (_wrongByWord[word] ?? 0) + 1);
-          if (wrongs >= 2) {
-            _reviewCard = _cardOf(word);
-            _wrongByWord[word] = 0; // recomeça a contagem após rever o card
-          }
-        }
-      }
-    });
+  /// A resposta não foi registrada: mantém a seleção e deixa tentar de novo.
+  void _snackTentarDeNovo() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+          content: Text('Sem conexão agora. Toque em Confirmar de novo.')));
   }
 
   void _advance() {
-    if (_index >= widget.steps.length - 1) {
-      // Fim da sessão → Resumo (3.7). pushReplacement: o botão voltar não
-      // retorna a uma sessão já encerrada; o Resumo aterrissa na Trilha.
-      // Demo: a variante com conquista exercita a cadeia completa
-      // Resumo → Modo Conquista → Passaporte.
-      const summary = SessionSummary.sampleWithAchievement;
-      // Enfileira o item novo: se o aluno seguir direto pra Trilha sem tocar
-      // "Ver no Passaporte", o reveal toca quando ele abrir o Passaporte
-      // (fila drenada lá; o teaser do Resumo é só o atalho).
-      final conquista = summary.achievement?.conquista;
-      if (conquista != null) {
-        ConquistaQueue.instance.enfileirar(conquista);
-      }
+    _selected = null;
+    _controller.continuar();
+  }
+
+  /// Fila vazia e sem feedback pendente → fecha no servidor e vai ao Resumo.
+  Future<void> _finalizar() async {
+    if (_finalizando) return;
+    _finalizando = true;
+    try {
+      final summary = await _controller.finalizar();
+      if (!mounted) return;
+      // pushReplacement: o botão voltar não retorna a uma sessão encerrada;
+      // o Resumo aterrissa na Trilha.
       Navigator.of(context).pushReplacement(
-        adaptivePageRoute(builder: (_) => const ResumoScreen(summary: summary)),
+        adaptivePageRoute(builder: (_) => ResumoScreen(summary: summary)),
       );
-      return;
+    } on ApiException catch (e) {
+      _finalizando = false;
+      if (!mounted) return;
+      if (e.code == 'sessao_encerrada') {
+        // O /fim anterior chegou mas a resposta se perdeu: a sessão já está
+        // fechada e salva — volta para a tela de origem (que recarrega).
+        Navigator.of(context).maybePop();
+        return;
+      }
+      // Sem retry automático: falha persistente viraria martelo no servidor.
+      setState(() => _erroFinalizar = true);
+    } catch (_) {
+      _finalizando = false;
+      if (!mounted) return;
+      setState(() => _erroFinalizar = true);
     }
-    setState(() {
-      _index += 1;
-      _selected = null;
-      _outcome = null;
-    });
+  }
+
+  void _report(int index) {
+    setState(() => _reportOpen = false);
+    // Melhor esforço: o agradecimento não depende da rede (mock na fatia A).
+    _controller.reportar(_reasons[index].$2).ignore();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+          const SnackBar(content: Text('Obrigado! Vamos revisar essa questão.')));
   }
 
   @override
   Widget build(BuildContext context) {
+    final estado = ref.watch(sessaoControllerProvider);
+
     return Scaffold(
       body: SessionBackground(
         child: SafeArea(
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
-                child: Column(
-                  children: [
-                    SessionTopBar(
-                      current: _index + 1,
-                      total: widget.steps.length,
-                      combo: _combo > 0 ? _combo : null,
-                      reportActive: _reportOpen,
-                      onClose: () => Navigator.of(context).maybePop(),
-                      onReport: () => setState(() => _reportOpen = true),
-                    ),
-                    const SizedBox(height: 16),
-                    // Slide/fade curto ao trocar de passo (questão → questão,
-                    // card → questão). Responder a MESMA questão não troca a
-                    // chave — o feedback aparece sem transição de tela.
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 280),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) =>
-                            FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.04, 0),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        ),
-                        child: KeyedSubtree(
-                          key: ValueKey(_contentKey),
-                          child: _buildContent(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_reportOpen)
-                ReportPopover(
-                  reasons: _reasons,
-                  onClose: () => setState(() => _reportOpen = false),
-                  onSelect: (_) {
-                    setState(() => _reportOpen = false);
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(const SnackBar(
-                          content: Text('Obrigado! Vamos revisar essa questão.')));
-                  },
-                ),
-            ],
+          child: estado.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => _erroAbertura(context),
+            data: (s) => _sessao(context, s),
           ),
         ),
       ),
     );
   }
 
+  /// Falha ao montar a sessão (rede/servidor): mensagem gentil + tentar de novo.
+  Widget _erroAbertura(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Não deu para começar a praticar',
+              textAlign: TextAlign.center,
+              style: AppType.fredoka(size: 22, color: c.ink)),
+          const SizedBox(height: 8),
+          Text('Confira sua conexão e tente de novo.',
+              textAlign: TextAlign.center,
+              style: AppType.nunito(
+                  size: 15, weight: FontWeight.w600, color: c.muted)),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Tentar de novo',
+            onTap: () => ref.invalidate(sessaoControllerProvider),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: Text('Voltar',
+                style: AppType.nunito(
+                    size: 15, weight: FontWeight.w700, color: c.muted)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Falha ao fechar a sessão (as respostas já estão salvas; só o resumo não
+  /// veio). Sem retry automático — botão explícito.
+  Widget _erroFim(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Quase lá!',
+              textAlign: TextAlign.center,
+              style: AppType.fredoka(size: 22, color: c.ink)),
+          const SizedBox(height: 8),
+          Text('Suas respostas estão salvas. Confira a conexão para ver o resumo.',
+              textAlign: TextAlign.center,
+              style: AppType.nunito(
+                  size: 15, weight: FontWeight.w600, color: c.muted)),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Ver meu resumo',
+            onTap: () {
+              setState(() => _erroFinalizar = false);
+              _finalizar();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sessao(BuildContext context, SessaoEstado s) {
+    // Fila drenada e nada em exibição → hora do Resumo (agenda pós-frame para
+    // não navegar durante o build).
+    if (s.atual == null && s.feedback == null && s.cardRevisao == null) {
+      if (_erroFinalizar) return _erroFim(context);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _finalizar());
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
+          child: Column(
+            children: [
+              SessionTopBar(
+                current: s.numeroAtual,
+                total: s.total,
+                combo: s.combo > 0 ? s.combo : null,
+                reportActive: _reportOpen,
+                onClose: () => Navigator.of(context).maybePop(),
+                onReport: () => setState(() => _reportOpen = true),
+              ),
+              const SizedBox(height: 16),
+              // Slide/fade curto ao trocar de passo (questão → questão,
+              // card → questão). Responder a MESMA questão não troca a
+              // chave — o feedback aparece sem transição de tela.
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.04, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: KeyedSubtree(
+                    key: ValueKey(_contentKey(s)),
+                    child: _buildContent(s),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_reportOpen)
+          ReportPopover(
+            reasons: [for (final r in _reasons) r.$1],
+            onClose: () => setState(() => _reportOpen = false),
+            onSelect: _report,
+          ),
+      ],
+    );
+  }
+
   /// Identidade do conteúdo atual para o AnimatedSwitcher: muda ao avançar de
   /// passo ou ao entrar/sair do card de revisão (2º erro).
-  String get _contentKey =>
-      _reviewCard != null && _outcome == null ? 'review-$_index' : 'step-$_index';
-
-  Widget _buildContent() {
-    // Interstício: relembrar a palavra (2º erro) antes do próximo passo.
-    // O avanço da fila já aconteceu ao sair da questão; aqui só dispensa o card.
-    final review = _reviewCard;
-    if (review != null && _outcome == null) {
-      return _discovery(review,
-          onDone: () => setState(() => _reviewCard = null));
+  String _contentKey(SessaoEstado s) {
+    final review = s.cardRevisao;
+    if (review != null && s.feedback == null) {
+      return 'review-${s.concluidos}-${review.word}';
     }
-    return switch (_step) {
-      DiscoveryStep(:final card) => _discovery(card, onDone: _advance),
-      QuestionStep(:final question) => _question(question),
+    final passo = s.atual;
+    final id = switch (passo) {
+      QuestionStep(:final question) => 'q-${question.questaoId ?? question.stem.hashCode}',
+      DiscoveryStep(:final card) => 'c-${card.word}',
+      null => 'fim',
+    };
+    return 'step-${s.concluidos}-$id';
+  }
+
+  Widget _buildContent(SessaoEstado s) {
+    // Interstício: relembrar a palavra (2º erro) antes do próximo passo.
+    // A fila já avançou no servidor; aqui só se dispensa o card.
+    final review = s.cardRevisao;
+    if (review != null && s.feedback == null) {
+      return _discovery(review, onDone: _controller.dispensarCardRevisao);
+    }
+    return switch (s.atual) {
+      DiscoveryStep(:final card) =>
+        _discovery(card, onDone: _controller.avancarCard),
+      QuestionStep(:final question) => _question(s, question),
+      null => const SizedBox.shrink(),
     };
   }
 
@@ -213,9 +321,8 @@ class _SessionScreenState extends State<SessionScreen> {
     );
   }
 
-  Widget _question(SessionQuestion q) {
-    final answered = _outcome != null;
-    final correctIndex = q.options.indexWhere((o) => o.correct);
+  Widget _question(SessaoEstado s, SessionQuestion q) {
+    final answered = s.feedback != null;
 
     return Column(
       children: [
@@ -231,11 +338,11 @@ class _SessionScreenState extends State<SessionScreen> {
                     if (i > 0) const SizedBox(height: 10),
                     OptionTile(
                       option: q.options[i],
-                      state: _optionState(i, answered, correctIndex),
+                      state: _optionState(s, i),
                       showConfetti: answered &&
-                          _outcome == AnswerOutcome.correct &&
-                          i == correctIndex,
-                      onTap: answered
+                          s.feedback!.correto &&
+                          i == _selected,
+                      onTap: answered || s.respondendo
                           ? null
                           : () => setState(() => _selected = i),
                     ),
@@ -246,48 +353,52 @@ class _SessionScreenState extends State<SessionScreen> {
           ),
         ),
         const SizedBox(height: 13),
-        _questionFoot(q, answered),
+        _questionFoot(s, q),
       ],
     );
   }
 
-  OptionState _optionState(int i, bool answered, int correctIndex) {
-    if (!answered) {
+  /// No acerto, a escolhida É a correta — destaca. No erro, marca só a
+  /// escolhida: a resposta certa NÃO é revelada (a questão volta no fim da
+  /// fila, produto 3.4) — e o servidor nem a envia antes disso.
+  OptionState _optionState(SessaoEstado s, int i) {
+    final feedback = s.feedback;
+    if (feedback == null) {
       return i == _selected ? OptionState.selected : OptionState.neutral;
     }
-    // No acerto, destaca a correta. No erro, marca só a escolhida — a resposta
-    // certa NÃO é revelada (a questão volta no fim da fila, produto 3.4).
-    if (_outcome == AnswerOutcome.correct) {
-      return i == correctIndex ? OptionState.correct : OptionState.neutral;
-    }
-    return i == _selected ? OptionState.wrong : OptionState.neutral;
+    if (i != _selected) return OptionState.neutral;
+    return feedback.correto ? OptionState.correct : OptionState.wrong;
   }
 
-  Widget _questionFoot(SessionQuestion q, bool answered) {
-    if (!answered) {
+  Widget _questionFoot(SessaoEstado s, SessionQuestion q) {
+    final feedback = s.feedback;
+    if (feedback == null) {
       return PrimaryButton(
-        label: 'Confirmar',
-        enabled: _selected != null,
-        onTap: _selected == null ? null : () => _confirm(q),
+        label: s.respondendo ? 'Enviando…' : 'Confirmar',
+        enabled: _selected != null && !s.respondendo,
+        onTap: _selected == null || s.respondendo ? null : _confirm,
       );
     }
 
-    final ok = _outcome == AnswerOutcome.correct;
+    final ok = feedback.correto;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         FeedbackBar(
           positive: ok,
-          title: ok ? 'Boa!' : 'Quase! Vamos rever isso.',
+          title: ok
+              ? (feedback.dominou ? 'Palavra dominada!' : 'Boa!')
+              : 'Quase! Vamos rever isso.',
           subtitle: ok
-              ? (_combo >= 2 ? 'Combo ×$_combo — você está voando' : 'Mandou bem!')
-              : (_reviewCard != null
+              ? (s.combo >= 2 ? 'Combo ×${s.combo} — você está voando' : 'Mandou bem!')
+              : (s.cardRevisao != null
                   ? 'Vamos relembrar a palavra antes de seguir.'
                   : 'Esta questão volta no fim da fila.'),
-          xp: ok ? q.xp : null,
+          xp: ok && feedback.xpGanho > 0 ? feedback.xpGanho : null,
         ),
         const SizedBox(height: 11),
-        PrimaryButton(label: 'Continuar', trailingIcon: AppIcons.arrow, onTap: _advance),
+        PrimaryButton(
+            label: 'Continuar', trailingIcon: AppIcons.arrow, onTap: _advance),
       ],
     );
   }

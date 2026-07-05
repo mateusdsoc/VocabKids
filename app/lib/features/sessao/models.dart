@@ -1,9 +1,9 @@
 /// Modelos de apresentação da Sessão (núcleo da prática).
 ///
-/// Hoje alimentados por uma sessão de exemplo ([sampleSession]); a estrutura
-/// espelha o que `/v1/sessoes` entrega para que o wiring com o backend troque
-/// só a fonte, não os widgets. Cliente fino: nenhuma pontuação é calculada aqui
-/// (o combo/feedback de demo vive na tela; o servidor será autoritativo).
+/// Alimentados pelo backend via `SessaoMapper` (`/v1/sessoes` + `/respostas`)
+/// ou, em `AppConfig.demo`, pela sessão de exemplo ([sampleSession]). Cliente
+/// fino: pontuação, correção e ordem da fila são do servidor; o campo
+/// [QuestionOption.correct] só é preenchido nos dados de demo.
 library;
 
 /// Os quatro tipos fixos de questão (produto 3.2). Não rotulamos na UI — o
@@ -22,6 +22,9 @@ class QuestionOption {
   /// Letra exibida no "key" (A, B, C, D).
   final String key;
   final String text;
+
+  /// **Só na demo.** Com backend, o cliente nunca sabe a correta antes de
+  /// responder; o resultado vem do servidor ([RespostaDto]).
   final bool correct;
 
   /// Palavra a destacar em negrito dentro do texto (ex.: "vasto" nas frases).
@@ -32,14 +35,18 @@ class QuestionOption {
 class SessionDiscovery {
   const SessionDiscovery({
     required this.word,
-    required this.partOfSpeech,
+    this.partOfSpeech,
     required this.definition,
     required this.example,
     required this.exampleHighlight,
   });
 
   final String word;
-  final String partOfSpeech;
+
+  /// Classe gramatical ("adjetivo"). O banco base ainda não a expõe — `null`
+  /// esconde a linha no card.
+  // TODO(backend): servir classe_gramatical na palavra.
+  final String? partOfSpeech;
   final String definition;
   final String example;
 
@@ -53,6 +60,8 @@ class SessionQuestion {
     required this.kind,
     required this.stem,
     required this.options,
+    this.questaoId,
+    this.palavraId,
     this.word,
     this.highlightWord,
     this.blank = false,
@@ -62,6 +71,10 @@ class SessionQuestion {
   final QuestionKind kind;
   final String stem;
   final List<QuestionOption> options;
+
+  /// Identidades do backend (`QuestaoSlot`). Nulas nos dados de demo.
+  final int? questaoId;
+  final int? palavraId;
 
   /// Palavra trabalhada pela questão (liga a questão ao card de descoberta —
   /// ex.: para reabrir o card após erros repetidos). Quando nula, vale

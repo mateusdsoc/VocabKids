@@ -298,20 +298,42 @@ dono (15/06):
 
 ---
 
-## 🔌 Pendências de backend (cliente fino)
+## 🔌 Wiring app ↔ backend — Sessão server-side (05/07)
 
-A Sessão hoje roda com `sampleSession` (dados de exemplo). O backend já expõe
-tudo o que a tela precisa — falta o **wiring no app**:
-- [ ] `POST /v1/sessoes` (montar a fila — entrega híbrida, sem vazar resposta).
-- [ ] `GET /v1/sessoes/{id}/proximo` (**implementado no backend em 10/06**).
-- [ ] `POST /v1/sessoes/{id}/respostas` (correção **server-side** → XP/combo/estado).
-      Hoje a correção é local (demo); o servidor será autoritativo.
-- [ ] `POST /v1/questoes/{id}/report` (mock na fatia A).
-- [ ] **Re-queue do erro** (decisão #3 **revisada em 10/06**): a intercalação é
-      **server-side** — a fila persiste em `sessao.fila` e volta reordenada em
-      cada `POST /respostas` (`fila`/`proximo`). O app só renderiza a ordem
-      recebida (nada de reimplementar a regra no Dart). No wiring, trocar o
-      "só avança" da demo por consumir `fila`.
+A Sessão do aluno agora consome o backend de verdade (fora de `DEMO`), no
+mesmo padrão da Home: **DTOs → `SessaoMapper` → `SessaoController`
+(AsyncNotifier)**; a tela guarda só estado efêmero (seleção, popover).
+
+- [x] `POST /v1/sessoes` — fila em lote na abertura; em paralelo, `GET
+      /v1/trilha` captura o contexto do Resumo (cidade/lição/teto de XP do nó
+      **jogado**, mesmo que um nó seja cruzado no meio).
+- [x] `POST /v1/sessoes/{id}/respostas` — correção server-side; o app rende a
+      `fila` devolvida (re-queue do erro incluído — **nada** da regra vive no
+      Dart). Trava anti toque-duplo enquanto a resposta viaja.
+- [x] `POST /v1/sessoes/{id}/fim` — fecha e monta o Resumo com números do
+      servidor; progresso por palavra acumulado das respostas
+      (`estado_palavra`/`dominou` — apresentação, não cálculo).
+- [x] `POST /v1/questoes/{id}/report` — popover ligado (melhor esforço; os
+      rótulos do brief mapeiam para o enum do contrato, "erro de digitação" cai
+      em `outro`).
+- [x] **Backend:** `QuestaoSlot` ganhou `lema` (aditivo) — o app destaca a
+      palavra no enunciado, reabre o card no 2º erro e rotula o Resumo (palavra
+      de revisão não tem card na fila).
+- [x] Recompensas de `respostas` → `ConquistaQueue` (cartão-postal resolvido
+      pelo snapshot da trilha) + teaser no Resumo.
+- [x] Erros com recuperação: falha de rede mantém a seleção e deixa tentar de
+      novo; `409` na resposta = sessão dessincronizada → abre sessão nova;
+      `409 sessao_encerrada` no `/fim` = já fechou → volta à origem.
+- [ ] **Card de revisão para palavra de revisão** (sem card na fila): buscar
+      via `GET /v1/palavras/{id}` no 2º erro — hoje o interstício simplesmente
+      não abre (paridade com a demo).
+- [ ] **Reveal de carimbo/selo** no Modo Conquista: `pais:*`/`feito:*` chegam
+      nas respostas mas ainda não têm variante de reveal — entra no wiring do
+      Passaporte (`GET /v1/passaporte`).
+- [ ] **Resiliência offline fina** (re-sync via `GET /proximo` após resposta
+      perdida) — hoje a saída é sessão nova via 409, sem perder progresso salvo.
+- [ ] **Classe gramatical** no card de descoberta: o banco base não a expõe —
+      a linha fica oculta (`partOfSpeech` nulo). Adicionar ao conteúdo depois.
 
 ### Home — campos ainda não expostos pela API (ver `HomeMapper`)
 - [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10. A meta
@@ -371,12 +393,14 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Superfície do Professor (web)** — telas A–D **completas** (fases 0–5); resta a
-**verificação visual claro/escuro** da fase 6 (precisa de Chrome/SDK; comandos no
-HANDOFF). Depois dela, **wiring com o backend** (`/v1/sessoes` na Sessão; fila de
-conquistas via `/v1/passaporte`; gatilho real do "completar nó" na Trilha) e a
-**fatia C** do professor (persistir meta/atribuição, exigir papel+escopo). As
-animações do contrato estão todas implementadas; TTS saiu do MVP (11/06).
+**Wiring da Sessão feito (05/07)** — pendente de `flutter analyze`/`flutter
+test` + teste manual contra o backend local (sem SDK no container; comandos no
+HANDOFF). Na sequência: **Passaporte** (`GET /v1/passaporte` + marcar revelados
++ reveal de carimbo/selo), **Trilha** (gatilho real do "completar nó" já
+acontece server-side; falta a tela ler `/v1/trilha` fora da Home), a
+**verificação visual claro/escuro** do professor (fase 6) e a **fatia C** do
+professor (persistir meta/atribuição, exigir papel+escopo). TTS fora do MVP
+(11/06).
 
 > **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
 > exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um

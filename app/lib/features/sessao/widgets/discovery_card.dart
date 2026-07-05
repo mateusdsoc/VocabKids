@@ -84,13 +84,17 @@ class _Hero extends StatelessWidget {
                 Text(card.word,
                     style: AppType.fredoka(
                         size: 42, color: Colors.white, height: 0.95)),
-                const SizedBox(height: 8),
-                Text(card.partOfSpeech,
-                    style: AppType.nunito(
-                        size: 13.5,
-                        weight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.82))
-                        .copyWith(fontStyle: FontStyle.italic)),
+                // Classe gramatical: o banco base ainda não a expõe — some
+                // sem deixar buraco quando ausente.
+                if (card.partOfSpeech != null) ...[
+                  const SizedBox(height: 8),
+                  Text(card.partOfSpeech!,
+                      style: AppType.nunito(
+                          size: 13.5,
+                          weight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.82))
+                          .copyWith(fontStyle: FontStyle.italic)),
+                ],
               ],
             ),
           ],
