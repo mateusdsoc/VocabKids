@@ -8,6 +8,8 @@ import '../../core/config.dart';
 import '../home/data/trilha_models.dart';
 import '../home/home_providers.dart' show trilhaRepositoryProvider;
 import '../passaporte/conquista_queue.dart';
+import '../passaporte/passaporte_providers.dart'
+    show passaporteRepositoryProvider;
 import '../resumo/models.dart';
 import 'data/sessao_models.dart';
 import 'data/sessao_repository.dart';
@@ -165,6 +167,11 @@ class SessaoController extends AutoDisposeAsyncNotifier<SessaoEstado> {
       // Demo começa com combo aceso, como no mockup.
       return SessaoEstado(fila: List.of(sampleSession), combo: 3);
     }
+
+    // Arma a persistência do reveal antes de qualquer conquista desta sessão:
+    // o caminho Resumo → teaser → Modo Conquista pode tocar sem nunca passar
+    // pelo Passaporte, e ainda assim o "visto" precisa chegar ao servidor.
+    ref.read(passaporteRepositoryProvider);
 
     // Uma viagem só de cada lado, em paralelo: a fila vem em lote e a trilha
     // dá o contexto do Resumo sem chamada extra no fim.

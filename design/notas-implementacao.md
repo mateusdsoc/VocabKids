@@ -327,13 +327,43 @@ mesmo padrão da Home: **DTOs → `SessaoMapper` → `SessaoController`
 - [ ] **Card de revisão para palavra de revisão** (sem card na fila): buscar
       via `GET /v1/palavras/{id}` no 2º erro — hoje o interstício simplesmente
       não abre (paridade com a demo).
-- [ ] **Reveal de carimbo/selo** no Modo Conquista: `pais:*`/`feito:*` chegam
-      nas respostas mas ainda não têm variante de reveal — entra no wiring do
-      Passaporte (`GET /v1/passaporte`).
 - [ ] **Resiliência offline fina** (re-sync via `GET /proximo` após resposta
       perdida) — hoje a saída é sessão nova via 409, sem perder progresso salvo.
 - [ ] **Classe gramatical** no card de descoberta: o banco base não a expõe —
       a linha fica oculta (`partOfSpeech` nulo). Adicionar ao conteúdo depois.
+
+## 🔌 Wiring app ↔ backend — Passaporte + Modo Conquista (06/07)
+
+O Passaporte agora é a coleção real do aluno, e a fila de reveals é
+**persistida no servidor** (fecha o app, volta amanhã, o reveal ainda toca).
+
+- [x] **Backend:** `aluno_colecionavel.revelado_em` (migration linear) +
+      `revelado` no `ItemPassaporteOut` + `POST /v1/passaporte/{id}/revelado`
+      (idempotente). `RecompensaOut` ganhou `colecionavel_id` para o app
+      persistir o reveal vindo do teaser do Resumo.
+- [x] **Coleção real:** `PassaporteMapper` monta capa/países/selos de
+      `/me` + `/trilha` + `/passaporte` (nomes de cidade/país da trilha;
+      título/descrição/ícone dos selos são **catálogo do cliente**).
+- [x] **Fila de conquistas espelhando o servidor:** pendente =
+      `conquistado && !revelado`, em ordem de ganho; ao abrir o Passaporte a
+      fila local é **substituída** pela do servidor (dedupe por definição).
+      Cada reveal dispara `POST /revelado` (melhor esforço — reveal nunca
+      trava por rede; falha rara = repete na próxima abertura).
+- [x] **Reveal de carimbo** (decisão 06/07): variante nova no Modo Conquista
+      **compondo peças travadas** (widget `Carimbo` da coleção + a mesma
+      coreografia blur→brilhos→encaixe do postal). Selo já tinha grid; agora
+      entra pela fila do Passaporte (o grid precisa da coleção).
+- [x] **Celebração real na Trilha:** `SessionSummary.noCompletado` (XP da
+      sessão cruzou o teto do nó) → o Resumo só passa `celebrarChegada`
+      quando o nó de fato fechou (antes: sempre, por demo).
+- [ ] **Mapa da Trilha com dados reais**: o mapa tem **coordenadas desenhadas
+      à mão** no contrato visual (340×540, ~8 nós). Janela dinâmica para
+      20 destinos/80 nós exige decisão de design (template de posições ×
+      janela ao redor do nó atual) **e verificação visual** — deliberadamente
+      adiado para uma sessão com SDK/Chrome. O cabeçalho/estados têm dados
+      prontos em `/v1/trilha`.
+- [ ] **Badge "novidades" no avatar** (Home) via `ConquistaQueue.listenable` —
+      opcional, pós-feedback.
 
 ### Home — campos ainda não expostos pela API (ver `HomeMapper`)
 - [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10. A meta

@@ -13,6 +13,7 @@ import 'conquista_queue.dart';
 import 'models.dart';
 import 'widgets/passaporte_background.dart';
 import 'widgets/postcard_face.dart';
+import 'widgets/postmark.dart';
 import 'widgets/seal_badge.dart';
 
 /// Passaporte — **Modo Conquista** (produto §3.10, `telas.md` §7): o reveal de
@@ -468,6 +469,7 @@ class _PageFace extends StatelessWidget {
     final c = context.colors;
     final titulo = switch (conquista) {
       ConquistaPostal() => 'Cartão-postal',
+      ConquistaCarimbo(:final pais) => 'Carimbo ${pais.comPreposicao}',
       ConquistaSelo(:final todos, :final novoIndex) => todos[novoIndex].titulo,
     };
 
@@ -502,6 +504,11 @@ class _PageFace extends StatelessWidget {
           switch (conquista) {
             ConquistaPostal(:final destino, :final pais) => _PolaroidReveal(
                 destino: destino,
+                pais: pais,
+                fase: fase,
+                reveal: reveal,
+              ),
+            ConquistaCarimbo(:final pais) => _CarimboReveal(
                 pais: pais,
                 fase: fase,
                 reveal: reveal,
@@ -672,6 +679,105 @@ class _PolaroidReveal extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Carimbo de país: bate na página embaçado até o toque — mesma coreografia
+/// do postal (blur de opacidade animada + brilhos + encaixe inclinado),
+/// reusando o widget [Carimbo] da coleção (sistema visual travado).
+class _CarimboReveal extends StatelessWidget {
+  const _CarimboReveal({
+    required this.pais,
+    required this.fase,
+    required this.reveal,
+  });
+
+  final Pais pais;
+  final _Fase fase;
+  final Animation<double> reveal;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+
+    return AnimatedBuilder(
+      animation: reveal,
+      builder: (context, _) {
+        final t = reveal.value;
+        final desfoque =
+            1 - const Interval(0.0, 0.5, curve: Curves.easeOut).transform(t);
+        final pop =
+            math.sin(const Interval(0.10, 0.65).transform(t) * math.pi);
+        final encaixe =
+            const Interval(0.55, 1.0, curve: Curves.easeOutBack).transform(t);
+        final revelado = t > 0.45;
+
+        final carimbo = Carimbo(
+            pais: pais, conquistado: true, size: 168, tilt: -0.11 * encaixe);
+
+        return Transform.scale(
+          scale: 1 + 0.08 * pop,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  carimbo,
+                  // Embaçado: sigma fixo, só a opacidade anima; sai da árvore
+                  // quando o reveal termina.
+                  if (fase != _Fase.pronto && desfoque > 0)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Opacity(
+                          opacity: desfoque.clamp(0.0, 1.0),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ImageFiltered(
+                                imageFilter: ImageFilter.blur(
+                                    sigmaX: 7,
+                                    sigmaY: 7,
+                                    tileMode: TileMode.decal),
+                                child: carimbo,
+                              ),
+                              ColoredBox(
+                                  color: c.paper.withValues(alpha: 0.28)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (t > 0)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: _Sparkles(
+                            progress: const Interval(0.15, 1.0).transform(t),
+                            colors: [c.accent, c.accentStrong, Colors.white],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                child: Text(
+                  revelado ? pais.nome : '? ? ?',
+                  key: ValueKey(revelado),
+                  textAlign: TextAlign.center,
+                  style: AppType.caveat(
+                      size: 22, color: revelado ? c.ink : c.muted),
+                ),
+              ),
+            ],
           ),
         );
       },

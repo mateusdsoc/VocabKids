@@ -105,16 +105,19 @@ class SessaoAbertaDto {
 class RecompensaDto {
   const RecompensaDto({
     required this.tipo,
+    required this.colecionavelId,
     required this.referencia,
     required this.assetRef,
   });
 
   final String tipo; // cartao_postal | carimbo | selo
+  final int colecionavelId; // p/ persistir o reveal
   final String referencia; // destino:{id} | pais:{id} | feito:{slug}
   final String? assetRef;
 
   factory RecompensaDto.fromJson(Map<String, dynamic> j) => RecompensaDto(
         tipo: j['tipo'] as String,
+        colecionavelId: j['colecionavel_id'] as int,
         referencia: j['referencia'] as String,
         assetRef: j['asset_ref'] as String?,
       );

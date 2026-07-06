@@ -8,7 +8,7 @@ from app.api.deps import get_conn
 from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
 from app.sessao import repository as sessao_repo
 from app.trilha import service
-from app.trilha.schemas import PassaporteOut, TrilhaOut
+from app.trilha.schemas import PassaporteOut, ReveladoOut, TrilhaOut
 
 router = APIRouter(tags=["trilha"])
 
@@ -29,3 +29,16 @@ async def passaporte(
     conn: Annotated[AsyncConnection, Depends(get_conn)],
 ):
     return await service.passaporte(conn, usuario.id)
+
+
+@router.post(
+    "/passaporte/{colecionavel_id}/revelado",
+    response_model=ReveladoOut,
+    summary="Marca um item conquistado como revelado (Modo Conquista tocou; idempotente)",
+)
+async def revelar(
+    colecionavel_id: int,
+    usuario: Annotated[UsuarioAutenticado, Depends(get_usuario_atual)],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    return await service.marcar_revelado(conn, usuario.id, colecionavel_id)

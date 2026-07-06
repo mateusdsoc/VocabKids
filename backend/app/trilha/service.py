@@ -6,6 +6,7 @@ limiar de um nó, e selos por feito (combo, palavras dominadas). Tudo idempotent
 """
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.errors import ApiError
 from app.trilha import repository as repo
 
 NOS_POR_DESTINO = 4
@@ -69,11 +70,28 @@ async def passaporte(conn: AsyncConnection, usuario_id: int) -> dict:
             "asset_ref": r.asset_ref,
             "conquistado": r.ganho_em is not None,
             "ganho_em": r.ganho_em,
+            "revelado": r.revelado_em is not None,
         }
         for r in linhas
     ]
     conquistados = sum(1 for i in itens if i["conquistado"])
     return {"total": len(itens), "conquistados": conquistados, "itens": itens}
+
+
+async def marcar_revelado(
+    conn: AsyncConnection, usuario_id: int, colecionavel_id: int
+) -> dict:
+    """Marca um item ganho como revelado (o Modo Conquista tocou).
+
+    Idempotente: revelar de novo não muda o timestamp — o reveal dispara 1×,
+    mas o app pode repetir o POST num retry de rede sem efeito colateral.
+    """
+    linha = await repo.ler_aluno_colecionavel(conn, usuario_id, colecionavel_id)
+    if linha is None:
+        raise ApiError(404, "item_nao_conquistado", "Item não conquistado pelo aluno.")
+    if linha.revelado_em is None:
+        await repo.marcar_revelado(conn, usuario_id, colecionavel_id)
+    return {"revelado": True, "colecionavel_id": colecionavel_id}
 
 
 async def _conceder_por_referencia(
@@ -82,7 +100,12 @@ async def _conceder_por_referencia(
     col = await repo.colecionavel_por_referencia(conn, referencia)
     if col and await repo.conceder(conn, usuario_id, col.id):
         ganhos.append(
-            {"tipo": col.tipo, "referencia": col.referencia, "asset_ref": col.asset_ref}
+            {
+                "tipo": col.tipo,
+                "colecionavel_id": col.id,
+                "referencia": col.referencia,
+                "asset_ref": col.asset_ref,
+            }
         )
 
 

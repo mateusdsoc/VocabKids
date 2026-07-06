@@ -111,8 +111,9 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   para modelos de apresentação; providers Riverpod (GETs em `FutureProvider`,
   mutações em `AsyncNotifier`). `AppConfig.demo` serve dados `*.sample` sem
   backend.
-- Estado atual do wiring: **Home + auth + Sessão→Resumo** do aluno consomem o
-  backend real; o resto roda em mock/sample (pendências em `HANDOFF.md`).
+- Estado atual do wiring: **Home + auth + Sessão→Resumo + Passaporte (coleção
+  e Modo Conquista)** do aluno consomem o backend real; mapa da Trilha e
+  diagnóstico ainda em mock/sample (pendências em `HANDOFF.md`).
 
 ## Mapa dos documentos
 

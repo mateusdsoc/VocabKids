@@ -6,21 +6,24 @@
 
 ---
 
-## Estado atual (05/07)
+## Estado atual (06/07)
 
-**App do aluno (Flutter, mobile) — fatia A completa + Sessão integrada.**
-Todas as telas portadas, claro+escuro, com animações. **Home + auth + Sessão →
-Resumo** consomem o backend real (fora de `DEMO`); Trilha/Passaporte/demais
-ainda em mock/sample. A Sessão segue o padrão da Home: DTOs
-(`features/sessao/data/`) → `SessaoMapper` → `SessaoController`
-(AsyncNotifier); correção, XP/combo e re-queue do erro são 100% server-side —
-o app só renderiza a fila devolvida. Detalhes e pendências na seção "🔌
-Wiring" de `design/notas-implementacao.md`.
+**App do aluno (Flutter, mobile) — fatia A completa + Sessão e Passaporte
+integrados.** Todas as telas portadas, claro+escuro, com animações. **Home +
+auth + Sessão → Resumo + Passaporte (coleção e Modo Conquista)** consomem o
+backend real (fora de `DEMO`); o mapa da Trilha e o diagnóstico seguem em
+mock/sample. Padrão em todas: DTOs (`features/<x>/data/`) → `*Mapper` →
+providers Riverpod. A fila de reveals é persistida no servidor
+(`revelado_em`); correção, XP/combo, re-queue e recompensas são server-side.
+Detalhes e pendências nas seções "🔌 Wiring" de
+`design/notas-implementacao.md`.
 
 > ⚠️ **Pendência de verificação (sem SDK no container):** rodar
 > `cd app && flutter analyze && flutter test` (inclui `sessao_mapper_test.dart`
-> novo) e um teste manual da Sessão contra o backend local
-> (`uv run uvicorn app.main:app` + seeds; app SEM `--dart-define=DEMO`).
+> e `passaporte_mapper_test.dart` novos) e um teste manual contra o backend
+> local (`uv run uvicorn app.main:app` + seeds; app SEM `--dart-define=DEMO`):
+> praticar uma sessão inteira, fechar um destino (ver teaser + reveal), abrir
+> o Passaporte e conferir a coleção + reveal de carimbo no claro/escuro.
 
 **Superfície do Professor (web, Flutter) — fatia A completa (telas A–D).**
 Entrypoint separado, mesmo design system, **sem pesar** o app do aluno. Painel
@@ -100,10 +103,11 @@ cd app && flutter build web -t lib/main_professor.dart
 
 ## Pendências conhecidas (fora do professor)
 
-- ~~Sessão server-side~~ **feita (05/07)** — ver "🔌 Wiring" nas notas.
-- **Wiring restante do aluno:** Passaporte via `/v1/passaporte` (+ reveal de
-  carimbo/selo), Trilha lendo `/v1/trilha` na própria tela (o avanço de nó já
-  é server-side), diagnóstico do onboarding (`POST /v1/onboarding/diagnostico`).
+- ~~Sessão server-side~~ **feita (05/07)**; ~~Passaporte + Modo Conquista~~
+  **feitos (06/07)** — ver "🔌 Wiring" nas notas.
+- **Wiring restante do aluno:** mapa da Trilha com dados reais (**bloqueado em
+  decisão de design** — janela/posições para 20 destinos; ver notas) e
+  diagnóstico do onboarding (`POST /v1/onboarding/diagnostico`).
 - **Revisão pedagógica do diagnóstico** (professor — não é tarefa de código).
 - **Opcional pré-pitch:** empacotar as fontes da marca como assets
   (confiabilidade da web em wifi instável).

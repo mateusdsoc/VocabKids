@@ -88,35 +88,42 @@ abstract final class SessaoMapper {
 
   // ─────────────────────── recompensas → conquistas ───────────────────────
 
-  /// `destino:{id}` → cartão-postal revelável no Modo Conquista, resolvendo
-  /// cidade/país pelo snapshot da trilha. `null` quando não dá para resolver
-  /// (ou o tipo ainda não tem reveal — carimbo/selo ficam para o wiring do
-  /// Passaporte; ver notas de implementação).
+  /// Recompensa de uma resposta → conquista revelável no Modo Conquista,
+  /// resolvendo cidade/país pelo snapshot da trilha. `null` quando não dá
+  /// para resolver ou o tipo não tem reveal aqui — o selo precisa do grid da
+  /// coleção, então entra pendente via `GET /v1/passaporte` (PassaporteMapper).
   static Conquista? conquistaDe(RecompensaDto r, Trilha trilha) {
-    if (r.tipo != 'cartao_postal') return null;
-    final destinoId = int.tryParse(r.referencia.split(':').elementAtOrNull(1) ?? '');
-    if (destinoId == null) return null;
-    for (final pais in trilha.paises) {
-      for (final destino in pais.destinos) {
-        if (destino.id == destinoId) {
-          final paisEnum = _paisDe(pais.nome);
-          if (paisEnum == null) return null;
-          return ConquistaPostal(
-            destino: Destino(cidade: destino.nome, conquistado: true),
-            pais: paisEnum,
-          );
+    final alvoId = int.tryParse(r.referencia.split(':').elementAtOrNull(1) ?? '');
+    if (alvoId == null) return null;
+    switch (r.tipo) {
+      case 'cartao_postal':
+        for (final pais in trilha.paises) {
+          for (final destino in pais.destinos) {
+            if (destino.id == alvoId) {
+              final paisEnum = paisDe(pais.nome);
+              if (paisEnum == null) return null;
+              return ConquistaPostal(
+                colecionavelId: r.colecionavelId,
+                destino: Destino(cidade: destino.nome, conquistado: true),
+                pais: paisEnum,
+              );
+            }
+          }
         }
-      }
+        return null;
+      case 'carimbo':
+        for (final pais in trilha.paises) {
+          if (pais.id == alvoId) {
+            final paisEnum = paisDe(pais.nome);
+            if (paisEnum == null) return null;
+            return ConquistaCarimbo(
+                colecionavelId: r.colecionavelId, pais: paisEnum);
+          }
+        }
+        return null;
+      default:
+        return null;
     }
-    return null;
-  }
-
-  static Pais? _paisDe(String nome) {
-    final n = nome.toLowerCase();
-    if (n.startsWith('brasil')) return Pais.brasil;
-    if (n.startsWith('fran')) return Pais.franca;
-    if (n.startsWith('jap')) return Pais.japao;
-    return null;
   }
 
   // ───────────────────────────── resumo ─────────────────────────────
@@ -172,6 +179,8 @@ abstract final class SessaoMapper {
       xpTarget: no?.xpLimiar ?? fim.xpTotal,
       words: palavras,
       achievement: achievement,
+      // O nó capturado na abertura foi fechado se o XP final cruzou seu teto.
+      noCompletado: no != null && fim.xpTotal >= no.xpLimiar,
     );
   }
 }

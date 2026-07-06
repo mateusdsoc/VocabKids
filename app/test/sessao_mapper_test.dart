@@ -120,19 +120,31 @@ void main() {
   group('SessaoMapper.conquistaDe', () {
     test('cartao_postal resolve cidade e país pelo snapshot da trilha', () {
       const recompensa = RecompensaDto(
-          tipo: 'cartao_postal', referencia: 'destino:12', assetRef: null);
+          tipo: 'cartao_postal',
+          colecionavelId: 5,
+          referencia: 'destino:12',
+          assetRef: null);
       final conquista = SessaoMapper.conquistaDe(recompensa, _trilha());
       expect(conquista, isA<ConquistaPostal>());
       final postal = conquista as ConquistaPostal;
       expect(postal.destino.cidade, 'Rio de Janeiro');
       expect(postal.pais, Pais.brasil);
+      expect(postal.colecionavelId, 5); // persiste o reveal por este id
     });
 
-    test('carimbo/selo ainda não têm reveal — ficam para o wiring do Passaporte',
-        () {
-      const carimbo =
-          RecompensaDto(tipo: 'carimbo', referencia: 'pais:1', assetRef: null);
-      expect(SessaoMapper.conquistaDe(carimbo, _trilha()), isNull);
+    test('carimbo resolve o país; selo fica para a fila do Passaporte', () {
+      const carimbo = RecompensaDto(
+          tipo: 'carimbo', colecionavelId: 9, referencia: 'pais:1', assetRef: null);
+      final conquista = SessaoMapper.conquistaDe(carimbo, _trilha());
+      expect(conquista, isA<ConquistaCarimbo>());
+      expect((conquista as ConquistaCarimbo).pais, Pais.brasil);
+
+      const selo = RecompensaDto(
+          tipo: 'selo',
+          colecionavelId: 21,
+          referencia: 'feito:combo_10',
+          assetRef: null);
+      expect(SessaoMapper.conquistaDe(selo, _trilha()), isNull);
     });
   });
 
@@ -155,7 +167,10 @@ void main() {
         ],
         recompensas: const [
           RecompensaDto(
-              tipo: 'cartao_postal', referencia: 'destino:12', assetRef: null),
+              tipo: 'cartao_postal',
+              colecionavelId: 5,
+              referencia: 'destino:12',
+              assetRef: null),
         ],
       );
 

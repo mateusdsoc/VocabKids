@@ -247,6 +247,9 @@ aluno_colecionavel = Table(
     Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False),
     Column("colecionavel_id", BigInteger, ForeignKey("colecionavel.id", ondelete="CASCADE"), nullable=False),
     Column("ganho_em", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    # Modo Conquista (§3.10): o reveal dispara 1× — nulo = ainda não revelado.
+    # A fila de conquistas pendentes deriva daqui; o app só espelha.
+    Column("revelado_em", DateTime(timezone=True), nullable=True),
     _created_at(),
     UniqueConstraint("usuario_id", "colecionavel_id", name="aluno_colecionavel_unico"),
 )

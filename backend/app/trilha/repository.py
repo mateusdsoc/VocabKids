@@ -3,7 +3,7 @@
 `xp_limiar` é cumulativo, então "concluído"/"nó atual" saem de comparações diretas
 com `xp_total`, sem somatórios no caminho quente das respostas.
 """
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -152,8 +152,38 @@ async def listar_passaporte(conn: AsyncConnection, usuario_id: int) -> list[Row]
             c.c.referencia,
             c.c.asset_ref,
             ac.c.ganho_em,
+            ac.c.revelado_em,
         )
         .select_from(juncao)
         .order_by(c.c.tipo, c.c.id)
     )
     return list((await conn.execute(stmt)).all())
+
+
+async def ler_aluno_colecionavel(
+    conn: AsyncConnection, usuario_id: int, colecionavel_id: int
+) -> Row | None:
+    ac = schema.aluno_colecionavel
+    return (
+        await conn.execute(
+            select(ac.c.id, ac.c.revelado_em).where(
+                ac.c.usuario_id == usuario_id,
+                ac.c.colecionavel_id == colecionavel_id,
+            )
+        )
+    ).first()
+
+
+async def marcar_revelado(
+    conn: AsyncConnection, usuario_id: int, colecionavel_id: int
+) -> None:
+    ac = schema.aluno_colecionavel
+    await conn.execute(
+        update(ac)
+        .where(
+            ac.c.usuario_id == usuario_id,
+            ac.c.colecionavel_id == colecionavel_id,
+            ac.c.revelado_em.is_(None),  # o 1º reveal fixa o timestamp
+        )
+        .values(revelado_em=func.now())
+    )
