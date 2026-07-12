@@ -9,6 +9,7 @@ import 'features/configuracoes/preferencias_controller.dart';
 import 'features/home/home_screen.dart';
 import 'features/identidade/auth_controller.dart';
 import 'features/identidade/entrada_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: VocabKidsApp()));
@@ -44,7 +45,8 @@ class VocabKidsApp extends ConsumerWidget {
 }
 
 /// Roteamento por estado de autenticação (cliente fino):
-/// carregando → splash; logado → perfil; deslogado → entrada.
+/// carregando → splash; deslogado → entrada; aluno recém-criado →
+/// onboarding (com o diagnóstico real); logado → Home.
 class _Gate extends ConsumerWidget {
   const _Gate();
 
@@ -55,12 +57,17 @@ class _Gate extends ConsumerWidget {
     if (AppConfig.demo) return const EntradaScreen();
 
     final auth = ref.watch(authControllerProvider);
+    final onboarding = ref.watch(onboardingPendenteProvider);
     return auth.when(
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => const EntradaScreen(),
-      data: (me) => me == null ? const EntradaScreen() : const HomeScreen(),
+      data: (me) => me == null
+          ? const EntradaScreen()
+          : onboarding
+              ? OnboardingScreen(nome: me.nome)
+              : const HomeScreen(),
     );
   }
 }

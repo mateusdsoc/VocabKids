@@ -433,16 +433,25 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Wiring da Sessão feito (05/07)** — pendente de `flutter analyze`/`flutter
-test` + teste manual contra o backend local (sem SDK no container; comandos no
-HANDOFF). Na sequência: **Passaporte** (`GET /v1/passaporte` + marcar revelados
-+ reveal de carimbo/selo), **Trilha** (gatilho real do "completar nó" já
-acontece server-side; falta a tela ler `/v1/trilha` fora da Home), a
-**verificação visual claro/escuro** do professor (fase 6) e a **fatia C** do
-professor (persistir meta/atribuição, exigir papel+escopo). TTS fora do MVP
-(11/06).
+**Wiring do aluno COMPLETO (12/07):** Sessão (05/07), Passaporte (06/07),
+Trilha (12/07 — janela com template fixo) e **diagnóstico do onboarding
+(12/07)**. O diagnóstico real: aluno **novo** (`novo` do `/acesso/turma`)
+entra pelo gate no Onboarding; o passo 4 dialoga com
+`POST /v1/onboarding/diagnostico` via `DiagnosticoController` (estado da
+escada é **opaco** — o app reenvia verbatim; correção e nível são do
+servidor). "Pular"/concluir desligam a pendência da sessão de app (não
+persiste de propósito: fechar o app no meio deixa o nível padrão e a
+adaptação corrige — filosofia "diagnóstico leve + adaptação forte").
+Verificado em runtime: aluno novo → escada subiu com acertos →
+`nivel_dificuldade_atual: 9` persistido → Home. Na sequência: **fatia C**
+do professor (persistir meta/atribuição, exigir papel+escopo) e o trio de
+segurança (auth real, rate limiting, CORS). TTS fora do MVP (11/06).
 
-> **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
-> exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um
-> professor para virar conteúdo real, e o wiring com a escada do backend
-> (`POST /v1/onboarding/diagnostico`).
+> **Diagnóstico (conteúdo) — decisão do dono (12/07):** a **revisão
+> pedagógica** das questões com um professor **não é preocupação agora** —
+> fica deliberadamente adiada até a preparação do piloto com alunos reais.
+> As questões do seed seguem como conteúdo de exemplo válido para demo.
+
+> **Seed de palavras — decisão do dono (12/07):** a expansão do banco base
+> (hoje 8 palavras; a 2ª sessão esgota o vocabulário novo) fica **postergada
+> por alguns dias**. Retomar antes de demo a escolas.

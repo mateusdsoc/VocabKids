@@ -117,10 +117,15 @@ cd app && flutter build web -t lib/main_professor.dart
 ## Pendências conhecidas (fora do professor)
 
 - ~~Sessão server-side~~ **feita (05/07)**; ~~Passaporte + Modo Conquista~~
-  **feitos (06/07)** — ver "🔌 Wiring" nas notas.
-- **Wiring restante do aluno:** mapa da Trilha com dados reais (**bloqueado em
-  decisão de design** — janela/posições para 20 destinos; ver notas) e
-  diagnóstico do onboarding (`POST /v1/onboarding/diagnostico`).
-- **Revisão pedagógica do diagnóstico** (professor — não é tarefa de código).
+  **feitos (06/07)**; ~~mapa da Trilha~~ **feito (12/07** — decisão "janela
+  com template fixo"; ver notas**)**; ~~diagnóstico do onboarding~~ **feito
+  (12/07** — aluno novo entra pelo gate no Onboarding e o quiz dialoga com
+  `POST /v1/onboarding/diagnostico`; nível persistido verificado**)**.
+  **O wiring do aluno está completo.**
+- **Revisão pedagógica do diagnóstico** — **não é preocupação agora (decisão
+  do dono, 12/07)**: adiada até a preparação do piloto com alunos reais.
+- **Expansão do seed de palavras** (hoje 8; a 2ª sessão esgota o vocabulário
+  novo) — **postergada por alguns dias (decisão do dono, 12/07)**; retomar
+  antes de demo a escolas.
 - **Opcional pré-pitch:** empacotar as fontes da marca como assets
   (confiabilidade da web em wifi instável).

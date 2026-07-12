@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config.dart';
 import '../../core/platform/adaptive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -10,21 +12,25 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/progress_bar.dart';
 import '../../core/widgets/surface_card.dart';
 import '../home/home_screen.dart';
+import '../identidade/auth_controller.dart' show onboardingPendenteProvider;
 import '../identidade/widgets/passport_background.dart';
 import '../sessao/models.dart';
 import '../sessao/widgets/feedback_bar.dart';
 import '../sessao/widgets/option_tile.dart';
 import '../sessao/widgets/question_panel.dart';
+import 'data/diagnostico_models.dart';
+import 'diagnostico_controller.dart';
 import 'diagnostico_data.dart';
 
 /// Onboarding (produto 3.5): o primeiro voo do aluno depois do embarque.
 ///
 /// Conduz boas-vindas → como funciona → demonstração (acerto/erro) →
 /// diagnóstico → primeira palavra. O **diagnóstico** roda como um mini-quiz
-/// (telas §2.3): posiciona o aluno "sem ser prova" — o app percorre as questões
-/// de exemplo (ver `diagnostico_data.dart`), mas **não calcula nota** nem revela
-/// a alternativa correta (cliente fino). Tudo é mockado — nenhuma rede.
-class OnboardingScreen extends StatefulWidget {
+/// (telas §2.3): posiciona o aluno "sem ser prova" — com backend, cada
+/// resposta vai a `POST /v1/onboarding/diagnostico` (a escada grosso→fino é
+/// do servidor; o app **não calcula nota** nem conhece a alternativa correta).
+/// Em `AppConfig.demo`, percorre as questões de exemplo sem rede.
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key, this.nome});
 
   /// Primeiro nome do aluno (vindo do embarque), usado nas saudações. Opcional:
@@ -32,10 +38,10 @@ class OnboardingScreen extends StatefulWidget {
   final String? nome;
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _step = 0;
 
   /// O diagnóstico (passo 3) dirige a si mesmo respondendo questão a questão;
@@ -69,6 +75,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _irParaApp() {
+    // Fluxo real: o onboarding é mostrado pelo gate (`_Gate`); concluir (ou
+    // "Pular") desliga a pendência e o gate troca para a Home — sem navegação.
+    if (!AppConfig.demo) {
+      ref.read(onboardingPendenteProvider.notifier).concluir();
+      return;
+    }
     Navigator.of(context).pushReplacement(
       adaptivePageRoute(
         builder: (_) => const HomeScreen(),
@@ -144,8 +156,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         0 => _Boas(nome: _primeiroNome),
         1 => const _Como(),
         2 => const _Demo(),
-        3 => _Diagnostico(
-            onConcluir: () => setState(() => _diagConcluido = true)),
+        3 => AppConfig.demo
+            ? _Diagnostico(
+                onConcluir: () => setState(() => _diagConcluido = true))
+            : _DiagnosticoReal(
+                onConcluir: () => setState(() => _diagConcluido = true)),
         _ => _Pronto(nome: _primeiroNome),
       };
 }
@@ -595,6 +610,203 @@ class _DiagnosticoState extends State<_Diagnostico> {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Passo 4 com backend: o mesmo mini-quiz, dirigido pelo servidor. Cada
+/// escolha vai a `POST /v1/onboarding/diagnostico` via [DiagnosticoController]
+/// e a próxima questão vem da escada grosso→fino — o app só apresenta.
+/// Erro de rede recomeça a etapa (diagnóstico é curto; o estado é do servidor).
+class _DiagnosticoReal extends ConsumerStatefulWidget {
+  const _DiagnosticoReal({required this.onConcluir});
+
+  /// Chamado uma vez quando o servidor conclui o diagnóstico.
+  final VoidCallback onConcluir;
+
+  @override
+  ConsumerState<_DiagnosticoReal> createState() => _DiagnosticoRealState();
+}
+
+class _DiagnosticoRealState extends ConsumerState<_DiagnosticoReal> {
+  String? _escolhida;
+  bool _avisado = false;
+  Timer? _avanco;
+
+  void _responder(String opcao) {
+    if (_escolhida != null) return; // trava: uma escolha por questão
+    setState(() => _escolhida = opcao);
+    // Pequena pausa para o aluno ver a seleção; o servidor decide o resto.
+    _avanco = Timer(const Duration(milliseconds: 480), () {
+      if (!mounted) return;
+      setState(() => _escolhida = null);
+      ref.read(diagnosticoControllerProvider.notifier).responder(opcao);
+    });
+  }
+
+  /// Questão do contrato → modelo da Sessão (mesmos widgets do quiz demo).
+  SessionQuestion _questaoUi(DiagnosticoQuestao q) {
+    final lacuna = RegExp('_{3,}');
+    final temLacuna = q.enunciado.contains(lacuna);
+    const letras = ['A', 'B', 'C', 'D', 'E'];
+    return SessionQuestion(
+      kind: temLacuna ? QuestionKind.completar : QuestionKind.significado,
+      stem: temLacuna
+          ? q.enunciado.replaceAll(lacuna, '_____')
+          : q.enunciado,
+      blank: temLacuna,
+      options: [
+        for (var i = 0; i < q.opcoes.length; i++)
+          QuestionOption(
+            key: i < letras.length ? letras[i] : '${i + 1}',
+            text: q.opcoes[i],
+          ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _avanco?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(diagnosticoControllerProvider, (_, next) {
+      if (next.value?.concluido == true && !_avisado) {
+        _avisado = true;
+        widget.onConcluir();
+      }
+    });
+
+    final passo = ref.watch(diagnosticoControllerProvider);
+    if (passo.value?.concluido == true) return const _DiagResultado();
+
+    final c = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _StepHeader(
+          icon: AppIcons.meta,
+          title: 'Seu ponto de partida',
+          subtitle:
+              'Algumas perguntas rápidas ajustam a dificuldade ao seu nível. '
+              'Sem pressão — é só para começar no lugar certo.',
+        ),
+        const SizedBox(height: 22),
+        SurfaceCard(
+          padding: const EdgeInsets.all(16),
+          child: passo.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 44),
+              child: Center(child: CircularProgressIndicator.adaptive()),
+            ),
+            error: (_, _) => _DiagErro(
+                onTentarDeNovo: () =>
+                    ref.invalidate(diagnosticoControllerProvider)),
+            data: (p) {
+              final questao = p.questao;
+              if (questao == null) {
+                // Concluído sem questão já foi tratado acima; isto é só o
+                // instante entre estados.
+                return const SizedBox(height: 44);
+              }
+              final q = _questaoUi(questao);
+              final atual = p.perguntas + 1;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text('DIAGNÓSTICO',
+                          style: AppType.mono(
+                              size: 10,
+                              weight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                              color: c.muted)),
+                      const Spacer(),
+                      // A escada pode fechar antes do teto — "de N" é o máximo.
+                      Text('Pergunta $atual de ${p.maxPerguntas}',
+                          style: AppType.nunito(
+                              size: 11.5,
+                              weight: FontWeight.w800,
+                              color: c.muted)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ProgressBar(
+                      value: atual / p.maxPerguntas, color: c.primary),
+                  const SizedBox(height: 16),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: KeyedSubtree(
+                      key: ValueKey(questao.questaoId),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          QuestionPanel(question: q),
+                          const SizedBox(height: 14),
+                          for (final opt in q.options) ...[
+                            OptionTile(
+                              option: opt,
+                              state: _escolhida == opt.text
+                                  ? OptionState.selected
+                                  : OptionState.neutral,
+                              onTap: _escolhida == null
+                                  ? () => _responder(opt.text)
+                                  : null,
+                            ),
+                            if (opt != q.options.last)
+                              const SizedBox(height: 9),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Erro de rede dentro do cartão do diagnóstico — recomeça a etapa.
+class _DiagErro extends StatelessWidget {
+  const _DiagErro({required this.onTentarDeNovo});
+  final VoidCallback onTentarDeNovo;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        Icon(Icons.cloud_off_rounded, size: 34, color: c.muted),
+        const SizedBox(height: 10),
+        Text('Não consegui falar com o servidor.',
+            textAlign: TextAlign.center,
+            style: AppType.nunito(
+                size: 13.5, weight: FontWeight.w700, color: c.ink)),
+        const SizedBox(height: 4),
+        Text('Confira a conexão — vamos recomeçar desta etapa.',
+            textAlign: TextAlign.center,
+            style: AppType.nunito(
+                size: 12, weight: FontWeight.w600, color: c.muted)),
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: onTentarDeNovo,
+          style: FilledButton.styleFrom(
+            backgroundColor: c.primary,
+            foregroundColor: c.onPrimary,
+          ),
+          child: const Text('Tentar de novo'),
+        ),
+        const SizedBox(height: 6),
       ],
     );
   }

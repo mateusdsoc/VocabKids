@@ -8,8 +8,8 @@
 /// backend, para o wiring futuro trocar só a *fonte*, não os widgets.
 ///
 /// Espelha `backend/app/diagnostico/schemas.py` (`QuestaoDiagnostico`).
-// TODO(backend): substituir por POST /v1/onboarding/diagnostico (roda a escada
-// grosso→fino com desconto de chute e devolve nivel_dificuldade_atual).
+/// Com backend, o passo usa `POST /v1/onboarding/diagnostico` (ver
+/// `diagnostico_controller.dart`); este banco fica **só para o demo**.
 library;
 
 import '../sessao/models.dart';
