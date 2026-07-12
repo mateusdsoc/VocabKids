@@ -372,6 +372,16 @@ O Passaporte agora é a coleção real do aluno, e a fila de reveals é
       `CountryStamp` virou o `ProgressBar` do core (o artesanal colapsava a
       altura e nunca pintava). Docs atualizados juntos: `design/telas.md`
       §6 e `design/brief-mockup-trilha.md`.
+- [x] **Diagnóstico do onboarding real (12/07).** Aluno **novo** (`novo` do
+      `/acesso/turma`) entra pelo gate (`main.dart:_Gate`) no Onboarding antes
+      da Home, via `onboardingPendenteProvider` (estado de sessão de app, não
+      persiste — quem fecha o app no meio começa no nível padrão e a adaptação
+      corrige). O passo 4 (`_DiagnosticoReal` em `onboarding_screen.dart`)
+      dialoga com `POST /v1/onboarding/diagnostico` via `DiagnosticoController`
+      (`AsyncNotifier` autoDispose): o `estado` da escada é **opaco** — o app
+      reenvia verbatim; correção e nível são do servidor. DTOs em
+      `onboarding/data/`. As questões de `diagnostico_data.dart` ficam só p/
+      o `DEMO`. Verificado: escada subiu com acertos → `nivel=9` persistido.
 - [ ] **Badge "novidades" no avatar** (Home) via `ConquistaQueue.listenable` —
       opcional, pós-feedback.
 

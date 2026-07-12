@@ -6,28 +6,109 @@
 
 ---
 
-## Estado atual (11/07)
+## Estado atual (12/07)
 
-**✅ Verificação pendente CUMPRIDA (11/07, máquina local com SDK + Postgres).**
-`flutter analyze` limpo, `flutter test` 33/33, `pytest` 90/90. Verificação
-manual em runtime (backend real + app web sem `DEMO`, via proxy same-origin):
-sessão inteira (16 slots, XP/combo server-side conferidos no papel), erro
-suavizado + re-fila com outra variação, Resumo real, Passaporte com coleção
-e **Modo Conquista** (reveal persistido em `revelado_em`), e as 4 telas do
-professor em claro+escuro (incl. datepicker e stepper). Consertados no
-processo: compilação pós-Riverpod 3, bug de tipo do report popover,
-`greenlet` (macOS arm64), `ProgressBar` que nunca pintava o preenchimento,
-datepicker em inglês (faltava `flutter_localizations`) e Home que não
-recarregava ao voltar da sessão.
+**🎉 Wiring do app do ALUNO completo — todas as telas consomem o backend
+real (fora de `DEMO`).** Auth, Home, Sessão→Resumo, Passaporte (coleção +
+Modo Conquista), **mapa da Trilha** e **diagnóstico do onboarding**. Padrão
+em todas: DTOs (`features/<x>/data/`) → `*Mapper` → providers Riverpod.
+Verificado em runtime (backend local + app web sem `DEMO`, via proxy
+same-origin — ver "Como verificar"). `flutter analyze` limpo, `flutter test`
+**39/39**, `pytest` **90/90**.
 
-Residuais da verificação (não bloqueiam):
+**O que esta sessão (11–12/07) entregou** — branch `claude/claude-md-docs-85mxpx`,
+4 commits novos sobre `d444fcd`:
+1. `6926d94` **fix build** — o wiring da Sessão (91c40a1) foi autorado sem SDK
+   no container e **nunca compilava**: `AutoDisposeAsyncNotifier` não existe
+   no Riverpod 3, e o `ReportPopover.onSelect` passava texto onde o handler
+   esperava índice. Backend: `sqlalchemy[asyncio]` (o `greenlet` não instalava
+   em macOS arm64).
+2. `3fe0a14` **fix visual/UX** — `ProgressBar` nunca pintava (faltava
+   `heightFactor`); datepicker em inglês (faltava `flutter_localizations` +
+   locale pt-BR); Home não recarregava ao voltar da Sessão.
+3. `89ac5e9` **Trilha real** — decisão do dono **"janela com template fixo"**:
+   um destino por vez sobre o desenho travado (340×540), swipe/chevrons trocam
+   de destino, abre no nó atual. `TrilhaMapper` (puro, com testes).
+4. `8ca3b32` **Diagnóstico real** — aluno novo entra pelo gate no Onboarding;
+   o passo 4 dialoga com `POST /v1/onboarding/diagnostico` (escada grosso→fino
+   do servidor; estado opaco reenviado verbatim). Verificado: nível persistido
+   subiu para 9 com acertos.
+
+Residuais (não bloqueiam, registrados para não se perderem):
 - Teaser de **cartão-postal** no Resumo não exercitado (exige fechar um
   destino; o mecanismo recompensa→fila→reveal foi coberto pelo selo).
 - SnackBars de confirmação não conferidos visualmente (timing do headless).
-- CORS ausente confirmado na prática: app web contra backend real só rodou
-  atrás de proxy same-origin — entra com o trio de segurança da fatia C.
-- Seed tem só 8 palavras: a 2ª sessão já esgota vocabulário novo — expandir
-  o banco base antes de demo a escolas.
+- **CORS ausente** confirmado na prática: app web contra backend real só rodou
+  atrás de proxy same-origin — entra com o trio de segurança abaixo.
+
+---
+
+## ▶️ Próximos passos (ordem sugerida)
+
+**1. Trio de segurança pré-piloto (bloqueante antes de qualquer aluno real).**
+Hoje a auth é provisória e sem defesas — detalhes na análise de vulnerabilidades
+(abaixo). Antes de expor a alunos de verdade:
+- **Auth real:** trocar o token `prov_<id>` por JWT assinado com expiração. O
+  módulo `backend/app/identidade/auth.py` foi desenhado para trocar **só ele**
+  (a dependency `get_usuario_atual` continua igual). No app, migrar o token de
+  `SharedPreferences` para `flutter_secure_storage`.
+- **Papel/escopo nas rotas do professor:** cada rota de `app/professor/` já tem
+  `TODO fatia C: exigir papel professor/coordenador + escopo por associação`.
+  Hoje qualquer token de aluno acessa (inócuo com dados mock; vira exposição
+  quando a fatia C ligar dados reais).
+- **Rate limiting + CORS explícito** no FastAPI (`app/main.py`). Sem CORS o
+  site do professor não fala com o backend real pelo browser (confirmado nesta
+  sessão). Origens explícitas, nunca `*` com credenciais.
+
+**2. Fatia C do professor** — trocar os mocks de `app/professor/` por queries
+reais (`associacao_turma`/`turma_config`/`redacao_atribuicao` já existem no
+schema, vazias). Os contratos e o app **não mudam** — só o miolo das rotas.
+Inclui persistir a meta semanal (hoje a Home do aluno mostra "6/10" fixo — ver
+`HomeMapper._metaSemanalPlaceholder`) e a atribuição de redação.
+
+**3. Integridade do gameplay (endurecer, quando sobrar)** — em
+`app/sessao/service.py:responder`: validar que a `questao_id` pertence à fila
+da sessão, e respeitar `nivel4_agendado_para` ao responder N4 (hoje um cliente
+adulterado poderia dominar palavras na hora e farmar o bônus de +500).
+
+**Dever do dono (adiado de propósito, não é código):**
+- **Revisão pedagógica do diagnóstico** — adiada até a preparação do piloto.
+- **Expansão do seed de palavras** (hoje 8; a 2ª sessão esgota o vocabulário
+  novo) — postergada por alguns dias; retomar antes de demo a escolas.
+
+**Vulnerabilidades já mapeadas (para o passo 1):** token forjável (itera IDs
+inteiros), login por turma+nome sem PIN (entra na conta de outro), criação de
+contas ilimitada, zero rate limiting. O `api_client.dart:_send` faz `jsonDecode`
+fora do try (um 502 com HTML vira `FormatException` crua). Rotas do professor
+usam `HTTPException` em vez de `ApiError` (envelope de erro inconsistente).
+Nomes de crianças sem fluxo de consentimento (LGPD — item de produto da fatia C).
+
+---
+
+## Como verificar (runtime, sem device físico)
+
+Esta sessão validou o app **web** contra o backend local por um proxy
+same-origin (o backend não tem CORS). Receita, tudo na máquina do dono:
+
+```bash
+# 1. Backend + banco (uma vez): Postgres local, migrations, seeds
+cd backend
+uv run alembic upgrade head
+uv run python -m app.seed            # turma DEMO7A
+uv run python -m app.seed_vocabulario
+uv run python -m app.seed_trilha
+uv run uvicorn app.main:app --port 8000   # deixa rodando
+
+# 2. App web apontando para o proxy (NÃO usar --dart-define=DEMO)
+cd app
+flutter build web -t lib/main.dart --dart-define=API_BASE_URL=http://localhost:8080
+
+# 3. Proxy same-origin serve os estáticos + repassa /v1 e /health ao :8000.
+#    (nesta sessão usei um Starlette de ~30 linhas; qualquer reverse-proxy serve)
+```
+
+No dispositivo/emulador real não há CORS — aí basta
+`flutter run -t lib/main.dart --dart-define=API_BASE_URL=<host>`.
 
 ---
 
@@ -114,18 +195,13 @@ cd app && flutter build web -t lib/main_professor.dart
 
 ---
 
-## Pendências conhecidas (fora do professor)
+## Histórico do wiring do aluno (tudo feito)
 
-- ~~Sessão server-side~~ **feita (05/07)**; ~~Passaporte + Modo Conquista~~
-  **feitos (06/07)**; ~~mapa da Trilha~~ **feito (12/07** — decisão "janela
-  com template fixo"; ver notas**)**; ~~diagnóstico do onboarding~~ **feito
-  (12/07** — aluno novo entra pelo gate no Onboarding e o quiz dialoga com
-  `POST /v1/onboarding/diagnostico`; nível persistido verificado**)**.
-  **O wiring do aluno está completo.**
-- **Revisão pedagógica do diagnóstico** — **não é preocupação agora (decisão
-  do dono, 12/07)**: adiada até a preparação do piloto com alunos reais.
-- **Expansão do seed de palavras** (hoje 8; a 2ª sessão esgota o vocabulário
-  novo) — **postergada por alguns dias (decisão do dono, 12/07)**; retomar
-  antes de demo a escolas.
-- **Opcional pré-pitch:** empacotar as fontes da marca como assets
-  (confiabilidade da web em wifi instável).
+- ~~Sessão server-side~~ **05/07** · ~~Passaporte + Modo Conquista~~ **06/07**
+  · ~~mapa da Trilha (janela com template fixo)~~ **12/07** · ~~diagnóstico do
+  onboarding~~ **12/07**. Detalhe de cada um nas seções "🔌 Wiring" de
+  `design/notas-implementacao.md`.
+- **Opcional pré-pitch (fora do wiring):** empacotar as fontes da marca como
+  assets (confiabilidade da web em wifi instável).
+
+> Próximos passos e itens adiados pelo dono: ver "▶️ Próximos passos" no topo.
