@@ -48,6 +48,9 @@ class ProgressBar extends StatelessWidget {
             curve: Curves.easeOutCubic,
             builder: (context, animated, child) => FractionallySizedBox(
               widthFactor: animated <= 0 ? 0.0001 : animated.clamp(0.0, 1.0),
+              // Sem heightFactor o DecoratedBox (sem filho) colapsa a altura 0
+              // dentro do Align e o preenchimento nunca aparece.
+              heightFactor: 1,
               child: child,
             ),
             child: DecoratedBox(

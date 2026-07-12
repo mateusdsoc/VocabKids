@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config.dart';
@@ -33,6 +34,10 @@ class VocabKidsApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       themeAnimationDuration: AppDurations.themeSwitch,
+      // pt-BR nos widgets do Material (datepicker, tooltips, semântica).
+      locale: const Locale('pt', 'BR'),
+      supportedLocales: const [Locale('pt', 'BR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const _Gate(),
     );
   }

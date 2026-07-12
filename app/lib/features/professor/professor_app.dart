@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../../core/config.dart';
 import '../../core/theme/app_theme.dart';
@@ -23,6 +24,10 @@ class ProfessorApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: mode,
+      // pt-BR nos widgets do Material (showDatePicker de "Atribuir redação").
+      locale: const Locale('pt', 'BR'),
+      supportedLocales: const [Locale('pt', 'BR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const _ProfessorHome(),
     );
   }

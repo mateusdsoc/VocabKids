@@ -6,7 +6,32 @@
 
 ---
 
-## Estado atual (06/07)
+## Estado atual (11/07)
+
+**✅ Verificação pendente CUMPRIDA (11/07, máquina local com SDK + Postgres).**
+`flutter analyze` limpo, `flutter test` 33/33, `pytest` 90/90. Verificação
+manual em runtime (backend real + app web sem `DEMO`, via proxy same-origin):
+sessão inteira (16 slots, XP/combo server-side conferidos no papel), erro
+suavizado + re-fila com outra variação, Resumo real, Passaporte com coleção
+e **Modo Conquista** (reveal persistido em `revelado_em`), e as 4 telas do
+professor em claro+escuro (incl. datepicker e stepper). Consertados no
+processo: compilação pós-Riverpod 3, bug de tipo do report popover,
+`greenlet` (macOS arm64), `ProgressBar` que nunca pintava o preenchimento,
+datepicker em inglês (faltava `flutter_localizations`) e Home que não
+recarregava ao voltar da sessão.
+
+Residuais da verificação (não bloqueiam):
+- Teaser de **cartão-postal** no Resumo não exercitado (exige fechar um
+  destino; o mecanismo recompensa→fila→reveal foi coberto pelo selo).
+- SnackBars de confirmação não conferidos visualmente (timing do headless).
+- CORS ausente confirmado na prática: app web contra backend real só rodou
+  atrás de proxy same-origin — entra com o trio de segurança da fatia C.
+- Seed tem só 8 palavras: a 2ª sessão já esgota vocabulário novo — expandir
+  o banco base antes de demo a escolas.
+
+---
+
+## Estado anterior (06/07)
 
 **App do aluno (Flutter, mobile) — fatia A completa + Sessão e Passaporte
 integrados.** Todas as telas portadas, claro+escuro, com animações. **Home +
@@ -18,12 +43,8 @@ providers Riverpod. A fila de reveals é persistida no servidor
 Detalhes e pendências nas seções "🔌 Wiring" de
 `design/notas-implementacao.md`.
 
-> ⚠️ **Pendência de verificação (sem SDK no container):** rodar
-> `cd app && flutter analyze && flutter test` (inclui `sessao_mapper_test.dart`
-> e `passaporte_mapper_test.dart` novos) e um teste manual contra o backend
-> local (`uv run uvicorn app.main:app` + seeds; app SEM `--dart-define=DEMO`):
-> praticar uma sessão inteira, fechar um destino (ver teaser + reveal), abrir
-> o Passaporte e conferir a coleção + reveal de carimbo no claro/escuro.
+> ~~⚠️ Pendência de verificação (sem SDK no container)~~ **feita (11/07)** —
+> ver "Estado atual" acima; só o teaser de fechar um destino ficou de fora.
 
 **Superfície do Professor (web, Flutter) — fatia A completa (telas A–D).**
 Entrypoint separado, mesmo design system, **sem pesar** o app do aluno. Painel
@@ -74,18 +95,10 @@ Decisão e plano completos em `design/notas-implementacao.md`
 - **Drill-down/ações** são páginas empurradas (`Navigator.push`) com
   `ProfessorBackBar`; voltam com o resultado e o painel confirma por SnackBar.
 
-### 🔶 Pendência da fase 6 — verificação visual claro/escuro
-Falta abrir as 4 telas no Chrome e conferir claro+escuro (incl. o `showDatePicker`
-de "Atribuir redação" e o stepper de "Meta"). **Não foi possível na sessão atual**
-(ambiente headless, sem SDK Flutter). Garantias estáticas já feitas: **zero cores
-hardcoded** em `features/professor/` (tudo via `context.colors`), R1/R2 verificados
-e `flutter_lints` respeitado nas convenções. Falta só a conferência de olho:
-```bash
-cd app && flutter run -d chrome -t lib/main_professor.dart --dart-define=DEMO=true --dart-define=THEME=dark
-cd app && flutter run -d chrome -t lib/main_professor.dart --dart-define=DEMO=true --dart-define=THEME=light
-```
-Rodar também `flutter analyze` e `flutter test` (inclui o guard de isolamento e os
-testes de mapper do professor) — não rodaram aqui por falta de SDK.
+### ~~🔶 Pendência da fase 6 — verificação visual claro/escuro~~ ✅ feita (11/07)
+As 4 telas conferidas em claro+escuro (Chromium headless + screenshots),
+incluindo o `showDatePicker` (agora em pt-BR) e o stepper de "Meta" com
+reflexão otimista no painel. `flutter analyze` e `flutter test` verdes.
 
 ### Como rodar
 ```bash

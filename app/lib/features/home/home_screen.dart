@@ -98,7 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       if (i == 1) {
                         _abrirTrilha(context);
                       } else if (i == 2) {
-                        _abrirSessao(context);
+                        _abrirSessao(context, ref);
                       } else if (i == 4) {
                         _abrirPerfil(context);
                       } else {
@@ -116,14 +116,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _Content extends StatelessWidget {
+class _Content extends ConsumerWidget {
   const _Content({required this.data, required this.onRefresh});
 
   final HomeData data;
   final Future<void> Function() onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: context.colors.primary,
@@ -144,7 +144,7 @@ class _Content extends StatelessWidget {
           const SizedBox(height: AppGaps.section),
           ContinueCard(
             lesson: data.lesson,
-            onTap: () => _abrirSessao(context),
+            onTap: () => _abrirSessao(context, ref),
           ),
           const SizedBox(height: AppGaps.section),
           TrilhaRibbon(
@@ -219,10 +219,13 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-void _abrirSessao(BuildContext context) {
-  Navigator.of(context).push(
+Future<void> _abrirSessao(BuildContext context, WidgetRef ref) async {
+  await Navigator.of(context).push(
     adaptivePageRoute(builder: (_) => const SessionScreen()),
   );
+  // A sessão muda XP/palavras no servidor; ao voltar, a Home refaz o GET
+  // (sem isso ela mostraria o snapshot de antes da prática).
+  ref.invalidate(homeDataProvider);
 }
 
 void _abrirTrilha(BuildContext context) {
