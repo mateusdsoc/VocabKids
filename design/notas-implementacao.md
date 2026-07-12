@@ -356,12 +356,22 @@ O Passaporte agora é a coleção real do aluno, e a fila de reveals é
 - [x] **Celebração real na Trilha:** `SessionSummary.noCompletado` (XP da
       sessão cruzou o teto do nó) → o Resumo só passa `celebrarChegada`
       quando o nó de fato fechou (antes: sempre, por demo).
-- [ ] **Mapa da Trilha com dados reais**: o mapa tem **coordenadas desenhadas
-      à mão** no contrato visual (340×540, ~8 nós). Janela dinâmica para
-      20 destinos/80 nós exige decisão de design (template de posições ×
-      janela ao redor do nó atual) **e verificação visual** — deliberadamente
-      adiado para uma sessão com SDK/Chrome. O cabeçalho/estados têm dados
-      prontos em `/v1/trilha`.
+- [x] **Mapa da Trilha com dados reais — janela com template fixo (decisão
+      do dono, 12/07).** Os 20 destinos/80 nós **não** ganham layout
+      procedural: o template travado (340×540) é reutilizado **por destino**
+      — a "câmera" enquadra uma janela e swipe/chevrons (ao lado do carimbo
+      do país) trocam de destino; abre na janela do nó atual. Gramática da
+      janela (de baixo p/ cima): âncora (início ou marco do destino
+      anterior) → nós 1..3 (fichas comuns) → nó 4 = **marco** (medalhão do
+      destino) → prévia do próximo destino, ou **portão + fronteira** quando
+      o destino fecha o país. `TrilhaMapper` (puro, com testes) traduz
+      `/v1/trilha`; `trilhaProvider` (autoDispose) refaz o GET a cada volta.
+      Ajustes no widget: aside "Continuar" segue o flag `cta` (o nó atual
+      real pode ser comum, não só medal) e muda de lado quando falta espaço;
+      o painter aceita janelas sem nó atual (passado/futuro). O medidor do
+      `CountryStamp` virou o `ProgressBar` do core (o artesanal colapsava a
+      altura e nunca pintava). Docs atualizados juntos: `design/telas.md`
+      §6 e `design/brief-mockup-trilha.md`.
 - [ ] **Badge "novidades" no avatar** (Home) via `ConquistaQueue.listenable` —
       opcional, pós-feedback.
 
