@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api_providers.dart';
 import '../../core/config.dart';
 import '../home/home_providers.dart' show trilhaRepositoryProvider;
 import '../identidade/auth_controller.dart';

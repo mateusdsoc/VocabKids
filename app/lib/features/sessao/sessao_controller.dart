@@ -139,7 +139,7 @@ class RespostaFeedback {
 ///
 /// Em `AppConfig.demo` tudo roda local sobre [sampleSession], preservando o
 /// fluxo de design (combo aceso, conquista do Rio no fim).
-class SessaoController extends AutoDisposeAsyncNotifier<SessaoEstado> {
+class SessaoController extends AsyncNotifier<SessaoEstado> {
   SessaoRepository get _repo => ref.read(sessaoRepositoryProvider);
 
   /// Card de cada palavra vista na sessão, para o interstício de revisão.
@@ -296,7 +296,7 @@ class SessaoController extends AutoDisposeAsyncNotifier<SessaoEstado> {
   /// Reporta a questão atual (motivo predefinido). Melhor esforço: em demo ou
   /// sem questão em foco, não faz nada.
   Future<void> reportar(String motivo) async {
-    final passo = state.valueOrNull?.atual;
+    final passo = state.value?.atual;
     if (AppConfig.demo || passo is! QuestionStep) return;
     final questaoId = passo.question.questaoId;
     if (questaoId == null) return;

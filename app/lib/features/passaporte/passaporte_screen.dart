@@ -70,7 +70,7 @@ class _PassaporteScreenState extends ConsumerState<PassaporteScreen> {
                   child: carregado.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => _Erro(
+                    error: (_, _) => _Erro(
                         onTentarDeNovo: () =>
                             ref.invalidate(passaporteProvider)),
                     data: (dados) =>

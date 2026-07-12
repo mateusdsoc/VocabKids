@@ -138,7 +138,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
         child: SafeArea(
           child: estado.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => _erroAbertura(context),
+            error: (_, _) => _erroAbertura(context),
             data: (s) => _sessao(context, s),
           ),
         ),
