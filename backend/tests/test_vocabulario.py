@@ -16,13 +16,30 @@ async def test_listar_palavras(client, auth_headers):
     res = await seed_vocabulario()
     assert res["palavras_inseridas"] == len(PALAVRAS)
 
-    r = await client.get("/v1/palavras", headers=auth_headers)
+    # limit alto para trazer o banco base inteiro numa página (o default pagina em 20)
+    r = await client.get("/v1/palavras?limit=100", headers=auth_headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert len(body["items"]) == len(PALAVRAS)
     assert body["next_cursor"] is None
     primeiro = body["items"][0]
     assert {"id", "lema", "nivel_dificuldade"} == set(primeiro)
+
+
+@pytest.mark.asyncio
+async def test_seed_e_idempotente(client, auth_headers):
+    """Rodar o seed de novo (ex.: na segunda máquina após um git pull) não
+    duplica nada: a 2ª chamada insere 0 e o banco base fica idêntico. É o que
+    garante o mesmo vocabulário reproduzido em qualquer máquina."""
+    primeira = await seed_vocabulario()
+    assert primeira["palavras_inseridas"] == len(PALAVRAS)
+
+    segunda = await seed_vocabulario()
+    assert segunda["palavras_inseridas"] == 0
+    assert segunda["questoes_inseridas"] == 0
+
+    body = (await client.get("/v1/palavras?limit=100", headers=auth_headers)).json()
+    assert len(body["items"]) == len(PALAVRAS)  # sem duplicatas
 
 
 @pytest.mark.asyncio

@@ -8,6 +8,24 @@
 
 ## Estado atual (13/07, noite)
 
+**📚 Seed de vocabulário expandido FEITO** — 8 → **37 palavras** curadas,
+distribuídas nos níveis 1–10 (3–4 por nível; antes faltavam por completo os
+níveis 1, 8, 9 e 10). Resolve o "2ª sessão esgota o vocabulário novo" e dá ao
+diagnóstico conteúdo para exercitar a escada inteira. As 4 palavras antigas
+usadas por testes (`enorme`, `veloz`, `belo`, `relevante`) foram preservadas.
+`pytest` **106/106** (1 teste novo — idempotência do seed; mais o ajuste do
+teste de listagem para pedir `?limit=100`, já que o banco base passou do
+default de 20). Nada muda de contrato: só `seed_vocabulario.py` cresceu.
+
+> **Reprodutibilidade entre as duas máquinas (notebook/desktop):** garantida
+> porque o banco base **vive no arquivo versionado** `seed_vocabulario.py` e o
+> seed é **idempotente por `lema`**. Em cada máquina: `git pull` + `uv run
+> python -m app.seed_vocabulario` produz o mesmo vocabulário; rodar de novo não
+> duplica. ⚠️ O **progresso do aluno** (XP, sessões, palavras dominadas) é por
+> banco local e **não** sincroniza entre máquinas — isso é esperado no setup
+> atual (Postgres local em cada uma); um banco compartilhado/hospedado seria
+> outra decisão, se um dia quiser progresso contínuo entre as máquinas.
+
 **🛡️ Integridade do gameplay FEITA** — as duas guardas que faltavam no
 `responder` (`app/sessao/service.py`): questão precisa ter sido apresentada
 (fila **ou** tentativa anterior — o retry legítimo de uma errada sai da fila
@@ -126,9 +144,15 @@ atual". Com isso, **não há mais pendência de código mapeada** antes das
 tarefas do dono e das decisões de produto abaixo.
 
 **Dever do dono (adiado de propósito, não é código):**
-- **Revisão pedagógica do diagnóstico** — adiada até a preparação do piloto.
-- **Expansão do seed de palavras** (hoje 8; a 2ª sessão esgota o vocabulário
-  novo) — postergada por alguns dias; retomar antes de demo a escolas.
+- **Revisão pedagógica do diagnóstico** — **só será feita quando estivermos em
+  contato com as escolas** (decisão do dono, 13/07). Até lá a escada e os
+  limiares atuais ficam como estão; a calibração (limiares de subir/descer,
+  níveis default por ano, dificuldade das palavras) sai com o retorno
+  pedagógico do 1º cliente, não antes.
+- ~~**Expansão do seed de palavras**~~ ✅ feita (13/07, noite) — 37 palavras,
+  níveis 1–10. Ver "Estado atual". Segue reduzida frente às 500–800 de
+  produção (banco gerado+revisado offline, Bloco 3), mas sem o gargalo da 2ª
+  sessão.
 
 **Riscos remanescentes (mapeados, não regridem):** login por turma+nome **sem
 PIN** — dá para entrar na conta de outro aluno da mesma turma (decisão de
