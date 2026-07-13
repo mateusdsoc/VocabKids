@@ -259,4 +259,5 @@ final Me sampleMe = Me(
     palavrasDominadas: 48,
     nivelDificuldadeAtual: 3,
   ),
+  metaSemanal: MetaSemanal(atual: 6, alvo: 10),
 );

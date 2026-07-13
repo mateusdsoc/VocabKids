@@ -73,6 +73,18 @@ class Progresso {
       );
 }
 
+/// Meta da semana (parte de `GET /v1/me`, §3.5): palavras dominadas desde
+/// segunda-feira sobre o alvo da turma — mesmo corte do painel do professor.
+class MetaSemanal {
+  final int atual;
+  final int alvo;
+
+  MetaSemanal({required this.atual, required this.alvo});
+
+  factory MetaSemanal.fromJson(Map<String, dynamic> j) =>
+      MetaSemanal(atual: j['atual'] as int, alvo: j['alvo'] as int);
+}
+
 /// Resposta de `GET /v1/me` — perfil + progresso do aluno autenticado.
 class Me {
   final int usuarioId;
@@ -81,6 +93,7 @@ class Me {
   final Escola? escola;
   final Turma? turma;
   final Progresso progresso;
+  final MetaSemanal? metaSemanal; // nula sem turma
 
   Me({
     required this.usuarioId,
@@ -89,6 +102,7 @@ class Me {
     required this.escola,
     required this.turma,
     required this.progresso,
+    required this.metaSemanal,
   });
 
   factory Me.fromJson(Map<String, dynamic> j) => Me(
@@ -102,5 +116,8 @@ class Me {
             ? null
             : Turma.fromJson(j['turma'] as Map<String, dynamic>),
         progresso: Progresso.fromJson(j['progresso'] as Map<String, dynamic>),
+        metaSemanal: j['meta_semanal'] == null
+            ? null
+            : MetaSemanal.fromJson(j['meta_semanal'] as Map<String, dynamic>),
       );
 }

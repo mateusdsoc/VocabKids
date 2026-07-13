@@ -14,11 +14,9 @@ import 'home_data.dart';
 /// que é puramente de apresentação. Campos ainda não expostos pela API estão
 /// marcados com `TODO(backend)`.
 abstract final class HomeMapper {
-  /// Meta semanal: a agregação "palavras dominadas nesta semana" ainda não é
-  /// exposta pela API. Mantemos o valor canônico do produto (6/10) como
-  /// placeholder até a rota existir.
-  // TODO(backend): expor meta semanal em /v1/me (current/target).
-  static const _metaSemanalPlaceholder = WeeklyGoal(current: 6, target: 10);
+  /// Fallback da meta quando o `/me` vier sem `meta_semanal` (aluno sem turma
+  /// — não acontece no fluxo normal). Zero sobre o default do produto.
+  static const _metaSemanalFallback = WeeklyGoal(current: 0, target: 5);
 
   static HomeData from({required Me me, required Trilha trilha}) {
     final destinos = trilha.destinosEmOrdem;
@@ -33,7 +31,12 @@ abstract final class HomeMapper {
       // nó atual; a barra reflete a mesma fração.
       xpCurrent: trilha.xpTotal,
       xpTarget: trilha.noAtual?.xpLimiar ?? math.max(trilha.xpTotal, 1),
-      weeklyGoal: _metaSemanalPlaceholder,
+      weeklyGoal: me.metaSemanal == null
+          ? _metaSemanalFallback
+          : WeeklyGoal(
+              current: me.metaSemanal!.atual,
+              target: me.metaSemanal!.alvo,
+            ),
       lesson: _licao(trilha, destinos, atualIdx),
       trail: _fita(destinos, atualIdx),
     );
