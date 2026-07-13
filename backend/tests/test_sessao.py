@@ -419,6 +419,77 @@ async def test_passar_o_n4_domina_a_palavra(client, aluno):
     assert b["xp_ganho"] >= 600  # 100 + combo + 500 de domínio
 
 
+@pytest.mark.asyncio
+async def test_nao_responde_questao_fora_da_fila(client, aluno):
+    """Servidor autoritativo: questão que a montagem não pôs na fila (e sem
+    tentativa anterior) → 409, mesmo sendo de palavra atribuída ao aluno."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    na_fila = {s["questao_id"] for s in _questoes(sessao["slots"])}
+    palavras = {s["palavra_id"] for s in _questoes(sessao["slots"])}
+
+    # Uma questão dessas palavras que ficou fora da fila (ex.: outra variação,
+    # ou o N4 que só entra quando o agendamento vence).
+    async with engine.begin() as conn:
+        fora = (
+            await conn.execute(
+                select(schema.questao.c.id)
+                .where(
+                    schema.questao.c.palavra_id.in_(palavras),
+                    schema.questao.c.id.notin_(na_fila),
+                )
+                .limit(1)
+            )
+        ).scalar_one()
+    correta = await _resposta_correta(fora)
+
+    r = await client.post(
+        f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": fora, "opcao": correta},
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "questao_fora_da_sessao"
+
+
+@pytest.mark.asyncio
+async def test_n4_com_agendamento_futuro_nao_domina(client, aluno):
+    """Guarda do bônus de domínio: responder um N4 cujo agendamento ainda não
+    venceu → 409 (sem farmar o +500), mesmo com a questão em mãos."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    mapa = await _mapa_palavras(client, h)
+    alvo = mapa["belo"]
+    await _em_progresso(aluno["usuario_id"], alvo, estado="nivel_4", nivel4=0)
+
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    n4 = next(
+        s for s in _questoes(sessao["slots"])
+        if s["palavra_id"] == alvo and s["nivel"] == 4
+    )
+    # Empurra o agendamento para o futuro depois da montagem — o estado que a
+    # guarda do `responder` precisa rejeitar por conta própria.
+    async with engine.begin() as conn:
+        await conn.execute(
+            update(schema.aluno_palavra)
+            .where(
+                schema.aluno_palavra.c.usuario_id == aluno["usuario_id"],
+                schema.aluno_palavra.c.palavra_id == alvo,
+            )
+            .values(nivel4_agendado_para=99)
+        )
+    correta = await _resposta_correta(n4["questao_id"])
+
+    r = await client.post(
+        f"/v1/sessoes/{sessao['sessao_id']}/respostas",
+        headers=h,
+        json={"questao_id": n4["questao_id"], "opcao": correta},
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "nivel4_nao_vencido"
+
+
 # ───────────────────────────────── fim ─────────────────────────────────
 
 

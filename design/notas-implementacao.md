@@ -472,6 +472,27 @@ preset de rigor (§4.3) — fast-follow pós-feedback.
 
 ---
 
+## 🛡️ Integridade do gameplay — guardas no `responder` (13/07)
+
+Fecha os dois furos do princípio "servidor autoritativo" mapeados no HANDOFF
+(um cliente adulterado podia responder qualquer questão ativa e dominar
+palavras na hora, farmando o bônus de +500). Só `app/sessao/service.py`
+mudou; nenhum contrato nem comportamento do app honesto foi alterado.
+
+- **Questão tem que ter sido apresentada** → senão 409
+  `questao_fora_da_sessao`. A regra **não** é "está na fila": quando o aluno
+  erra, a intercalação troca o slot por outra variação, e o fluxo legítimo de
+  acertar na 2ª tentativa responde uma questão que já saiu da fila. A regra é
+  "está na fila **ou** já tem tentativa registrada em `aluno_questao`".
+- **N4 só vale vencido** → senão 409 `nivel4_nao_vencido`
+  (`nivel4_agendado_para` nulo ou > `sessoes_total`). A montagem já só põe N4
+  vencido na fila; a guarda é a segunda camada, no ponto que concede o bônus.
+- Ordem das checagens preservada: os erros existentes
+  (`questao_nao_encontrada`, `opcao_invalida`, `palavra_nao_atribuida`,
+  `questao_ja_respondida`) continuam saindo antes das guardas novas.
+
+---
+
 ## 📱 Sensação de plataforma (camada adaptativa)
 
 Decisão: **manter o design system da marca** (neutro) e adaptar só os "tells" de

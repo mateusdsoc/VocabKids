@@ -6,7 +6,20 @@
 
 ---
 
-## Estado atual (13/07, tarde)
+## Estado atual (13/07, noite)
+
+**🛡️ Integridade do gameplay FEITA** — as duas guardas que faltavam no
+`responder` (`app/sessao/service.py`): questão precisa ter sido apresentada
+(fila **ou** tentativa anterior — o retry legítimo de uma errada sai da fila
+na intercalação) → 409 `questao_fora_da_sessao`; e N4 só conta com o
+agendamento vencido → 409 `nivel4_nao_vencido` (fecha o farm do bônus de
++500). Só o serviço mudou — sem mudança de contrato nem de app. `pytest`
+**105/105** (2 testes novos). Detalhe em `design/notas-implementacao.md`
+(seção "🛡️ Integridade do gameplay").
+
+---
+
+## Estado anterior (13/07, tarde)
 
 **🧑‍🏫 Fatia C do professor FEITA** (branch `security`, na sequência do trio) —
 os mocks de `app/professor/` viraram **queries reais com escopo por
@@ -108,10 +121,9 @@ de fora, de propósito: **login do professor** (decisão de produto com a escola
 cliente — até lá o site roda em `DEMO` e o token real sai do seed) e o job do
 **sinal de turma** (é do pipeline de redação, fatia C de redação).
 
-**1. Integridade do gameplay (endurecer, quando sobrar)** — em
-`app/sessao/service.py:responder`: validar que a `questao_id` pertence à fila
-da sessão, e respeitar `nivel4_agendado_para` ao responder N4 (hoje um cliente
-adulterado poderia dominar palavras na hora e farmar o bônus de +500).
+**~~1. Integridade do gameplay~~ ✅ feita (13/07, noite)** — ver "Estado
+atual". Com isso, **não há mais pendência de código mapeada** antes das
+tarefas do dono e das decisões de produto abaixo.
 
 **Dever do dono (adiado de propósito, não é código):**
 - **Revisão pedagógica do diagnóstico** — adiada até a preparação do piloto.

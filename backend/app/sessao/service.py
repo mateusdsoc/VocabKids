@@ -250,11 +250,37 @@ async def responder(
         # Nunca se repergunta uma variação já acertada (3.4).
         raise ApiError(409, "questao_ja_respondida", "Questão já acertada.")
 
+    # Servidor autoritativo: só se responde o que o servidor apresentou — o
+    # slot está na fila persistida OU a questão já tem tentativa registrada
+    # (reenvio legítimo de uma errada, cujo slot a intercalação trocou por
+    # outra variação). Sem isso, um cliente adulterado responderia qualquer
+    # questão ativa e avançaria palavras fora da sessão.
+    fila_antiga: list[dict] = sessao.fila or []
+    na_fila = any(
+        s.get("tipo") == "questao" and s.get("questao_id") == questao_id
+        for s in fila_antiga
+    )
+    if not na_fila and anterior is None:
+        raise ApiError(
+            409, "questao_fora_da_sessao", "Questão não está na fila desta sessão."
+        )
+
     tentativa = (anterior.tentativas if anterior else 0) + 1
     correto = opcao == questao.resposta_correta
     primeira = correto and tentativa == 1
 
     progresso = await repo.ler_pontuacao(conn, usuario_id)
+
+    # N4 é a avaliação final espaçada: só vale quando o agendamento venceu. A
+    # montagem já só põe N4 vencido na fila; a guarda cobre o cliente que
+    # tentaria dominar a palavra na hora e farmar o bônus de +500.
+    if questao.nivel == 4 and (
+        aluno_palavra.nivel4_agendado_para is None
+        or progresso.sessoes_total < aluno_palavra.nivel4_agendado_para
+    ):
+        raise ApiError(
+            409, "nivel4_nao_vencido", "A avaliação final desta palavra ainda não venceu."
+        )
     pontos = xp_regras.pontuar(
         correto=correto,
         tentativa=tentativa,
@@ -286,7 +312,6 @@ async def responder(
 
     # Intercalação server-side (3.4): no erro, a outra variação não acertada do
     # mesmo nível (ou a própria questão, se não houver) vai pro fim da fila.
-    fila_antiga: list[dict] = sessao.fila or []
     retry_slot = None
     if not correto:
         original = next(
