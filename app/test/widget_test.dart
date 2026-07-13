@@ -35,7 +35,7 @@ void main() {
     expect(find.text('VocabKids'), findsOneWidget);
     expect(find.text('PASSE DE EMBARQUE'), findsOneWidget);
     expect(find.text('CÓDIGO DA TURMA'), findsOneWidget);
-    expect(find.text('SEU NOME'), findsOneWidget);
+    expect(find.text('SEU APELIDO'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.text('Embarcar'), findsOneWidget);
   });

@@ -52,15 +52,22 @@ ENTRADA (código de turma)
 ## 1. Entrada (código de turma)
 
 - **Objetivo:** acesso provisório da fatia A — aluno entra pelo código da turma.
-- **Conteúdo:** campo *código da turma*; campo *nome*; botão **Entrar**.
+- **Conteúdo:** campo *código da turma*; campo *apelido* (rótulo "Seu apelido",
+  hint "Como quer ser chamado?"); botão **Entrar**.
 - **Hierarquia/CTA:** botão Entrar é o único CTA; tela mínima.
 - **Estados:** carregando (entrando); erro (código inexistente / sem conexão —
   mensagem legível vinda do `error.message`); sucesso → roteia.
 - **Dados:** `POST /v1/acesso/turma {codigo_turma, nome}` → token + `novo`.
-  Se `novo == true` → Onboarding; senão → Home.
+  Se `novo == true` → Onboarding; senão → Home. (O campo do body ainda se chama
+  `nome` no backend — só o rótulo virou "apelido"; o rename do contrato entra
+  na fase de pré-cadastro.)
 - **Navegação:** raiz quando deslogado.
-- **Notas:** acesso é **provisório** (token `prov_<id>`); auth real entra depois
-  sem mexer na tela (produto 3.11 / 10). *UI hoje é placeholder.*
+- **Notas:** acesso é **provisório** (token JWT); auth real entra depois sem
+  mexer na tela (produto 3.11 / 10). **Apelido em vez de nome real** (decisão
+  LGPD faseada, 13/07 — ver `notas-implementacao.md`): já nesta fase o campo
+  pede um **apelido**, para o piloto não coletar nome de menor; o self-service
+  (aluno digita apelido + turma) segue como está. Na fase seguinte a professora
+  **pré-cadastra** a turma e o acesso casa com a lista.
 
 ---
 

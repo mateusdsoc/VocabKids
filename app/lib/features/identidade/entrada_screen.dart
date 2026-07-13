@@ -177,14 +177,14 @@ class _BoardingCard extends StatelessWidget {
           const SizedBox(height: 16),
           PassportField(
             controller: nome,
-            label: 'Seu nome',
+            label: 'Seu apelido',
             icon: AppIcons.signature,
-            hint: 'Como te chamam?',
+            hint: 'Como quer ser chamado?',
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.go,
             onSubmitted: (_) => onSubmit(),
             validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe seu nome' : null,
+                (v == null || v.trim().isEmpty) ? 'Escolha um apelido' : null,
           ),
         ],
       ),
