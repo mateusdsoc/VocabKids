@@ -556,11 +556,46 @@ Verificado em runtime: aluno novo → escada subiu com acertos →
 do professor (persistir meta/atribuição, exigir papel+escopo) e o trio de
 segurança (auth real, rate limiting, CORS). TTS fora do MVP (11/06).
 
-> **Diagnóstico (conteúdo) — decisão do dono (12/07):** a **revisão
-> pedagógica** das questões com um professor **não é preocupação agora** —
-> fica deliberadamente adiada até a preparação do piloto com alunos reais.
-> As questões do seed seguem como conteúdo de exemplo válido para demo.
+> **Diagnóstico (conteúdo) — decisão do dono (12/07, afinada 13/07):** a
+> **revisão pedagógica** das questões e a **calibração** da escada (limiares de
+> subir/descer, níveis default por ano, dificuldade das palavras) **só serão
+> feitas quando estivermos em contato com as escolas** — não antes. As questões
+> do seed seguem como conteúdo de exemplo válido para demo; a calibração sai
+> com o retorno pedagógico do 1º cliente.
 
-> **Seed de palavras — decisão do dono (12/07):** a expansão do banco base
-> (hoje 8 palavras; a 2ª sessão esgota o vocabulário novo) fica **postergada
-> por alguns dias**. Retomar antes de demo a escolas.
+> **Seed de palavras — feito (13/07, noite):** expandido de 8 → **37 palavras**,
+> níveis 1–10 (3–4 por nível; antes faltavam 1, 8, 9, 10). Resolve o gargalo da
+> 2ª sessão e dá conteúdo para o diagnóstico exercitar a escada inteira.
+> Reprodutível entre máquinas por construção (seed versionado + idempotente por
+> `lema`). Segue reduzido frente às 500–800 de produção (Bloco 3).
+
+---
+
+## 🧭 Decisões de produto — pré-piloto (13/07, noite)
+
+Três pendências destravadas em conversa com o dono. Duas mantêm o status quo
+(sem mudança de contrato); a terceira é uma **direção**, ainda **não travada**
+(spec pendente de resolver a tensão abaixo — por isso `telas.md`/briefs/
+`arquitetura.md` **não** foram editados ainda; entram no commit que fechar a
+spec, conforme a regra das decisões revisadas).
+
+- **Login do aluno — manter SEM PIN no piloto.** Aceita-se o risco de
+  impersonação (entrar na conta de um colega da mesma turma) para não adicionar
+  atrito à criança; o foco do piloto é validar o produto, não a segurança da
+  conta. Rate limiting só freia força bruta, não impersonação. Reavaliar com o
+  feedback do piloto (PIN de 4 dígitos ou senha-imagem são os candidatos).
+- **Login do professor — decidir só com a escola cliente.** Segue em `DEMO`/
+  token do seed até conhecer a infra do 1º cliente (Google Workspace é comum →
+  SSO seria natural; magic link é o plano B sem depender da escola). Sem
+  trabalho de código até lá.
+- **LGPD / nomes de crianças — DIREÇÃO: pseudonimizar por apelido/avatar (sem
+  nome real).** Minimiza dado pessoal de menor (a melhor postura para o piloto).
+  **Tensão em aberto a resolver antes de speccar:** o painel do professor hoje
+  lista/ordena os alunos por `nome` (`professor/repository.py`) — é como a
+  professora sabe *quem* precisa de ajuda. Com apelido, o painel mostra
+  apelidos; falta decidir **como a professora liga o apelido à criança real**.
+  Candidato recomendado: a professora atribui/registra os apelidos à sua lista
+  de chamada e **guarda o mapa** (a lista com nomes reais fica com a
+  escola/professora, fora do app) — o app processa só pseudônimos. Afeta, quando
+  travado: `acesso/turma` (`nome`→`apelido`, unicidade na turma), modelo
+  (`usuario.nome`), `telas.md` (acesso/onboarding) e briefs.
