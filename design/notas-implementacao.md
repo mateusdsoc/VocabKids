@@ -590,12 +590,20 @@ spec, conforme a regra das decisões revisadas).
   trabalho de código até lá.
 - **LGPD / nomes de crianças — DIREÇÃO: pseudonimizar por apelido/avatar (sem
   nome real).** Minimiza dado pessoal de menor (a melhor postura para o piloto).
-  **Tensão em aberto a resolver antes de speccar:** o painel do professor hoje
-  lista/ordena os alunos por `nome` (`professor/repository.py`) — é como a
-  professora sabe *quem* precisa de ajuda. Com apelido, o painel mostra
-  apelidos; falta decidir **como a professora liga o apelido à criança real**.
-  Candidato recomendado: a professora atribui/registra os apelidos à sua lista
-  de chamada e **guarda o mapa** (a lista com nomes reais fica com a
-  escola/professora, fora do app) — o app processa só pseudônimos. Afeta, quando
-  travado: `acesso/turma` (`nome`→`apelido`, unicidade na turma), modelo
-  (`usuario.nome`), `telas.md` (acesso/onboarding) e briefs.
+  A tensão "como a professora liga o apelido à criança real" (o painel hoje
+  identifica alunos por `nome`, `professor/repository.py`) resolve-se por
+  **pré-cadastro da turma pela professora** (apelido ↔ nome real no painel; o
+  mapa vive no app sob controle da escola). **Faseado (dono, 13/07):**
+  - **Agora (fase de testes):** mantém o fluxo **self-service atual** — o aluno
+    entra digitando **apelido + código da turma** (o "acha-ou-cria por nome" de
+    `acesso/turma` continua, só que o campo é um apelido, não o nome real).
+    Motivo: pré-cadastrar cada aluno agora tornaria cada teste um cadastro —
+    péssimo para iterar. **Nenhuma mudança de código nesta fase.**
+  - **Depois:** professora **pré-cadastra** a turma (apelido ↔ nome); o
+    acesso deixa de criar aluno na hora e passa a casar com a lista. Aí sim
+    entram as mudanças contratuais, num commit com docs juntos: `acesso/turma`,
+    modelo (`usuario`), painel (identificação), `telas.md` e briefs.
+  - Recomendação de baixo custo para a própria fase de testes ficar limpa de
+    dado real: rotular o campo de acesso como **"apelido"** (não "nome") no app
+    e nos textos — pendente da sua confirmação (é a única mudança pequena que
+    valeria já; não fiz para não mexer no que você testa sem combinar).
