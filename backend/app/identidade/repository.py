@@ -73,8 +73,13 @@ async def criar_aluno(
 
 
 async def buscar_usuario(conn: AsyncConnection, usuario_id: int) -> Row | None:
-    stmt = select(schema.usuario.c.id, schema.usuario.c.nome).where(
-        schema.usuario.c.id == usuario_id
+    """Usuário + papel (da associação — fonte da verdade para autorização)."""
+    u, a = schema.usuario, schema.associacao
+    stmt = (
+        select(u.c.id, u.c.nome, a.c.papel)
+        .select_from(u.outerjoin(a, a.c.usuario_id == u.c.id))
+        .where(u.c.id == usuario_id)
+        .limit(1)
     )
     return (await conn.execute(stmt)).first()
 

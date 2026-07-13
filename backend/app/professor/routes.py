@@ -6,18 +6,28 @@ verdade, escopo por papel e configuração) é da fatia C. Mesmas rotas, sem
 reescrita depois — os shapes espelham `associacao_turma`, `turma_config` e
 `redacao_atribuicao` de `docs/arquitetura.md`.
 
-TODO fatia C: exigir papel professor/coordenador + escopo (associação). Hoje só
-exige autenticação, como os demais mocks (report, redação).
+Autorização: leitura exige papel professor OU coordenador; configurar meta e
+atribuir redação são só do professor (coordenador é leitura, §3.11). O papel
+vem do banco via `require_papel` (auth.py).
+
+TODO fatia C: escopo por associação (professor só nas turmas de
+`associacao_turma`) — sem sentido enquanto as turmas daqui são mock.
 """
 import itertools
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
-from app.identidade.auth import get_usuario_atual
+from app.errors import ApiError
+from app.identidade.auth import require_papel
 
-router = APIRouter(tags=["professor"], dependencies=[Depends(get_usuario_atual)])
+router = APIRouter(
+    tags=["professor"],
+    dependencies=[Depends(require_papel("professor", "coordenador"))],
+)
+# Ações de configuração (meta, atribuir redação): só professor.
+_so_professor = [Depends(require_papel("professor"))]
 
 
 class TurmaResumo(BaseModel):
@@ -390,7 +400,7 @@ async def listar_turmas():
 async def painel_turma(turma_id: int):
     data = _PAINEIS.get(turma_id)
     if data is None:
-        raise HTTPException(status_code=404, detail="turma_nao_encontrada")
+        raise ApiError(404, "turma_nao_encontrada", "Turma não encontrada.")
     return data
 
 
@@ -411,7 +421,7 @@ async def painel_escola():
 async def detalhe_aluno(aluno_id: int):
     painel, aluno = _aluno_base(aluno_id)
     if painel is None or aluno is None:
-        raise HTTPException(status_code=404, detail="aluno_nao_encontrado")
+        raise ApiError(404, "aluno_nao_encontrado", "Aluno não encontrado.")
     extra = _ALUNOS_DETALHE.get(aluno_id, {})
     palavras = extra.get("palavras", [])
     return {
@@ -439,10 +449,11 @@ async def detalhe_aluno(aluno_id: int):
     response_model=RedacaoAtribuicaoOut,
     status_code=201,
     summary="Atribuir redação à turma — tema + prazo (MOCK na fatia A)",
+    dependencies=_so_professor,
 )
 async def atribuir_redacao(turma_id: int, body: AtribuirRedacaoIn):
     if turma_id not in _PAINEIS:
-        raise HTTPException(status_code=404, detail="turma_nao_encontrada")
+        raise ApiError(404, "turma_nao_encontrada", "Turma não encontrada.")
     # Mock: não persiste; só ecoa a atribuição criada (tema já validado/strip).
     return {
         "mock": True,
@@ -457,10 +468,11 @@ async def atribuir_redacao(turma_id: int, body: AtribuirRedacaoIn):
     "/professor/turmas/{turma_id}/meta",
     response_model=MetaTurmaOut,
     summary="Configurar meta semanal da turma — §3.5 (MOCK na fatia A)",
+    dependencies=_so_professor,
 )
 async def atualizar_meta(turma_id: int, body: AtualizarMetaIn):
     if turma_id not in _PAINEIS:
-        raise HTTPException(status_code=404, detail="turma_nao_encontrada")
+        raise ApiError(404, "turma_nao_encontrada", "Turma não encontrada.")
     # Mock: não persiste (a faixa já foi validada). Ecoa a nova meta; na fatia C
     # grava `turma_config.meta_semanal`. O app reflete otimisticamente.
     return {"mock": True, "turma_id": turma_id, "meta_semanal": body.meta_semanal}

@@ -113,9 +113,10 @@ async def test_jornada_completa_do_apresentavel(client):
     # 9. Telas mockadas da fatia A respondem.
     redacoes = (await client.get("/v1/redacoes", headers=h)).json()
     assert redacoes["mock"] is True and len(redacoes["itens"]) >= 1
-    # O painel saiu de /dashboard para o domínio professor (telas §8.2).
-    painel = (await client.get("/v1/professor/turmas/1/painel", headers=h)).json()
-    assert painel["mock"] is True
+    # O painel é do professor — o token de aluno bate na porta e leva 403
+    # (papel exigido pelas rotas de professor; ver test_professor.py).
+    painel = await client.get("/v1/professor/turmas/1/painel", headers=h)
+    assert painel.status_code == 403
     rep = await client.post(
         f"/v1/questoes/{questoes[0]['questao_id']}/report",
         headers=h,

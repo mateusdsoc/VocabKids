@@ -1,42 +1,78 @@
-"""Autenticação PROVISÓRIA da fatia A (apresentável).
+"""Autenticação por JWT assinado (HS256) com expiração.
 
-ATENÇÃO: isto **não** é autenticação real. O token é apenas `prov_<usuario_id>`,
-sem assinatura nem expiração — suficiente para a demo, onde o acesso nasce do
-`codigo_turma` (arquitetura, seção 3.11 / Bloco 3 decisão #4).
+Substitui o token provisório `prov_<usuario_id>` da fatia A. O contrato das
+rotas não muda (princípio auth-agnóstico): `get_usuario_atual` continua sendo a
+dependency que resolve a identidade a partir do `Authorization: Bearer <token>`.
 
-Princípio auth-agnóstico: a janela do 1º cliente (Out–Jan) troca SÓ este módulo
-(validar JWT/provedor real) sem mexer nas rotas — `get_usuario_atual` continua
-sendo a dependency que resolve a identidade.
+Decisões:
+- HS256 com segredo único (`JWT_SECRET`) — API monolítica, sem federação; o
+  algoritmo é fixado na validação (nunca aceitar o `alg` do próprio token).
+- Claims: `sub` (usuario_id), `papel`, `iat`, `exp`. O `papel` no token é
+  informativo; a autorização usa o papel do banco (fonte da verdade), então
+  promover/rebaixar um usuário tem efeito imediato, sem esperar o token expirar.
+- Tokens antigos `prov_*` falham a validação e caem no 401 normal → o app
+  descarta e pede novo acesso pelo código de turma.
 """
+import time
 from dataclasses import dataclass
 from typing import Annotated
 
+import jwt
 from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.api.deps import get_conn
+from app.config import settings
 from app.errors import ApiError
 from app.identidade import repository as repo
 
-_PREFIXO = "prov_"
+_ALGORITMO = "HS256"
 
 
 @dataclass
 class UsuarioAutenticado:
     id: int
     nome: str
+    papel: str | None  # 'aluno' | 'professor' | 'coordenador' | 'admin'
 
 
-def criar_token_provisorio(usuario_id: int) -> str:
-    return f"{_PREFIXO}{usuario_id}"
+def _segredo() -> str:
+    if not settings.jwt_secret:
+        raise RuntimeError(
+            "JWT_SECRET não configurado. Gere um segredo com "
+            "`openssl rand -hex 32` e defina JWT_SECRET no ambiente/.env."
+        )
+    return settings.jwt_secret
+
+
+def criar_token(usuario_id: int, papel: str) -> str:
+    agora = int(time.time())
+    return jwt.encode(
+        {
+            "sub": str(usuario_id),
+            "papel": papel,
+            "iat": agora,
+            "exp": agora + settings.jwt_ttl_horas * 3600,
+        },
+        _segredo(),
+        algorithm=_ALGORITMO,
+    )
 
 
 def _ler_token(token: str) -> int:
-    if not token.startswith(_PREFIXO):
-        raise ApiError(401, "nao_autenticado", "Token de sessão inválido.")
     try:
-        return int(token[len(_PREFIXO):])
-    except ValueError:
+        claims = jwt.decode(
+            token,
+            _segredo(),
+            algorithms=[_ALGORITMO],
+            options={"require": ["exp", "sub"]},
+        )
+        return int(claims["sub"])
+    except jwt.ExpiredSignatureError:
+        raise ApiError(
+            401, "sessao_expirada", "Sua sessão expirou. Entre de novo."
+        )
+    except (jwt.InvalidTokenError, ValueError):
         raise ApiError(401, "nao_autenticado", "Token de sessão inválido.")
 
 
@@ -55,4 +91,21 @@ async def get_usuario_atual(
     row = await repo.buscar_usuario(conn, usuario_id)
     if row is None:
         raise ApiError(401, "nao_autenticado", "Sessão inválida.")
-    return UsuarioAutenticado(id=row.id, nome=row.nome)
+    return UsuarioAutenticado(id=row.id, nome=row.nome, papel=row.papel)
+
+
+def require_papel(*papeis: str):
+    """Dependency que restringe a rota aos papéis dados (papel vem do banco)."""
+
+    async def _dep(
+        usuario: Annotated[UsuarioAutenticado, Depends(get_usuario_atual)],
+    ) -> UsuarioAutenticado:
+        if usuario.papel not in papeis:
+            raise ApiError(
+                403,
+                "sem_permissao",
+                "Você não tem permissão para acessar este recurso.",
+            )
+        return usuario
+
+    return _dep

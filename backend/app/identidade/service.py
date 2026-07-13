@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.errors import ApiError
 from app.identidade import repository as repo
-from app.identidade.auth import criar_token_provisorio
+from app.identidade.auth import criar_token
 
 
 async def acessar_por_codigo_turma(
@@ -12,7 +12,7 @@ async def acessar_por_codigo_turma(
     """Acesso provisório da fatia A: entra por código de turma.
 
     Encontra a turma pelo código; acha-ou-cria o aluno (por nome) e devolve a
-    sessão (token provisório). Ver `auth.py` sobre a natureza do token.
+    sessão (JWT assinado com expiração — ver `auth.py`).
     """
     nome = nome.strip()
     turma = await repo.buscar_turma_por_codigo(conn, codigo_turma.strip())
@@ -34,7 +34,7 @@ async def acessar_por_codigo_turma(
         nome_final = aluno.nome
 
     return {
-        "token": criar_token_provisorio(usuario_id),
+        "token": criar_token(usuario_id, "aluno"),
         "usuario_id": usuario_id,
         "nome": nome_final,
         "turma": {"id": turma.id, "nome": turma.nome, "ano_escolar": turma.ano_escolar},

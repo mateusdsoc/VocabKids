@@ -9,6 +9,13 @@ import os
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+asyncpg://postgres@localhost:5432/vocabkids_test"
 )
+# Auth JWT: segredo fixo de teste (a suíte não depende de .env).
+os.environ["JWT_SECRET"] = "segredo-de-teste-nao-usar-fora-da-suite"
+# Rate limit desligado por padrão (a suíte compartilha um "IP" só — httpx ASGI);
+# o middleware é exercitado por teste próprio com limites baixos via monkeypatch.
+os.environ["RATE_LIMIT_HABILITADO"] = "false"
+# CORS ligado com uma origem de teste (o middleware só é montado se houver origem).
+os.environ["CORS_ORIGINS"] = "http://cors-permitido.test"
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
@@ -71,3 +78,47 @@ async def aluno(client):
 @pytest_asyncio.fixture
 async def auth_headers(aluno):
     return aluno["headers"]
+
+
+@pytest_asyncio.fixture
+async def professor(client):
+    """Professora do seed — JWT com papel professor (não há login de professor)."""
+    from app.identidade.auth import criar_token
+    from app.seed import seed
+
+    s = await seed()
+    token = criar_token(s["professor_id"], "professor")
+    return {
+        "headers": {"Authorization": f"Bearer {token}"},
+        "usuario_id": s["professor_id"],
+    }
+
+
+@pytest_asyncio.fixture
+async def coordenador(client):
+    """Coordenador criado direto no banco (papel só-leitura, §3.11)."""
+    from sqlalchemy import insert
+
+    from app import schema
+    from app.identidade.auth import criar_token
+    from app.seed import seed
+
+    s = await seed()
+    async with engine.begin() as conn:
+        usuario_id = (
+            await conn.execute(
+                insert(schema.usuario)
+                .values(nome="Coordenador Teste")
+                .returning(schema.usuario.c.id)
+            )
+        ).scalar_one()
+        await conn.execute(
+            insert(schema.associacao).values(
+                usuario_id=usuario_id, escola_id=s["escola_id"], papel="coordenador"
+            )
+        )
+    token = criar_token(usuario_id, "coordenador")
+    return {
+        "headers": {"Authorization": f"Bearer {token}"},
+        "usuario_id": usuario_id,
+    }

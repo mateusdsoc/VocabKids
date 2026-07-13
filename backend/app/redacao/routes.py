@@ -7,9 +7,10 @@ professor saiu daqui para o domínio `professor`.)
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from app.errors import ApiError
 from app.identidade.auth import get_usuario_atual
 
 router = APIRouter(tags=["redacao"], dependencies=[Depends(get_usuario_atual)])
@@ -227,7 +228,7 @@ def _montar_analise_heroi() -> Analise:
 async def analise_redacao(redacao_id: int):
     item = next((r for r in _REDACOES if r["id"] == redacao_id), None)
     if item is None:
-        raise HTTPException(status_code=404, detail="redacao_nao_encontrada")
+        raise ApiError(404, "redacao_nao_encontrada", "Redação não encontrada.")
 
     # Só a redação 2 ("Um herói brasileiro") está analisada no mock; as demais
     # devolvem a análise vazia — a tela mostra o estado "em análise".

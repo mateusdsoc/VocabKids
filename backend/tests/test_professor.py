@@ -1,4 +1,4 @@
-"""Professor — telas mockadas (fatia A). Smoke: exige auth e devolve o shape.
+"""Professor — telas mockadas (fatia A). Smoke: exige auth+papel e devolve o shape.
 
 Como os demais, exige Postgres (a dependency de auth resolve um usuário real).
 """
@@ -20,8 +20,44 @@ async def test_professor_exige_auth(client):
 
 
 @pytest.mark.asyncio
-async def test_listar_turmas(client, auth_headers):
-    r = await client.get("/v1/professor/turmas", headers=auth_headers)
+async def test_aluno_nao_acessa_rotas_do_professor(client, auth_headers):
+    """Token de aluno é autenticado, mas sem papel — 403 em toda a superfície."""
+    respostas = [
+        await client.get("/v1/professor/turmas", headers=auth_headers),
+        await client.get("/v1/professor/turmas/1/painel", headers=auth_headers),
+        await client.get("/v1/professor/escola", headers=auth_headers),
+        await client.get("/v1/professor/alunos/1", headers=auth_headers),
+        await client.post(
+            "/v1/professor/turmas/1/redacoes", headers=auth_headers, json={"tema": "x"}
+        ),
+        await client.put(
+            "/v1/professor/turmas/1/meta", headers=auth_headers, json={"meta_semanal": 5}
+        ),
+    ]
+    for r in respostas:
+        assert r.status_code == 403
+        assert r.json()["error"]["code"] == "sem_permissao"
+
+
+@pytest.mark.asyncio
+async def test_coordenador_le_mas_nao_configura(client, coordenador):
+    """Coordenador é só leitura (§3.11): painéis sim; meta/redação não."""
+    h = coordenador["headers"]
+    assert (await client.get("/v1/professor/turmas", headers=h)).status_code == 200
+    assert (await client.get("/v1/professor/escola", headers=h)).status_code == 200
+    meta = await client.put(
+        "/v1/professor/turmas/1/meta", headers=h, json={"meta_semanal": 5}
+    )
+    assert meta.status_code == 403
+    redacao = await client.post(
+        "/v1/professor/turmas/1/redacoes", headers=h, json={"tema": "Tema"}
+    )
+    assert redacao.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_listar_turmas(client, professor):
+    r = await client.get("/v1/professor/turmas", headers=professor["headers"])
     assert r.status_code == 200
     b = r.json()
     assert b["mock"] is True
@@ -32,8 +68,8 @@ async def test_listar_turmas(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_painel_turma(client, auth_headers):
-    r = await client.get("/v1/professor/turmas/1/painel", headers=auth_headers)
+async def test_painel_turma(client, professor):
+    r = await client.get("/v1/professor/turmas/1/painel", headers=professor["headers"])
     assert r.status_code == 200
     b = r.json()
     assert b["turma_id"] == 1
@@ -48,14 +84,14 @@ async def test_painel_turma(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_painel_turma_inexistente(client, auth_headers):
-    r = await client.get("/v1/professor/turmas/999/painel", headers=auth_headers)
+async def test_painel_turma_inexistente(client, professor):
+    r = await client.get("/v1/professor/turmas/999/painel", headers=professor["headers"])
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_painel_escola(client, auth_headers):
-    r = await client.get("/v1/professor/escola", headers=auth_headers)
+async def test_painel_escola(client, professor):
+    r = await client.get("/v1/professor/escola", headers=professor["headers"])
     assert r.status_code == 200
     b = r.json()
     assert b["turmas"]
@@ -71,8 +107,8 @@ async def test_painel_escola(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_detalhe_aluno(client, auth_headers):
-    r = await client.get("/v1/professor/alunos/1", headers=auth_headers)
+async def test_detalhe_aluno(client, professor):
+    r = await client.get("/v1/professor/alunos/1", headers=professor["headers"])
     assert r.status_code == 200
     b = r.json()
     # Campos-base vêm do painel (fonte única) — devem coincidir com a turma 1.
@@ -87,16 +123,16 @@ async def test_detalhe_aluno(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_detalhe_aluno_inexistente(client, auth_headers):
-    r = await client.get("/v1/professor/alunos/999", headers=auth_headers)
+async def test_detalhe_aluno_inexistente(client, professor):
+    r = await client.get("/v1/professor/alunos/999", headers=professor["headers"])
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_atribuir_redacao(client, auth_headers):
+async def test_atribuir_redacao(client, professor):
     r = await client.post(
         "/v1/professor/turmas/1/redacoes",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"tema": "  Um herói brasileiro  ", "prazo": "2026-06-30"},
     )
     assert r.status_code == 201
@@ -109,10 +145,10 @@ async def test_atribuir_redacao(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_atribuir_redacao_sem_prazo(client, auth_headers):
+async def test_atribuir_redacao_sem_prazo(client, professor):
     r = await client.post(
         "/v1/professor/turmas/1/redacoes",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"tema": "Minhas férias dos sonhos"},
     )
     assert r.status_code == 201
@@ -120,34 +156,34 @@ async def test_atribuir_redacao_sem_prazo(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_atribuir_redacao_turma_inexistente(client, auth_headers):
+async def test_atribuir_redacao_turma_inexistente(client, professor):
     r = await client.post(
         "/v1/professor/turmas/999/redacoes",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"tema": "Tema qualquer"},
     )
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_atribuir_redacao_tema_vazio_e_prazo_invalido(client, auth_headers):
+async def test_atribuir_redacao_tema_vazio_e_prazo_invalido(client, professor):
     vazio = await client.post(
-        "/v1/professor/turmas/1/redacoes", headers=auth_headers, json={"tema": "   "}
+        "/v1/professor/turmas/1/redacoes", headers=professor["headers"], json={"tema": "   "}
     )
     assert vazio.status_code == 422
     prazo = await client.post(
         "/v1/professor/turmas/1/redacoes",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"tema": "Ok", "prazo": "30/06/2026"},
     )
     assert prazo.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_atualizar_meta(client, auth_headers):
+async def test_atualizar_meta(client, professor):
     r = await client.put(
         "/v1/professor/turmas/1/meta",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"meta_semanal": 8},
     )
     assert r.status_code == 200
@@ -158,22 +194,22 @@ async def test_atualizar_meta(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_atualizar_meta_turma_inexistente(client, auth_headers):
+async def test_atualizar_meta_turma_inexistente(client, professor):
     r = await client.put(
         "/v1/professor/turmas/999/meta",
-        headers=auth_headers,
+        headers=professor["headers"],
         json={"meta_semanal": 5},
     )
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_atualizar_meta_fora_da_faixa(client, auth_headers):
+async def test_atualizar_meta_fora_da_faixa(client, professor):
     zero = await client.put(
-        "/v1/professor/turmas/1/meta", headers=auth_headers, json={"meta_semanal": 0}
+        "/v1/professor/turmas/1/meta", headers=professor["headers"], json={"meta_semanal": 0}
     )
     assert zero.status_code == 422
     alto = await client.put(
-        "/v1/professor/turmas/1/meta", headers=auth_headers, json={"meta_semanal": 99}
+        "/v1/professor/turmas/1/meta", headers=professor["headers"], json={"meta_semanal": 99}
     )
     assert alto.status_code == 422

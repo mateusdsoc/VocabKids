@@ -19,6 +19,7 @@ ESCOLA_NOME = "Escola Demonstração"
 TURMA_NOME = "7º Ano A"
 TURMA_ANO = 7
 CODIGO_TURMA = "DEMO7A"
+PROFESSOR_NOME = "Professora Demo"
 
 
 async def seed() -> dict:
@@ -58,8 +59,63 @@ async def seed() -> dict:
                 )
             ).scalar_one()
 
-    return {"escola_id": escola_id, "turma_id": turma_id, "codigo_turma": CODIGO_TURMA}
+        # Professora demo (papel professor, associada à escola e à turma).
+        # Não há rota de login de professor na fatia A — o token sai do
+        # `python -m app.seed` (abaixo) enquanto o acesso real não chega (fatia C).
+        professor_id = (
+            await conn.execute(
+                select(schema.associacao.c.usuario_id)
+                .select_from(
+                    schema.usuario.join(
+                        schema.associacao,
+                        schema.associacao.c.usuario_id == schema.usuario.c.id,
+                    )
+                )
+                .where(
+                    schema.usuario.c.nome == PROFESSOR_NOME,
+                    schema.associacao.c.papel == "professor",
+                )
+            )
+        ).scalar_one_or_none()
+        if professor_id is None:
+            professor_id = (
+                await conn.execute(
+                    insert(schema.usuario)
+                    .values(nome=PROFESSOR_NOME)
+                    .returning(schema.usuario.c.id)
+                )
+            ).scalar_one()
+            associacao_id = (
+                await conn.execute(
+                    insert(schema.associacao)
+                    .values(
+                        usuario_id=professor_id, escola_id=escola_id, papel="professor"
+                    )
+                    .returning(schema.associacao.c.id)
+                )
+            ).scalar_one()
+            await conn.execute(
+                insert(schema.associacao_turma).values(
+                    associacao_id=associacao_id, turma_id=turma_id
+                )
+            )
+
+    return {
+        "escola_id": escola_id,
+        "turma_id": turma_id,
+        "codigo_turma": CODIGO_TURMA,
+        "professor_id": professor_id,
+    }
 
 
 if __name__ == "__main__":
-    print("seed ok:", asyncio.run(seed()))
+    resultado = asyncio.run(seed())
+    print("seed ok:", resultado)
+    # Conveniência de dev: um token de professor para exercitar as rotas
+    # (exige JWT_SECRET configurado; o login real do professor é fatia C).
+    from app.config import settings
+
+    if settings.jwt_secret:
+        from app.identidade.auth import criar_token
+
+        print("token professor (demo):", criar_token(resultado["professor_id"], "professor"))
