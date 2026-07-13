@@ -394,6 +394,44 @@ O Passaporte agora é a coleção real do aluno, e a fila de reveals é
 
 ---
 
+## 🔐 Trio de segurança pré-piloto (13/07)
+
+Fecha o bloqueante nº 1 do HANDOFF (auth provisória sem defesas). Nada de
+produto/design mudou — é o plug da auth real previsto pela arquitetura
+(auth-agnóstica, §3.11).
+
+- **JWT assinado (HS256) com expiração** substitui o `prov_<id>`:
+  `app/identidade/auth.py` (único módulo trocado, como desenhado). Claims
+  `sub`/`papel`/`iat`/`exp`; algoritmo fixado na validação; papel de
+  **autorização vem do banco**, não do token. Exige `JWT_SECRET` no ambiente
+  (`openssl rand -hex 32`); TTL default 30 dias (`JWT_TTL_HORAS`). Tokens
+  antigos caem no 401 e o app pede novo acesso.
+- **Papel nas rotas do professor** (`require_papel`): leitura exige
+  professor/coordenador; meta e atribuição de redação, só professor
+  (coordenador é leitura, §3.11). Aluno leva 403 `sem_permissao`. O seed criou
+  a "Professora Demo" e `python -m app.seed` imprime um token dela (login de
+  professor de verdade é fatia C, junto com o escopo por associação).
+- **Rate limiting** em memória (`app/seguranca/rate_limit.py`, regra pura):
+  janela de 60s; login por IP (freia brute-force de código de turma e criação
+  de contas), rotas autenticadas por token (não por IP — turma inteira atrás
+  do NAT da escola), resto por IP. 429 no envelope único + `Retry-After`.
+- **CORS explícito** (`CORS_ORIGINS`, nunca `*`): camada mais externa —
+  preflight não toca banco. Sem origem configurada, nada liberado (mobile não
+  precisa de CORS; o site do professor entra quando publicado).
+- **App**: token migrou de `SharedPreferences` para `flutter_secure_storage`
+  10.3.1 (keychain/keystore; resíduo antigo é limpo). `api_client.dart` não
+  vaza mais `FormatException` em resposta não-JSON (502 de proxy →
+  `ApiException` código `resposta_invalida`).
+- **Envelope de erro**: mocks de professor/redação trocaram `HTTPException`
+  por `ApiError` (códigos de domínio: `turma_nao_encontrada`,
+  `aluno_nao_encontrado`, `redacao_nao_encontrada`).
+
+Pendências que continuam mapeadas (não regridem): escopo por associação e
+login do professor (fatia C), PIN por aluno (entrar na conta de outro pelo
+nome continua possível — decisão de produto pendente), LGPD/consentimento.
+
+---
+
 ## 📱 Sensação de plataforma (camada adaptativa)
 
 Decisão: **manter o design system da marca** (neutro) e adaptar só os "tells" de

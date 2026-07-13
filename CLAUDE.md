@@ -38,8 +38,9 @@ psql -h localhost -U postgres -c "create database vocabkids_test;"
 
 # Rodar a API localmente
 cp .env.example .env                   # ajuste DATABASE_URL se preciso
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env   # obrigatório (auth JWT)
 uv run alembic upgrade head            # cria as tabelas
-uv run python -m app.seed              # turma demo (código DEMO7A) — idempotente
+uv run python -m app.seed              # turma demo (código DEMO7A) + professora — idempotente
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha (países/destinos/nós) + colecionáveis
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
@@ -86,9 +87,13 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   tanto das migrations quanto do `create_all` dos testes. Tabelas da fatia C
   já existem (vazias no apresentável). PK `BIGINT IDENTITY`; enums via
   `VARCHAR + CHECK`. Migrations Alembic **lineares** (uma cadeia única).
-- **Auth provisório da fatia A**: entrada por `codigo_turma`, token
-  `prov_<usuario_id>` sem assinatura (`app/identidade/auth.py`). As rotas são
-  auth-agnósticas; a auth real é plugada depois sem mexer nelas.
+- **Auth**: entrada por `codigo_turma`; sessão em **JWT HS256 com expiração**
+  (`app/identidade/auth.py` — exige `JWT_SECRET` no ambiente, gere com
+  `openssl rand -hex 32`; TTL via `JWT_TTL_HORAS`). Rotas do professor exigem
+  papel (`require_papel`; escopo por associação é fatia C). **Rate limiting**
+  em memória (`app/seguranca/rate_limit.py`) e **CORS explícito** via
+  `CORS_ORIGINS` (nunca `*`) em `app/main.py`. No app, o token vive em
+  `flutter_secure_storage` (`core/token_store.dart`).
 - **Erro em formato único**:
   `{"error": {"code": snake_case, "message": ..., "details": {}}}`
   (`app/errors.py`).

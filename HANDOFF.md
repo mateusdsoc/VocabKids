@@ -6,7 +6,36 @@
 
 ---
 
-## Estado atual (12/07)
+## Estado atual (13/07)
+
+**🔐 Trio de segurança pré-piloto FEITO** (branch `security`) — o bloqueante
+nº 1 saiu da frente. `pytest` **103/103**, `flutter analyze` limpo,
+`flutter test` **39/39**. Detalhe em `design/notas-implementacao.md`
+(seção "🔐 Trio de segurança"). Resumo:
+
+1. **JWT HS256 com expiração** no lugar do `prov_<id>` — só
+   `app/identidade/auth.py` mudou, como desenhado. Exige `JWT_SECRET` no
+   ambiente (`openssl rand -hex 32`); TTL default 30 dias. Papel de
+   autorização vem do **banco**, não do claim.
+2. **Papel nas rotas do professor** (`require_papel`): aluno → 403; leitura
+   professor/coordenador; meta e redação só professor. Seed cria a
+   "Professora Demo" e `python -m app.seed` imprime um token dela (login real
+   de professor = fatia C, junto com escopo por associação).
+3. **Rate limiting** (janela 60s em memória; login por IP, autenticado por
+   token — não pune a turma no NAT da escola) + **CORS explícito** por env
+   `CORS_ORIGINS` (nunca `*`; preflight não toca o banco). Com isso o site do
+   professor fala com o backend real **sem proxy** (basta pôr a origem no env).
+4. **Fixes mapeados**: token do app em `flutter_secure_storage` (era
+   SharedPreferences); `api_client.dart` sem `FormatException` crua em
+   resposta não-JSON; mocks professor/redação em `ApiError` (envelope único).
+
+⚠️ Operacional: o backend agora **não emite token sem `JWT_SECRET`** — em
+máquina nova, `echo "JWT_SECRET=$(openssl rand -hex 32)" >> backend/.env`.
+Tokens antigos (`prov_*`) caem em 401 e o app pede novo acesso — esperado.
+
+---
+
+## Estado anterior (12/07)
 
 **🎉 Wiring do app do ALUNO completo — todas as telas consomem o backend
 real (fora de `DEMO`).** Auth, Home, Sessão→Resumo, Passaporte (coleção +
@@ -45,28 +74,17 @@ Residuais (não bloqueiam, registrados para não se perderem):
 
 ## ▶️ Próximos passos (ordem sugerida)
 
-**1. Trio de segurança pré-piloto (bloqueante antes de qualquer aluno real).**
-Hoje a auth é provisória e sem defesas — detalhes na análise de vulnerabilidades
-(abaixo). Antes de expor a alunos de verdade:
-- **Auth real:** trocar o token `prov_<id>` por JWT assinado com expiração. O
-  módulo `backend/app/identidade/auth.py` foi desenhado para trocar **só ele**
-  (a dependency `get_usuario_atual` continua igual). No app, migrar o token de
-  `SharedPreferences` para `flutter_secure_storage`.
-- **Papel/escopo nas rotas do professor:** cada rota de `app/professor/` já tem
-  `TODO fatia C: exigir papel professor/coordenador + escopo por associação`.
-  Hoje qualquer token de aluno acessa (inócuo com dados mock; vira exposição
-  quando a fatia C ligar dados reais).
-- **Rate limiting + CORS explícito** no FastAPI (`app/main.py`). Sem CORS o
-  site do professor não fala com o backend real pelo browser (confirmado nesta
-  sessão). Origens explícitas, nunca `*` com credenciais.
+**~~1. Trio de segurança pré-piloto~~ ✅ feito (13/07)** — ver "Estado atual".
 
-**2. Fatia C do professor** — trocar os mocks de `app/professor/` por queries
+**1. Fatia C do professor** — trocar os mocks de `app/professor/` por queries
 reais (`associacao_turma`/`turma_config`/`redacao_atribuicao` já existem no
 schema, vazias). Os contratos e o app **não mudam** — só o miolo das rotas.
 Inclui persistir a meta semanal (hoje a Home do aluno mostra "6/10" fixo — ver
-`HomeMapper._metaSemanalPlaceholder`) e a atribuição de redação.
+`HomeMapper._metaSemanalPlaceholder`), a atribuição de redação, o **login do
+professor** (hoje o token sai do seed) e o **escopo por associação** (professor
+só nas turmas de `associacao_turma` — o papel já é exigido desde 13/07).
 
-**3. Integridade do gameplay (endurecer, quando sobrar)** — em
+**2. Integridade do gameplay (endurecer, quando sobrar)** — em
 `app/sessao/service.py:responder`: validar que a `questao_id` pertence à fila
 da sessão, e respeitar `nivel4_agendado_para` ao responder N4 (hoje um cliente
 adulterado poderia dominar palavras na hora e farmar o bônus de +500).
@@ -76,35 +94,33 @@ adulterado poderia dominar palavras na hora e farmar o bônus de +500).
 - **Expansão do seed de palavras** (hoje 8; a 2ª sessão esgota o vocabulário
   novo) — postergada por alguns dias; retomar antes de demo a escolas.
 
-**Vulnerabilidades já mapeadas (para o passo 1):** token forjável (itera IDs
-inteiros), login por turma+nome sem PIN (entra na conta de outro), criação de
-contas ilimitada, zero rate limiting. O `api_client.dart:_send` faz `jsonDecode`
-fora do try (um 502 com HTML vira `FormatException` crua). Rotas do professor
-usam `HTTPException` em vez de `ApiError` (envelope de erro inconsistente).
-Nomes de crianças sem fluxo de consentimento (LGPD — item de produto da fatia C).
+**Riscos remanescentes (mapeados, não regridem):** login por turma+nome **sem
+PIN** — dá para entrar na conta de outro aluno da mesma turma (decisão de
+produto pendente; o rate limiting só freia a força bruta). Nomes de crianças
+sem fluxo de consentimento (LGPD — item de produto da fatia C).
 
 ---
 
 ## Como verificar (runtime, sem device físico)
 
-Esta sessão validou o app **web** contra o backend local por um proxy
-same-origin (o backend não tem CORS). Receita, tudo na máquina do dono:
+Desde 13/07 o backend tem CORS explícito — o app **web** fala direto com a API
+local, **sem proxy**. Receita, tudo na máquina do dono:
 
 ```bash
 # 1. Backend + banco (uma vez): Postgres local, migrations, seeds
 cd backend
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env       # se ainda não tiver
+echo "CORS_ORIGINS=http://localhost:8080" >> .env       # origem do app web local
 uv run alembic upgrade head
-uv run python -m app.seed            # turma DEMO7A
+uv run python -m app.seed            # turma DEMO7A + Professora Demo (imprime token)
 uv run python -m app.seed_vocabulario
 uv run python -m app.seed_trilha
 uv run uvicorn app.main:app --port 8000   # deixa rodando
 
-# 2. App web apontando para o proxy (NÃO usar --dart-define=DEMO)
+# 2. App web apontando direto para a API (NÃO usar --dart-define=DEMO)
 cd app
-flutter build web -t lib/main.dart --dart-define=API_BASE_URL=http://localhost:8080
-
-# 3. Proxy same-origin serve os estáticos + repassa /v1 e /health ao :8000.
-#    (nesta sessão usei um Starlette de ~30 linhas; qualquer reverse-proxy serve)
+flutter build web -t lib/main.dart --dart-define=API_BASE_URL=http://localhost:8000
+cd build/web && python3 -m http.server 8080   # qualquer servidor estático na origem liberada
 ```
 
 No dispositivo/emulador real não há CORS — aí basta
