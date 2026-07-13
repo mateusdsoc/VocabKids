@@ -6,7 +6,34 @@
 
 ---
 
-## Estado atual (13/07)
+## Estado atual (13/07, tarde)
+
+**🧑‍🏫 Fatia C do professor FEITA** (branch `security`, na sequência do trio) —
+os mocks de `app/professor/` viraram **queries reais com escopo por
+associação**, sem mudar contratos nem o app do professor. `pytest` **103/103**,
+`flutter analyze` limpo, `flutter test` **39/39**, smoke em runtime ok.
+Decisões datadas em `design/notas-implementacao.md` (seção "🧑‍🏫 Fatia C").
+
+1. **Painéis reais**: turmas/painel/escola/detalhe do aluno saem de
+   `associacao_turma`, `aluno_palavra` (dominadas na semana), `aluno_progresso`
+   (acumulado) e `sessao` (ativos). Agregados por turma (sem N+1). Sinal de
+   turma lê `sinal_turma` (vazia até o pipeline de redação rodar).
+2. **Persistência**: `PUT meta` → upsert em `turma_config`; `POST redacoes` →
+   `redacao_atribuicao` com o professor autor; o detalhe do aluno lista as
+   atribuições com status traduzido (`pendente`/`em_analise`/`analisada`).
+3. **Escopo (§3.11)**: professor só nas próprias turmas (403 fora);
+   coordenador escola inteira, só leitura. Papel já vinha do trio.
+4. **Meta na Home do aluno**: `/v1/me` ganhou `meta_semanal {atual, alvo}`
+   (semana = segunda 00:00 America/Sao_Paulo; default por ano 6º=4…9º=7,
+   **provisório** — calibração pedagógica pendente). O app trocou o "6/10"
+   fixo pelo dado real (`HomeMapper`).
+5. **Fora desta fatia (decisão do dono, 13/07)**: login do professor — o site
+   segue em `DEMO`/token do seed até o fluxo definitivo (SSO/magic link) ser
+   decidido com a escola cliente.
+
+---
+
+## Estado anterior (13/07, manhã)
 
 **🔐 Trio de segurança pré-piloto FEITO** (branch `security`) — o bloqueante
 nº 1 saiu da frente. `pytest` **103/103**, `flutter analyze` limpo,
@@ -74,17 +101,14 @@ Residuais (não bloqueiam, registrados para não se perderem):
 
 ## ▶️ Próximos passos (ordem sugerida)
 
-**~~1. Trio de segurança pré-piloto~~ ✅ feito (13/07)** — ver "Estado atual".
+**~~1. Trio de segurança pré-piloto~~ ✅ feito (13/07)** — ver "Estado anterior".
 
-**1. Fatia C do professor** — trocar os mocks de `app/professor/` por queries
-reais (`associacao_turma`/`turma_config`/`redacao_atribuicao` já existem no
-schema, vazias). Os contratos e o app **não mudam** — só o miolo das rotas.
-Inclui persistir a meta semanal (hoje a Home do aluno mostra "6/10" fixo — ver
-`HomeMapper._metaSemanalPlaceholder`), a atribuição de redação, o **login do
-professor** (hoje o token sai do seed) e o **escopo por associação** (professor
-só nas turmas de `associacao_turma` — o papel já é exigido desde 13/07).
+**~~2. Fatia C do professor~~ ✅ feita (13/07)** — ver "Estado atual". Ficaram
+de fora, de propósito: **login do professor** (decisão de produto com a escola
+cliente — até lá o site roda em `DEMO` e o token real sai do seed) e o job do
+**sinal de turma** (é do pipeline de redação, fatia C de redação).
 
-**2. Integridade do gameplay (endurecer, quando sobrar)** — em
+**1. Integridade do gameplay (endurecer, quando sobrar)** — em
 `app/sessao/service.py:responder`: validar que a `questao_id` pertence à fila
 da sessão, e respeitar `nivel4_agendado_para` ao responder N4 (hoje um cliente
 adulterado poderia dominar palavras na hora e farmar o bônus de +500).

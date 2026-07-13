@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.errors import ApiError
 from app.identidade import repository as repo
 from app.identidade.auth import criar_token
+from app.progressao.meta import meta_efetiva
+from app.progressao.semana import inicio_da_semana
 
 
 async def acessar_por_codigo_turma(
@@ -56,6 +58,14 @@ async def perfil(conn: AsyncConnection, usuario_id: int) -> dict:
         "nivel_dificuldade_atual": prog.nivel_dificuldade_atual if prog else 1,
     }
 
+    # Meta da semana (§3.5): mesmo corte (segunda-feira) e mesmo default por
+    # ano que o painel do professor — aluno e professor leem o mesmo número.
+    meta_semanal = None
+    if p.turma_id:
+        config = await repo.meta_config_da_turma(conn, p.turma_id)
+        atual = await repo.dominadas_na_semana(conn, usuario_id, inicio_da_semana())
+        meta_semanal = {"atual": atual, "alvo": meta_efetiva(config, p.ano_escolar)}
+
     return {
         "usuario_id": p.usuario_id,
         "nome": p.nome,
@@ -67,4 +77,5 @@ async def perfil(conn: AsyncConnection, usuario_id: int) -> dict:
             else None
         ),
         "progresso": progresso,
+        "meta_semanal": meta_semanal,
     }

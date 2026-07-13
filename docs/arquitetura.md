@@ -712,7 +712,7 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | Método | Rota | Faz | Serviço |
 |---|---|---|---|
 | `POST` | `/v1/acesso/turma` | entra por `codigo_turma` → sessão do aluno | identidade |
-| `GET` | `/v1/me` | perfil + `aluno_progresso` (XP, nó, palavras dominadas) | progressao |
+| `GET` | `/v1/me` | perfil + `aluno_progresso` (XP, nó, palavras dominadas) + `meta_semanal` {atual, alvo} (§3.5; fatia C) | progressao |
 | `POST` | `/v1/onboarding/diagnostico` | roda/avança o diagnóstico → `nivel_dificuldade_atual` | diagnostico |
 | `POST` | `/v1/sessoes` | monta e abre uma sessão (fila de slots) | sessao |
 | `GET` | `/v1/sessoes/{id}/proximo` | próximo slot pendente (card ou questão) | sessao |
@@ -723,9 +723,9 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `POST` | `/v1/passaporte/{id}/revelado` | Modo Conquista tocou o item → marca revelado (idempotente) | trilha |
 | `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
 | `GET` | `/v1/redacoes` | tela mockada/estática (A) | redacao |
-| `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` · `/v1/professor/alunos/{id}` | painel do professor/coordenador + detalhe do aluno (mock A) | professor |
-| `POST` | `/v1/professor/turmas/{id}/redacoes` | atribuir redação à turma — tema + prazo (§4.6; mock A) | professor |
-| `PUT` | `/v1/professor/turmas/{id}/meta` | configurar meta semanal da turma (§3.5; mock A) | professor |
+| `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` · `/v1/professor/alunos/{id}` | painel do professor/coordenador + detalhe do aluno (**real na fatia C**: escopo por associação, §3.11) | professor |
+| `POST` | `/v1/professor/turmas/{id}/redacoes` | atribuir redação à turma — tema + prazo (§4.6; persiste `redacao_atribuicao`) | professor |
+| `PUT` | `/v1/professor/turmas/{id}/meta` | configurar meta semanal da turma (§3.5; persiste `turma_config`) | professor |
 
 A montagem da sessão é **server-side** e a entrega é **híbrida** (decisão #3 ao fim do
 bloco, **revisada em 10/06**): o cliente recebe a **fila planejada em lote** (renderiza +

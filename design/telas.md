@@ -278,10 +278,16 @@ Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
   - **Atribuir redação** — tema + prazo à turma (§4.6); é o gatilho da fonte
     pessoal do aluno (fecha o loop redação→vocabulário).
   - **Meta semanal** — configurar a meta da turma (§3.5; só professor configura).
-- **Dados (mock fatia A, todos já existem):** `GET /v1/professor/turmas`,
+- **Dados (reais desde 13/07 — fatia C):** `GET /v1/professor/turmas`,
   `GET /v1/professor/turmas/{id}/painel`, `GET /v1/professor/escola`,
-  `GET /v1/professor/alunos/{id}`, `POST /v1/professor/turmas/{id}/redacoes` e
-  `PUT /v1/professor/turmas/{id}/meta`. Viram reais na fatia C.
+  `GET /v1/professor/alunos/{id}`, `POST /v1/professor/turmas/{id}/redacoes`
+  (persiste `redacao_atribuicao`) e `PUT /v1/professor/turmas/{id}/meta`
+  (persiste `turma_config`). Escopo por associação (§3.11); meta com default
+  por ano quando não configurada; "semana" = segunda 00:00 (America/Sao_Paulo).
+  O **sinal de turma** lê a tabela real, populada só quando o pipeline de
+  redação (fatia C de redação) rodar. **Login do professor segue pendente**
+  (decisão com a escola cliente, produto §11) — o site roda em `DEMO`/token
+  gerado; por isso a seção continua sob "telas mockadas" só neste aspecto.
 - **Deferidos** (fast-follow pós-feedback das escolas): redações da turma
   agregadas por dimensão; preset de rigor de redação (§4.3).
 

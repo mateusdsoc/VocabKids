@@ -432,6 +432,46 @@ nome continua possível — decisão de produto pendente), LGPD/consentimento.
 
 ---
 
+## 🧑‍🏫 Fatia C do professor — dados reais + escopo (13/07)
+
+Os mocks de `app/professor/` viraram queries reais, **sem mudar contrato nem
+app** (o campo `mock` agora é sempre `false`). Estrutura padrão do domínio
+(rotas → serviço → repositório). Decisões desta fatia (com data):
+
+- **Semana da meta = segunda-feira 00:00 em America/Sao_Paulo**
+  (`progressao/semana.py`, regra pura). Aluno (Home via `/me`) e professor
+  (painel) leem o mesmo corte e o mesmo número.
+- **Meta default por ano** quando `turma_config.meta_semanal` é nula
+  (`progressao/meta.py`): 6º=4 · 7º=5 · 8º=6 · 9º=7 (fallback 5). Valores
+  **provisórios** (rampa que espelha a demo) — calibração pedagógica pendente:
+  simular contra o ritmo real (2 palavras novas/sessão, domínio em ~3+
+  sessões) antes do piloto.
+- **"Aluno ativo" = teve sessão iniciada na semana corrente** (KPI do painel).
+- **Status de redação na visão do professor**: sem envio → `pendente`;
+  `analisada` → `analisada`; o resto (`enviada`/`processando`/`erro_*`) →
+  `em_analise` (erro de pipeline é reprocesso interno, não estado que o
+  professor resolva).
+- **Escopo por associação (§3.11)**: professor enxerga/configura só as turmas
+  de `associacao_turma`; coordenador enxerga a escola inteira, só leitura;
+  fora do alcance → 403 `sem_permissao`. `/professor/escola` é o agregado da
+  própria escola (professor acessa pelo toggle turma↔escola).
+- **Persistência real**: `PUT meta` faz upsert em `turma_config`; `POST
+  redacoes` grava `redacao_atribuicao` com o professor autor. **Sinal de
+  turma** lê a tabela `sinal_turma` de verdade — vazia até o pipeline de
+  redação (fatia C de redação) rodar o job periódico.
+- **`/v1/me` ganhou `meta_semanal` {atual, alvo}** (aditivo). No app, o
+  `HomeMapper` trocou o placeholder fixo "6/10" pelo dado real (fallback 0/5
+  só se o aluno não tiver turma).
+- **Login do professor ficou de fora** (decisão do dono, 13/07): o fluxo
+  definitivo (SSO/magic link, produto §11) é da janela do 1º cliente. O site
+  do professor segue em `DEMO`; para exercitar o backend real, o token sai de
+  `python -m app.seed`.
+
+Deferidos desta superfície (sem mudança): redações agregadas por dimensão e
+preset de rigor (§4.3) — fast-follow pós-feedback.
+
+---
+
 ## 📱 Sensação de plataforma (camada adaptativa)
 
 Decisão: **manter o design system da marca** (neutro) e adaptar só os "tells" de

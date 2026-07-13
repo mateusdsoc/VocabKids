@@ -35,6 +35,14 @@ class ProgressoOut(BaseModel):
     nivel_dificuldade_atual: int
 
 
+class MetaSemanalOut(BaseModel):
+    """Meta da semana (§3.5): dominadas desde segunda-feira sobre o alvo da
+    turma (config do professor ou default por ano). Mesmo corte do painel."""
+
+    atual: int
+    alvo: int
+
+
 class MeOut(BaseModel):
     usuario_id: int
     nome: str
@@ -42,3 +50,4 @@ class MeOut(BaseModel):
     escola: EscolaOut | None
     turma: TurmaOut | None
     progresso: ProgressoOut
+    meta_semanal: MetaSemanalOut | None  # nula sem turma (não há meta sem turma)

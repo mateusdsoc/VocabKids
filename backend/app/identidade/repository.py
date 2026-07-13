@@ -111,6 +111,20 @@ async def buscar_perfil(conn: AsyncConnection, usuario_id: int) -> Row | None:
     return (await conn.execute(stmt)).first()
 
 
+async def meta_config_da_turma(conn: AsyncConnection, turma_id: int) -> int | None:
+    tc = schema.turma_config
+    stmt = select(tc.c.meta_semanal).where(tc.c.turma_id == turma_id)
+    return (await conn.execute(stmt)).scalar_one_or_none()
+
+
+async def dominadas_na_semana(conn: AsyncConnection, usuario_id: int, inicio) -> int:
+    ap = schema.aluno_palavra
+    stmt = select(func.count()).where(
+        ap.c.usuario_id == usuario_id, ap.c.dominada_em >= inicio
+    )
+    return (await conn.execute(stmt)).scalar_one()
+
+
 async def buscar_progresso(conn: AsyncConnection, usuario_id: int) -> Row | None:
     p = schema.aluno_progresso
     stmt = select(

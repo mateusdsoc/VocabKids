@@ -70,6 +70,8 @@ async def test_me_fluxo_completo(client):
     assert me["escola"]["nome"] == "Escola Demonstração"
     assert me["progresso"]["xp_total"] == 0
     assert me["progresso"]["nivel_dificuldade_atual"] == 1
+    # Meta da semana: aluno novo, nada dominado; alvo = default do 7º ano.
+    assert me["meta_semanal"] == {"atual": 0, "alvo": 5}
 
 
 @pytest.mark.asyncio

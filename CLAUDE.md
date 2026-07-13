@@ -79,10 +79,11 @@ Cada domínio é uma pasta-irmã em `backend/app/` com camadas
 SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 
 - Domínios: `identidade`, `vocabulario`, `sessao`, `diagnostico`, `trilha`,
-  `progressao` (regras puras de XP/combo), `adaptacao` (regra pura de nível),
-  e os **mocks da fatia A**: `report`, `redacao`, `professor` (devolvem dados
-  fixos; viram reais na fatia C sem mudar contratos — cada rota tem
-  `TODO fatia C`).
+  `progressao` (regras puras de XP/combo, semana letiva e meta default),
+  `adaptacao` (regra pura de nível), `professor` (**real desde 13/07**:
+  queries + escopo por associação; login do professor pendente) e os
+  **mocks restantes da fatia A**: `report`, `redacao` (viram reais depois sem
+  mudar contratos).
 - **Schema único** em `app/schema.py` (25 tabelas, SQLAlchemy Core) — fonte
   tanto das migrations quanto do `create_all` dos testes. Tabelas da fatia C
   já existem (vazias no apresentável). PK `BIGINT IDENTITY`; enums via
@@ -90,7 +91,8 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 - **Auth**: entrada por `codigo_turma`; sessão em **JWT HS256 com expiração**
   (`app/identidade/auth.py` — exige `JWT_SECRET` no ambiente, gere com
   `openssl rand -hex 32`; TTL via `JWT_TTL_HORAS`). Rotas do professor exigem
-  papel (`require_papel`; escopo por associação é fatia C). **Rate limiting**
+  papel (`require_papel`) e **escopo por associação** (professor só nas suas
+  turmas; coordenador só-leitura na escola). **Rate limiting**
   em memória (`app/seguranca/rate_limit.py`) e **CORS explícito** via
   `CORS_ORIGINS` (nunca `*`) em `app/main.py`. No app, o token vive em
   `flutter_secure_storage` (`core/token_store.dart`).
@@ -117,10 +119,11 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   mutações em `AsyncNotifier`). `AppConfig.demo` serve dados `*.sample` sem
   backend.
 - Estado atual do wiring: **o app do aluno consome o backend real de ponta a
-  ponta** — auth, Home, Sessão→Resumo, Passaporte (coleção e Modo Conquista),
-  mapa da Trilha (janela por destino) e diagnóstico do onboarding. A
-  superfície do **professor** segue mock (fatia C: dados reais + papel/escopo).
-  Estado detalhado e próximos passos em `HANDOFF.md`.
+  ponta** — auth, Home (incl. meta semanal real do `/me`), Sessão→Resumo,
+  Passaporte (coleção e Modo Conquista), mapa da Trilha (janela por destino) e
+  diagnóstico do onboarding. O **backend do professor é real** (fatia C), mas o
+  **site** do professor ainda roda em `DEMO` — falta o login do professor
+  (decisão de produto pendente). Estado e próximos passos em `HANDOFF.md`.
 
 ## Mapa dos documentos
 

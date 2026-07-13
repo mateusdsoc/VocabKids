@@ -43,3 +43,40 @@ def test_pontuar_continua_o_combo_da_sessao():
     r = xp.pontuar(correto=True, tentativa=1, combo_atual=9)
     assert r.combo == 10
     assert r.xp == 100 + (18 + 2 * 10)  # 138
+
+
+# ─────────────────── semana letiva e meta (§3.5) — regras puras ───────────────────
+
+from datetime import datetime, timezone
+
+from app.progressao.meta import META_DEFAULT, meta_efetiva
+from app.progressao.semana import FUSO_ESCOLA, inicio_da_semana
+
+
+def test_inicio_da_semana_e_segunda_a_meia_noite_no_fuso_da_escola():
+    # Quinta-feira 16/07/2026 15h em São Paulo → segunda 13/07 00:00.
+    quinta = datetime(2026, 7, 16, 15, 0, tzinfo=FUSO_ESCOLA)
+    inicio = inicio_da_semana(quinta)
+    assert inicio == datetime(2026, 7, 13, 0, 0, tzinfo=FUSO_ESCOLA)
+    # Segunda 00:00 é o próprio corte (não volta uma semana).
+    assert inicio_da_semana(inicio) == inicio
+
+
+def test_inicio_da_semana_converte_fusos():
+    # Terça 00:30 UTC ainda é segunda 21:30 em São Paulo → corte é a MESMA segunda.
+    terca_utc = datetime(2026, 7, 14, 0, 30, tzinfo=timezone.utc)
+    assert inicio_da_semana(terca_utc) == datetime(
+        2026, 7, 13, 0, 0, tzinfo=FUSO_ESCOLA
+    )
+
+
+def test_meta_efetiva_config_vence_default():
+    assert meta_efetiva(12, 7) == 12
+
+
+def test_meta_efetiva_default_por_ano():
+    assert meta_efetiva(None, 6) == 4
+    assert meta_efetiva(None, 7) == 5
+    assert meta_efetiva(None, 8) == 6
+    assert meta_efetiva(None, 9) == 7
+    assert meta_efetiva(None, None) == META_DEFAULT
