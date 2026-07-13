@@ -60,7 +60,18 @@ class ApiClient {
       throw ApiException.network(e);
     }
 
-    final decoded = res.body.isEmpty ? null : jsonDecode(res.body);
+    final dynamic decoded;
+    try {
+      decoded = res.body.isEmpty ? null : jsonDecode(res.body);
+    } on FormatException {
+      // Corpo não-JSON (ex.: HTML de um 502 de proxy) — vira erro de API
+      // legível em vez de uma FormatException crua na UI.
+      throw ApiException(
+        statusCode: res.statusCode,
+        code: 'resposta_invalida',
+        message: 'Resposta inesperada do servidor (HTTP ${res.statusCode}).',
+      );
+    }
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return decoded;
     }
