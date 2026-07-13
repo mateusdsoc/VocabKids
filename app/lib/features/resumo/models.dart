@@ -5,6 +5,8 @@
 /// com o backend troque só a fonte, não os widgets.
 library;
 
+import 'dart:ui' show clampDouble;
+
 import '../passaporte/models.dart';
 
 /// Como uma palavra trabalhada na sessão evoluiu.
@@ -63,6 +65,7 @@ class SessionSummary {
     required this.words,
     this.combo,
     this.achievement,
+    this.noCompletado = false,
   });
 
   final String city;
@@ -87,8 +90,16 @@ class SessionSummary {
   /// Item novo no Passaporte; `null` → resumo padrão (sem conquista).
   final SummaryAchievement? achievement;
 
-  double get baseFraction => xpTarget == 0 ? 0 : xpFrom / xpTarget;
-  double get gainFraction => xpTarget == 0 ? 0 : xpTo / xpTarget;
+  /// A sessão cruzou o teto de XP do nó da trilha ("completar nó", 3.7) —
+  /// gatilho real da animação de chegada ao aterrissar na Trilha.
+  final bool noCompletado;
+
+  // Clampadas: quando um nó da trilha é cruzado no meio da sessão, o XP passa
+  // do teto capturado na abertura — a barra satura em cheia, sem estourar.
+  double get baseFraction =>
+      xpTarget == 0 ? 0 : clampDouble(xpFrom / xpTarget, 0, 1);
+  double get gainFraction =>
+      xpTarget == 0 ? 0 : clampDouble(xpTo / xpTarget, 0, 1);
 
   /// Exemplo que espelha os frames do design (Rio · Lição 3).
   static const SessionSummary sample = SessionSummary(
@@ -113,6 +124,7 @@ class SessionSummary {
   );
 
   /// Mesmo exemplo, com o teaser do cartão-postal do Rio (frame 2/4).
+  /// `noCompletado`: a demo sempre celebra a chegada na Trilha (design).
   static const SessionSummary sampleWithAchievement = SessionSummary(
     city: 'Rio de Janeiro',
     lesson: 3,
@@ -122,6 +134,7 @@ class SessionSummary {
     xpFrom: 3120,
     xpTo: 3600,
     xpTarget: 4500,
+    noCompletado: true,
     words: [
       WordProgress(word: 'vasto', change: WordChange.dominated),
       WordProgress(

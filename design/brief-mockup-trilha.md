@@ -19,7 +19,15 @@ A **Trilha (mapa)** (produto 3.7): aterrissagem ao **sair de uma sessão**. Mapa
 visual da jornada — nó atual em destaque, concluído e o que vem, agrupado por
 **país → destino**. Fundamental II (~11–14), celular retrato, PT-BR, mockup HTML/CSS.
 Jornada: **3 países → 20 destinos → 80 nós** (~4.500 XP/nó). Mostre um recorte
-navegável (país atual + começo do próximo), não os 80 nós.
+navegável, não os 80 nós.
+
+> **Formalizado (decisão 12/07): janela com template fixo.** O recorte é
+> **um destino por vez**, sobre o template travado de posições (340×540):
+> âncora de contexto na base (início da jornada ou marco do destino
+> anterior) → os 4 nós do destino (3 fichas comuns + o **marco**, medalhão
+> que rende o postal) → no topo, prévia do próximo destino ou **portão +
+> faixa de fronteira** quando o destino fecha o país. Navegação lateral por
+> swipe ou chevrons ao lado do carimbo do país; abre na janela do nó atual.
 
 ---
 

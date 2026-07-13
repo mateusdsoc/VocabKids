@@ -111,6 +111,8 @@ async def test_aluno_novo_recebe_fila_com_cards_e_questoes(client, aluno):
     assert slots[0]["tipo"] == "card"          # cards agrupados no início
     assert len(_cards(slots)) >= 2             # ao menos 2 palavras novas
     assert len(_questoes(slots)) >= 6          # ~N1/N2/N3 das novas
+    # Toda questão identifica a palavra trabalhada (o app destaca/rotula por ela).
+    assert all(s["lema"] for s in _questoes(slots))
     # Nunca vaza a resposta correta (cliente fino).
     assert "resposta_correta" not in r.text
 

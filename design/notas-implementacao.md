@@ -298,20 +298,92 @@ dono (15/06):
 
 ---
 
-## 🔌 Pendências de backend (cliente fino)
+## 🔌 Wiring app ↔ backend — Sessão server-side (05/07)
 
-A Sessão hoje roda com `sampleSession` (dados de exemplo). O backend já expõe
-tudo o que a tela precisa — falta o **wiring no app**:
-- [ ] `POST /v1/sessoes` (montar a fila — entrega híbrida, sem vazar resposta).
-- [ ] `GET /v1/sessoes/{id}/proximo` (**implementado no backend em 10/06**).
-- [ ] `POST /v1/sessoes/{id}/respostas` (correção **server-side** → XP/combo/estado).
-      Hoje a correção é local (demo); o servidor será autoritativo.
-- [ ] `POST /v1/questoes/{id}/report` (mock na fatia A).
-- [ ] **Re-queue do erro** (decisão #3 **revisada em 10/06**): a intercalação é
-      **server-side** — a fila persiste em `sessao.fila` e volta reordenada em
-      cada `POST /respostas` (`fila`/`proximo`). O app só renderiza a ordem
-      recebida (nada de reimplementar a regra no Dart). No wiring, trocar o
-      "só avança" da demo por consumir `fila`.
+A Sessão do aluno agora consome o backend de verdade (fora de `DEMO`), no
+mesmo padrão da Home: **DTOs → `SessaoMapper` → `SessaoController`
+(AsyncNotifier)**; a tela guarda só estado efêmero (seleção, popover).
+
+- [x] `POST /v1/sessoes` — fila em lote na abertura; em paralelo, `GET
+      /v1/trilha` captura o contexto do Resumo (cidade/lição/teto de XP do nó
+      **jogado**, mesmo que um nó seja cruzado no meio).
+- [x] `POST /v1/sessoes/{id}/respostas` — correção server-side; o app rende a
+      `fila` devolvida (re-queue do erro incluído — **nada** da regra vive no
+      Dart). Trava anti toque-duplo enquanto a resposta viaja.
+- [x] `POST /v1/sessoes/{id}/fim` — fecha e monta o Resumo com números do
+      servidor; progresso por palavra acumulado das respostas
+      (`estado_palavra`/`dominou` — apresentação, não cálculo).
+- [x] `POST /v1/questoes/{id}/report` — popover ligado (melhor esforço; os
+      rótulos do brief mapeiam para o enum do contrato, "erro de digitação" cai
+      em `outro`).
+- [x] **Backend:** `QuestaoSlot` ganhou `lema` (aditivo) — o app destaca a
+      palavra no enunciado, reabre o card no 2º erro e rotula o Resumo (palavra
+      de revisão não tem card na fila).
+- [x] Recompensas de `respostas` → `ConquistaQueue` (cartão-postal resolvido
+      pelo snapshot da trilha) + teaser no Resumo.
+- [x] Erros com recuperação: falha de rede mantém a seleção e deixa tentar de
+      novo; `409` na resposta = sessão dessincronizada → abre sessão nova;
+      `409 sessao_encerrada` no `/fim` = já fechou → volta à origem.
+- [ ] **Card de revisão para palavra de revisão** (sem card na fila): buscar
+      via `GET /v1/palavras/{id}` no 2º erro — hoje o interstício simplesmente
+      não abre (paridade com a demo).
+- [ ] **Resiliência offline fina** (re-sync via `GET /proximo` após resposta
+      perdida) — hoje a saída é sessão nova via 409, sem perder progresso salvo.
+- [ ] **Classe gramatical** no card de descoberta: o banco base não a expõe —
+      a linha fica oculta (`partOfSpeech` nulo). Adicionar ao conteúdo depois.
+
+## 🔌 Wiring app ↔ backend — Passaporte + Modo Conquista (06/07)
+
+O Passaporte agora é a coleção real do aluno, e a fila de reveals é
+**persistida no servidor** (fecha o app, volta amanhã, o reveal ainda toca).
+
+- [x] **Backend:** `aluno_colecionavel.revelado_em` (migration linear) +
+      `revelado` no `ItemPassaporteOut` + `POST /v1/passaporte/{id}/revelado`
+      (idempotente). `RecompensaOut` ganhou `colecionavel_id` para o app
+      persistir o reveal vindo do teaser do Resumo.
+- [x] **Coleção real:** `PassaporteMapper` monta capa/países/selos de
+      `/me` + `/trilha` + `/passaporte` (nomes de cidade/país da trilha;
+      título/descrição/ícone dos selos são **catálogo do cliente**).
+- [x] **Fila de conquistas espelhando o servidor:** pendente =
+      `conquistado && !revelado`, em ordem de ganho; ao abrir o Passaporte a
+      fila local é **substituída** pela do servidor (dedupe por definição).
+      Cada reveal dispara `POST /revelado` (melhor esforço — reveal nunca
+      trava por rede; falha rara = repete na próxima abertura).
+- [x] **Reveal de carimbo** (decisão 06/07): variante nova no Modo Conquista
+      **compondo peças travadas** (widget `Carimbo` da coleção + a mesma
+      coreografia blur→brilhos→encaixe do postal). Selo já tinha grid; agora
+      entra pela fila do Passaporte (o grid precisa da coleção).
+- [x] **Celebração real na Trilha:** `SessionSummary.noCompletado` (XP da
+      sessão cruzou o teto do nó) → o Resumo só passa `celebrarChegada`
+      quando o nó de fato fechou (antes: sempre, por demo).
+- [x] **Mapa da Trilha com dados reais — janela com template fixo (decisão
+      do dono, 12/07).** Os 20 destinos/80 nós **não** ganham layout
+      procedural: o template travado (340×540) é reutilizado **por destino**
+      — a "câmera" enquadra uma janela e swipe/chevrons (ao lado do carimbo
+      do país) trocam de destino; abre na janela do nó atual. Gramática da
+      janela (de baixo p/ cima): âncora (início ou marco do destino
+      anterior) → nós 1..3 (fichas comuns) → nó 4 = **marco** (medalhão do
+      destino) → prévia do próximo destino, ou **portão + fronteira** quando
+      o destino fecha o país. `TrilhaMapper` (puro, com testes) traduz
+      `/v1/trilha`; `trilhaProvider` (autoDispose) refaz o GET a cada volta.
+      Ajustes no widget: aside "Continuar" segue o flag `cta` (o nó atual
+      real pode ser comum, não só medal) e muda de lado quando falta espaço;
+      o painter aceita janelas sem nó atual (passado/futuro). O medidor do
+      `CountryStamp` virou o `ProgressBar` do core (o artesanal colapsava a
+      altura e nunca pintava). Docs atualizados juntos: `design/telas.md`
+      §6 e `design/brief-mockup-trilha.md`.
+- [x] **Diagnóstico do onboarding real (12/07).** Aluno **novo** (`novo` do
+      `/acesso/turma`) entra pelo gate (`main.dart:_Gate`) no Onboarding antes
+      da Home, via `onboardingPendenteProvider` (estado de sessão de app, não
+      persiste — quem fecha o app no meio começa no nível padrão e a adaptação
+      corrige). O passo 4 (`_DiagnosticoReal` em `onboarding_screen.dart`)
+      dialoga com `POST /v1/onboarding/diagnostico` via `DiagnosticoController`
+      (`AsyncNotifier` autoDispose): o `estado` da escada é **opaco** — o app
+      reenvia verbatim; correção e nível são do servidor. DTOs em
+      `onboarding/data/`. As questões de `diagnostico_data.dart` ficam só p/
+      o `DEMO`. Verificado: escada subiu com acertos → `nivel=9` persistido.
+- [ ] **Badge "novidades" no avatar** (Home) via `ConquistaQueue.listenable` —
+      opcional, pós-feedback.
 
 ### Home — campos ainda não expostos pela API (ver `HomeMapper`)
 - [ ] **Meta semanal** (palavras dominadas/semana) — placeholder 6/10. A meta
@@ -371,14 +443,25 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
 ---
 
 ## ▶️ Próximo passo sugerido
-**Superfície do Professor (web)** — telas A–D **completas** (fases 0–5); resta a
-**verificação visual claro/escuro** da fase 6 (precisa de Chrome/SDK; comandos no
-HANDOFF). Depois dela, **wiring com o backend** (`/v1/sessoes` na Sessão; fila de
-conquistas via `/v1/passaporte`; gatilho real do "completar nó" na Trilha) e a
-**fatia C** do professor (persistir meta/atribuição, exigir papel+escopo). As
-animações do contrato estão todas implementadas; TTS saiu do MVP (11/06).
+**Wiring do aluno COMPLETO (12/07):** Sessão (05/07), Passaporte (06/07),
+Trilha (12/07 — janela com template fixo) e **diagnóstico do onboarding
+(12/07)**. O diagnóstico real: aluno **novo** (`novo` do `/acesso/turma`)
+entra pelo gate no Onboarding; o passo 4 dialoga com
+`POST /v1/onboarding/diagnostico` via `DiagnosticoController` (estado da
+escada é **opaco** — o app reenvia verbatim; correção e nível são do
+servidor). "Pular"/concluir desligam a pendência da sessão de app (não
+persiste de propósito: fechar o app no meio deixa o nível padrão e a
+adaptação corrige — filosofia "diagnóstico leve + adaptação forte").
+Verificado em runtime: aluno novo → escada subiu com acertos →
+`nivel_dificuldade_atual: 9` persistido → Home. Na sequência: **fatia C**
+do professor (persistir meta/atribuição, exigir papel+escopo) e o trio de
+segurança (auth real, rate limiting, CORS). TTS fora do MVP (11/06).
 
-> **Diagnóstico (conteúdo):** a etapa já roda como mini-quiz com **questões de
-> exemplo** (`diagnostico_data.dart`); falta a **revisão pedagógica** com um
-> professor para virar conteúdo real, e o wiring com a escada do backend
-> (`POST /v1/onboarding/diagnostico`).
+> **Diagnóstico (conteúdo) — decisão do dono (12/07):** a **revisão
+> pedagógica** das questões com um professor **não é preocupação agora** —
+> fica deliberadamente adiada até a preparação do piloto com alunos reais.
+> As questões do seed seguem como conteúdo de exemplo válido para demo.
+
+> **Seed de palavras — decisão do dono (12/07):** a expansão do banco base
+> (hoje 8 palavras; a 2ª sessão esgota o vocabulário novo) fica **postergada
+> por alguns dias**. Retomar antes de demo a escolas.

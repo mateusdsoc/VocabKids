@@ -114,16 +114,17 @@ class ResumoScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _Footer(
-                  // Vindo do Resumo, a Trilha celebra a chegada ao nó
-                  // (completar nó: trecho se desenha + pin pipoca + confete).
+                  // A Trilha celebra a chegada só quando a sessão de fato
+                  // cruzou o teto do nó (completar nó: trecho se desenha +
+                  // pin pipoca + confete) — gatilho real vindo do servidor.
                   // `pushAndRemoveUntil` até a Home: remove o Resumo **e** uma
                   // eventual Trilha anterior (quando a sessão começou na Trilha),
                   // deixando a pilha [Home, Trilha] — sem Trilha duplicada presa
                   // atrás, que obrigava a tocar "Início"/voltar duas vezes.
                   onTrilha: () => Navigator.of(context).pushAndRemoveUntil(
                     adaptivePageRoute(
-                        builder: (_) =>
-                            const TrilhaScreen(celebrarChegada: true)),
+                        builder: (_) => TrilhaScreen(
+                            celebrarChegada: summary.noCompletado)),
                     (r) => r.isFirst || r.settings.name == HomeScreen.routeName,
                   ),
                 ),

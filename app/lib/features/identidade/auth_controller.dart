@@ -39,13 +39,21 @@ class AuthController extends AsyncNotifier<Me?> {
     }
   }
 
-  /// Entra por código de turma e carrega o perfil.
+  /// Entra por código de turma e carrega o perfil. Aluno criado agora
+  /// (`novo` do acesso) marca o onboarding como pendente — o gate o mostra
+  /// antes da Home.
   Future<void> entrar({required String codigoTurma, required String nome}) async {
     state = const AsyncValue.loading();
+    var novo = false;
     state = await AsyncValue.guard(() async {
-      await _repo.acessarPorTurma(codigoTurma: codigoTurma, nome: nome);
+      final acesso =
+          await _repo.acessarPorTurma(codigoTurma: codigoTurma, nome: nome);
+      novo = acesso.novo;
       return _repo.me();
     });
+    if (novo && state.hasValue) {
+      ref.read(onboardingPendenteProvider.notifier).marcar();
+    }
   }
 
   Future<void> sair() async {
@@ -56,3 +64,20 @@ class AuthController extends AsyncNotifier<Me?> {
 
 final authControllerProvider =
     AsyncNotifierProvider<AuthController, Me?>(AuthController.new);
+
+/// Onboarding pendente **nesta sessão de app**: `true` logo após criar a
+/// conta (`novo` do `/acesso/turma`); o fim do onboarding (ou o "Pular")
+/// desliga. Não persiste de propósito: o `/me` não expõe "fez o diagnóstico",
+/// e a filosofia é "diagnóstico leve + adaptação forte" — quem fechar o app
+/// no meio começa no nível padrão e a adaptação corrige.
+class OnboardingPendente extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void marcar() => state = true;
+
+  void concluir() => state = false;
+}
+
+final onboardingPendenteProvider =
+    NotifierProvider<OnboardingPendente, bool>(OnboardingPendente.new);

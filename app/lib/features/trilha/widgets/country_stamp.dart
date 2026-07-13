@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/progress_bar.dart';
 import '../models.dart';
 
 /// Cabeçalho do país (variação "carimbo champanhe" da v5): nome do país em
@@ -62,28 +63,16 @@ class CountryStamp extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(5),
-                      child: Container(
-                        height: 8,
-                        color: Color.alphaBlend(
-                            c.accent.withValues(alpha: 0.22), paper),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: FractionallySizedBox(
-                            widthFactor: country.fraction.clamp(0.0, 1.0),
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(5),
-                                gradient: LinearGradient(colors: [
-                                  c.goal,
-                                  Color.lerp(c.goal, Colors.white, 0.45)!,
-                                ]),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                    // O ProgressBar do core (mesmo trilho/raio das demais
+                    // barras) no lugar do medidor artesanal, que colapsava
+                    // a altura 0 e nunca pintava o preenchimento.
+                    child: ProgressBar(
+                      value: country.fraction,
+                      color: c.goal,
+                      trackColor: Color.alphaBlend(
+                          c.accent.withValues(alpha: 0.22), paper),
+                      height: 8,
+                      gradient: true,
                     ),
                   ),
                   const SizedBox(width: 8),

@@ -17,11 +17,28 @@ import '../../core/widgets/app_icons.dart';
 
 enum Pais { brasil, franca, japao }
 
+/// Resolve o enum a partir do nome vindo do servidor (`/v1/trilha`).
+/// `null` para nomes fora do catálogo fixo do produto (3 países).
+Pais? paisDe(String nome) {
+  final n = nome.toLowerCase();
+  if (n.startsWith('brasil')) return Pais.brasil;
+  if (n.startsWith('fran')) return Pais.franca;
+  if (n.startsWith('jap')) return Pais.japao;
+  return null;
+}
+
 extension PaisX on Pais {
   String get nome => switch (this) {
         Pais.brasil => 'Brasil',
         Pais.franca => 'França',
         Pais.japao => 'Japão',
+      };
+
+  /// Nome com preposição, para títulos ("Carimbo do Brasil" / "da França").
+  String get comPreposicao => switch (this) {
+        Pais.brasil => 'do Brasil',
+        Pais.franca => 'da França',
+        Pais.japao => 'do Japão',
       };
 
   /// Inicial usada no miolo do carimbo quando não há arte.
@@ -95,11 +112,16 @@ class Capa {
 }
 
 /// Item recém-conquistado — alimenta o **Modo Conquista** (reveal que dispara
-/// uma única vez, após o Resumo). Com o backend, virá no retorno de
-/// `POST /v1/sessoes/{id}/fim`; aqui, o shape que a tela precisa, com amostras
-/// para a fatia A.
+/// uma única vez). Vem das recompensas de `POST /respostas` (caminho quente,
+/// via `SessaoMapper`) e da fila pendente de `GET /v1/passaporte`
+/// (`conquistado && !revelado`, via `PassaporteMapper`).
 sealed class Conquista {
-  const Conquista();
+  const Conquista({this.colecionavelId});
+
+  /// Id do colecionável no servidor — o reveal persiste o "visto" por ele
+  /// (`POST /v1/passaporte/{id}/revelado`). Nulo nas amostras/demo e quando a
+  /// recompensa chegou sem correspondência na coleção (só não persiste).
+  final int? colecionavelId;
 
   /// Amostra: o cartão-postal do Rio (casa com o teaser do Resumo).
   static const Conquista sampleRio = ConquistaPostal(
@@ -148,15 +170,30 @@ sealed class Conquista {
 
 /// Cartão-postal novo (destino concluído): 1 por página, só ele anima.
 class ConquistaPostal extends Conquista {
-  const ConquistaPostal({required this.destino, required this.pais});
+  const ConquistaPostal({
+    required this.destino,
+    required this.pais,
+    super.colecionavelId,
+  });
   final Destino destino;
+  final Pais pais;
+}
+
+/// Carimbo novo (país concluído): o carimbo bate na página, embaçado até o
+/// toque — mesma coreografia do postal, com o widget [Carimbo] da coleção.
+class ConquistaCarimbo extends Conquista {
+  const ConquistaCarimbo({required this.pais, super.colecionavelId});
   final Pais pais;
 }
 
 /// Selo novo (feito): grid com os antigos estáticos; só [novoIndex] anima
 /// (cai, pulsa e encaixa).
 class ConquistaSelo extends Conquista {
-  const ConquistaSelo({required this.todos, required this.novoIndex});
+  const ConquistaSelo({
+    required this.todos,
+    required this.novoIndex,
+    super.colecionavelId,
+  });
 
   /// O grid completo, na ordem de exibição.
   final List<Selo> todos;

@@ -31,6 +31,7 @@ class QuestaoSlot(BaseModel):
     tipo: Literal["questao"] = "questao"
     questao_id: int
     palavra_id: int
+    lema: str  # palavra trabalhada — o app destaca no enunciado e rotula o resumo
     nivel: int
     is_revisao: bool
     enunciado: str

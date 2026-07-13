@@ -16,7 +16,9 @@ class ReportPopover extends StatelessWidget {
 
   final List<String> reasons;
   final VoidCallback onClose;
-  final ValueChanged<String> onSelect;
+
+  /// Recebe o índice do motivo em [reasons] (o chamador mapeia para o código).
+  final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +64,7 @@ class ReportPopover extends StatelessWidget {
                 const SizedBox(height: 9),
                 for (var i = 0; i < reasons.length; i++) ...[
                   if (i > 0) Divider(height: 1, thickness: 1, color: c.line),
-                  _ReasonItem(text: reasons[i], onTap: () => onSelect(reasons[i])),
+                  _ReasonItem(text: reasons[i], onTap: () => onSelect(i)),
                 ],
               ],
             ),

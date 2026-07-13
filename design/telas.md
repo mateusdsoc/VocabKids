@@ -198,6 +198,14 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
   própria trilha já comunica a posição pelo progresso); nós do destino;
   agrupamento por **destino** e **país**; próximo nó/destino.
   Estrutura: **País → Destino → Nó** (3 países, 20 destinos, 80 nós).
+- **Layout (decisão 12/07): janela com template fixo.** O espaço desenhado
+  (340×540) mostra **um destino por vez**: âncora de contexto embaixo (início
+  da jornada ou marco do destino anterior), os 4 nós do destino (3 comuns +
+  o **marco**, medalhão que rende o postal) e, no topo, a prévia do próximo
+  destino — ou o **portão + faixa de fronteira** quando o destino fecha o
+  país. **Navegação lateral** (swipe ou chevrons ao lado do carimbo do país)
+  troca de janela; a tela abre na janela do nó atual. Nunca se renderizam os
+  80 nós de uma vez.
 - **Estados:** **completar nó** → animação (marcador avança + confete), sem item.
   **Completar destino** → cartão-postal (revelado no Passaporte). **Completar
   país** → carimbo (idem). **Modo livre** ao terminar os 3 países (mapa fica no

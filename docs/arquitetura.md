@@ -105,7 +105,7 @@ Não há tabela "sessão de questões fixa"; a sessão é montada na hora.
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
 | `aluno_progresso` | `usuario_id→usuario` (PK), `xp_total`, `no_atual_id→trilha_no`, `palavras_dominadas` (contador), `combo_atual`, `nivel_dificuldade_atual` (1–10), `sessoes_total` (int), `nivel_mudou_em_sessao` (int, nullable) | 1:1 com aluno. `combo` é **por sessão** (decidido 10/06): zera ao **iniciar cada sessão** e ao errar/2ª tentativa (seção 3.7) — não carrega entre sessões (sem `combo_data`). `nivel_dificuldade_atual` = faixa do banco base para o aluno (diagnóstico + adaptação, Bloco 2a). `sessoes_total` = contador p/ timing do N4 e janela de adaptação. `nivel_mudou_em_sessao` = cooldown da histerese da adaptação. | A |
-| `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em` | Até 28 por aluno (passaporte: 20 cartões + 3 carimbos + 5 selos — seção 3.10 / `referencia_arte.md`). Booleano (ganhou/não). | A |
+| `aluno_colecionavel` | `usuario_id→usuario`, `colecionavel_id→colecionavel`, `ganho_em`, `revelado_em` (nullable) | Até 28 por aluno (passaporte: 20 cartões + 3 carimbos + 5 selos — seção 3.10 / `referencia_arte.md`). `revelado_em` nulo = pendente do Modo Conquista (o reveal dispara 1×). | A |
 
 > **XP de evento** (seção 3.9) é uma economia separada e **pós-MVP** — não modelado
 > aqui; entra junto de `evento_competicao`/`participacao` quando eventos entrarem.
@@ -719,7 +719,8 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `POST` | `/v1/sessoes/{id}/respostas` | registra resposta → XP/combo, avanço de estado, intercalação | sessao+progressao |
 | `POST` | `/v1/sessoes/{id}/fim` | fecha sessão → resumo + roda adaptação | sessao+adaptacao |
 | `GET` | `/v1/trilha` | mapa: nó atual, destinos, "você está aqui" | trilha |
-| `GET` | `/v1/passaporte` | coleção (até 28), modos Conquista/Exploração | trilha |
+| `GET` | `/v1/passaporte` | coleção (até 28) + pendentes de reveal (`conquistado && !revelado`) | trilha |
+| `POST` | `/v1/passaporte/{id}/revelado` | Modo Conquista tocou o item → marca revelado (idempotente) | trilha |
 | `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
 | `GET` | `/v1/redacoes` | tela mockada/estática (A) | redacao |
 | `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` · `/v1/professor/alunos/{id}` | painel do professor/coordenador + detalhe do aluno (mock A) | professor |

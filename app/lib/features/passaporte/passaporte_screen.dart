@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
+import '../../core/widgets/primary_button.dart';
 import 'conquista_queue.dart';
 import 'conquista_screen.dart';
-import 'models.dart';
+import 'passaporte_providers.dart';
 import 'variants/journal_view.dart';
 import 'widgets/passaporte_background.dart';
 
@@ -14,24 +16,27 @@ import 'widgets/passaporte_background.dart';
 /// (carimbos, cartões-postais, selos) na direção **Caderno de Viagem** (escolha
 /// do dono). O Modo Conquista (reveal) vive em `conquista_screen.dart`.
 ///
-/// Ao abrir, **drena a fila de conquistas pendentes** ([ConquistaQueue]): se o
-/// aluno terminou sessões e não tocou "Ver no Passaporte", os reveals tocam
-/// aqui (um de cada vez) antes de mostrar a coleção.
-class PassaporteScreen extends StatefulWidget {
-  const PassaporteScreen({super.key, this.passaporte = Passaporte.sample});
-
-  final Passaporte passaporte;
+/// A coleção vem do servidor ([passaporteProvider]; em `DEMO`, a amostra). Ao
+/// carregar, **drena a fila de conquistas pendentes** — a pendência real do
+/// servidor (`conquistado && !revelado`): se o aluno terminou sessões e não
+/// tocou "Ver no Passaporte" (mesmo em outro dia), os reveals tocam aqui, um
+/// de cada vez, antes de mostrar a coleção.
+class PassaporteScreen extends ConsumerStatefulWidget {
+  const PassaporteScreen({super.key});
 
   @override
-  State<PassaporteScreen> createState() => _PassaporteScreenState();
+  ConsumerState<PassaporteScreen> createState() => _PassaporteScreenState();
 }
 
-class _PassaporteScreenState extends State<PassaporteScreen> {
-  @override
-  void initState() {
-    super.initState();
+class _PassaporteScreenState extends ConsumerState<PassaporteScreen> {
+  /// O reveal dispara uma única vez por abertura (não repete ao voltar dele).
+  bool _drenou = false;
+
+  void _drenarFila() {
+    if (_drenou) return;
+    _drenou = true;
     // Pós-frame: empurra o Modo Conquista por cima desta tela (que fica
-    // pronta por baixo). Só uma vez — initState não repete ao voltar do reveal.
+    // pronta por baixo).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final fila = ConquistaQueue.instance.pendentes;
@@ -46,6 +51,9 @@ class _PassaporteScreenState extends State<PassaporteScreen> {
     final overlay = Theme.of(context).brightness == Brightness.dark
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
+    final carregado = ref.watch(passaporteProvider);
+
+    if (carregado.hasValue) _drenarFila();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay.copyWith(statusBarColor: Colors.transparent),
@@ -59,12 +67,50 @@ class _PassaporteScreenState extends State<PassaporteScreen> {
                   child: _TopBar(onBack: () => Navigator.of(context).maybePop()),
                 ),
                 Expanded(
-                  child: _Reveal(child: JournalView(p: widget.passaporte)),
+                  child: carregado.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, _) => _Erro(
+                        onTentarDeNovo: () =>
+                            ref.invalidate(passaporteProvider)),
+                    data: (dados) =>
+                        _Reveal(child: JournalView(p: dados.passaporte)),
+                  ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Falha ao carregar a coleção: mensagem gentil + tentar de novo.
+class _Erro extends StatelessWidget {
+  const _Erro({required this.onTentarDeNovo});
+  final VoidCallback onTentarDeNovo;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Não deu para abrir o Passaporte',
+              textAlign: TextAlign.center,
+              style: AppType.fredoka(size: 22, color: c.ink)),
+          const SizedBox(height: 8),
+          Text('Confira sua conexão e tente de novo.',
+              textAlign: TextAlign.center,
+              style: AppType.nunito(
+                  size: 15, weight: FontWeight.w600, color: c.muted)),
+          const SizedBox(height: 20),
+          PrimaryButton(label: 'Tentar de novo', onTap: onTentarDeNovo),
+        ],
       ),
     );
   }

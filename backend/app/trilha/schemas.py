@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class RecompensaOut(BaseModel):
     tipo: str          # cartao_postal | carimbo | selo
+    colecionavel_id: int  # p/ o app persistir o reveal (POST /passaporte/{id}/revelado)
     referencia: str
     asset_ref: str | None
 
@@ -50,9 +51,17 @@ class ItemPassaporteOut(BaseModel):
     asset_ref: str | None
     conquistado: bool
     ganho_em: datetime | None
+    # Modo Conquista: conquistado e ainda não revelado = pendente de reveal.
+    # O app drena esses itens ao abrir o Passaporte e marca via POST.
+    revelado: bool
 
 
 class PassaporteOut(BaseModel):
     total: int
     conquistados: int
     itens: list[ItemPassaporteOut]
+
+
+class ReveladoOut(BaseModel):
+    revelado: bool
+    colecionavel_id: int

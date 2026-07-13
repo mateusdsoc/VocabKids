@@ -70,6 +70,44 @@ async def test_passaporte_aluno_novo(client, aluno):
     assert p["total"] == 28
     assert p["conquistados"] == 0
     assert all(not i["conquistado"] for i in p["itens"])
+    assert all(not i["revelado"] for i in p["itens"])
+
+
+@pytest.mark.asyncio
+async def test_revelar_item_conquistado(client, aluno):
+    """Fluxo do Modo Conquista: ganha → aparece pendente → revela → some da fila."""
+    await seed_trilha()
+    await seed_vocabulario()
+    await _set_progresso(aluno["usuario_id"], xp_total=17900)
+    await _responder_questoes_n1(client, aluno["headers"], 1)
+
+    h = aluno["headers"]
+    p = (await client.get("/v1/passaporte", headers=h)).json()
+    pendente = next(i for i in p["itens"] if i["conquistado"])
+    assert not pendente["revelado"]
+
+    r = await client.post(f"/v1/passaporte/{pendente['id']}/revelado", headers=h)
+    assert r.status_code == 200
+    assert r.json() == {"revelado": True, "colecionavel_id": pendente["id"]}
+
+    # Idempotente: repetir o POST (retry de rede) não erra nem duplica.
+    r2 = await client.post(f"/v1/passaporte/{pendente['id']}/revelado", headers=h)
+    assert r2.status_code == 200
+
+    p2 = (await client.get("/v1/passaporte", headers=h)).json()
+    item = next(i for i in p2["itens"] if i["id"] == pendente["id"])
+    assert item["revelado"]
+
+
+@pytest.mark.asyncio
+async def test_revelar_item_nao_conquistado_e_404(client, aluno):
+    await seed_trilha()
+    p = (await client.get("/v1/passaporte", headers=aluno["headers"])).json()
+    r = await client.post(
+        f"/v1/passaporte/{p['itens'][0]['id']}/revelado", headers=aluno["headers"]
+    )
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "item_nao_conquistado"
 
 
 @pytest.mark.asyncio

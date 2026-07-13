@@ -55,22 +55,21 @@ class TrilhaMap extends StatelessWidget {
                   child: CustomPaint(
                       painter: _PathPainter(data.nodes, t,
                           chegada: chegada, markerColor: c.primary))),
-              // fronteira única
-              Positioned(
-                left: 14, right: 14, top: fy - 11,
-                child: _Frontier(
-                    label: data.frontierLabel ?? 'Fronteira', tones: t),
-              ),
+              // fronteira — só quando a janela cruza de país
+              if (data.frontierLabel != null)
+                Positioned(
+                  left: 14, right: 14, top: fy - 11,
+                  child: _Frontier(label: data.frontierLabel!, tones: t),
+                ),
               // nós
               for (final n in data.nodes) _positionedPin(n, k),
               // rótulos abaixo dos nós (exceto o atual, que usa o aside)
               for (final n in data.nodes)
-                if (!(n.type == NodeType.medal && n.state == NodeState.current))
-                  _positionedLabel(context, n, k, w),
-              // aside do nó atual (nome + "Continuar")
+                if (!n.cta) _positionedLabel(context, n, k, w),
+              // aside do nó atual (nome + "Continuar") — pelo flag `cta`,
+              // porque com dados reais o nó atual pode ser comum, não medal.
               for (final n in data.nodes)
-                if (n.type == NodeType.medal && n.state == NodeState.current)
-                  _positionedAside(context, n, k),
+                if (n.cta) _positionedAside(context, n, k, w),
               // confete da chegada, sobre o nó atual (monta no pop, 1×)
               if (chegada != null) _confettiChegada(k),
               // esmaecido do topo
@@ -161,12 +160,17 @@ class TrilhaMap extends StatelessWidget {
     );
   }
 
-  Widget _positionedAside(BuildContext context, MapNode n, double k) {
+  Widget _positionedAside(BuildContext context, MapNode n, double k, double w) {
     final s = MapPin.discSize(n);
-    // Espaço real à esquerda do pin; o aside encolhe em vez de sair da tela.
-    final room = n.x * k - s.width / 2 - 11;
+    // O aside fica do lado com mais espaço (nós à esquerda do template
+    // jogam o aside para a direita); encolhe em vez de sair da tela.
+    final roomLeft = n.x * k - s.width / 2 - 11;
+    final roomRight = w - n.x * k - s.width / 2 - 11;
+    final aDireita = roomRight > roomLeft;
+    final room = (aDireita ? roomRight : roomLeft).clamp(0.0, double.infinity);
     final width = room.clamp(0.0, 170.0);
-    Widget aside = _CurrentAside(node: n, onContinue: onContinue);
+    Widget aside =
+        _CurrentAside(node: n, onContinue: onContinue, aDireita: aDireita);
     final cheg = chegada;
     if (cheg != null) {
       // Entra em fade depois do pop do pin. Segue tocável desde já
@@ -186,7 +190,7 @@ class TrilhaMap extends StatelessWidget {
       );
     }
     return Positioned(
-      left: room - width,
+      left: aDireita ? n.x * k + s.width / 2 + 11 : roomLeft - width,
       top: n.y * k - 30,
       width: width,
       child: aside,
@@ -298,17 +302,20 @@ class _Label extends StatelessWidget {
 }
 
 /// Lateral do nó atual: nome em azul + botão "Continuar" chunky.
+/// [aDireita] espelha o alinhamento quando o aside fica à direita do pin.
 class _CurrentAside extends StatelessWidget {
-  const _CurrentAside({required this.node, this.onContinue});
+  const _CurrentAside({required this.node, this.onContinue, this.aDireita = false});
   final MapNode node;
   final VoidCallback? onContinue;
+  final bool aDireita;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final t = TrilhaTones.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment:
+          aDireita ? CrossAxisAlignment.start : CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (node.label != null)
@@ -432,9 +439,15 @@ class _PathPainter extends CustomPainter {
       final cy = n.type == NodeType.gate ? n.y + 50 : n.y;
       return Offset(n.x * sx, cy * sy);
     }).toList();
-    final curIdx = nodes.reversed.toList().indexWhere((n) => n.state == NodeState.current);
-    final traveled = pts.sublist(0, curIdx + 1);
-    final future = pts.sublist(curIdx);
+    // Corte percorrido/futuro: no nó atual; sem um (janela de destino já
+    // concluído ou ainda bloqueado), no último concluído a partir da base.
+    final rev = nodes.reversed.toList();
+    var curIdx = rev.indexWhere((n) => n.state == NodeState.current);
+    if (curIdx == -1) {
+      curIdx = rev.lastIndexWhere((n) => n.state == NodeState.done);
+    }
+    final traveled = curIdx >= 0 ? pts.sublist(0, curIdx + 1) : <Offset>[];
+    final future = pts.sublist(curIdx >= 0 ? curIdx : 0);
 
     final all = _curve(pts), fut = _curve(future);
     var trav = _curve(traveled);
