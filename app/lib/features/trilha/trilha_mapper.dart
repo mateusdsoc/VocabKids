@@ -4,33 +4,45 @@ import '../home/data/trilha_models.dart';
 import '../home/home_mapper.dart';
 import 'models.dart';
 
-/// Traduz `GET /v1/trilha` na **janela** do mapa (decisão do dono, 12/07):
-/// o desenho travado do contrato (espaço 340×540, template fixo de posições)
-/// é reutilizado por destino — a "câmera" enquadra um destino por vez e a
-/// navegação lateral (swipe/chevrons) troca de janela. Nada de layout
-/// procedural para os 80 nós.
+/// Traduz `GET /v1/trilha` no **mapa vertical contínuo** (decisão do dono,
+/// 13/07 — revisa a "janela com template fixo" de 12/07): a serpentina do
+/// design (4 nós por destino, largura 340) repete-se de baixo para cima num
+/// canvas único; a tela rola livremente e abre centrada no nó atual. Entre
+/// países entra o **portão** com a faixa de fronteira. Sem paginação.
 ///
-/// Gramática da janela (de baixo para cima, como o mockup):
-///   âncora (início da jornada ou marco do destino anterior)
-///   → nós 1..3 do destino (fichas comuns)
-///   → nó 4 = **marco** do destino (medalhão; rende o cartão-postal)
-///   → contexto do topo: prévia do próximo destino, ou o **portão** do
-///     próximo país (com a faixa de fronteira) quando o destino é o último
-///     do seu país. Última janela da trilha não tem topo.
+/// Gramática (de baixo para cima):
+///   bandeira de início
+///   → por destino: nós 1..3 (fichas comuns) + nó 4 = **marco** (medalhão;
+///     rende o cartão-postal)
+///   → entre países: faixa de fronteira + portão do próximo país
 abstract final class TrilhaMapper {
-  /// Posições do template no espaço lógico 340×540 (serpentina do design).
-  static const _slotAncora = (x: 166.0, y: 524.0);
-  static const _slotsNos = [
-    (x: 90.0, y: 468.0),
-    (x: 200.0, y: 420.0),
-    (x: 252.0, y: 340.0),
-    (x: 140.0, y: 264.0), // marco (medal)
+  /// Serpentina do design por destino: x fixo, dy = altura ACIMA da base
+  /// do segmento do destino (espaço lógico, largura 340).
+  static const _slots = [
+    (x: 90.0, dy: 56.0),
+    (x: 200.0, dy: 104.0),
+    (x: 252.0, dy: 184.0),
+    (x: 140.0, dy: 260.0), // marco (medal)
   ];
-  static const _slotPrevia = (x: 248.0, y: 168.0);
-  static const _slotPortao = (x: 170.0, y: 54.0);
-  // Abaixo do rótulo do portão (que termina ~155) e acima do marco (~228):
-  // a faixa não colide com texto e o caminho "cruza a fronteira".
-  static const _fronteiraY = 168.0;
+
+  /// Bandeira de início: altura acima da borda inferior do mapa.
+  static const _yInicio = 16.0;
+  static const _xInicio = 166.0;
+
+  /// Passo vertical entre bases de destinos consecutivos do mesmo país
+  /// (marco→nó1 seguinte = 300+56−260 = 96, o respiro do template).
+  static const _passo = 300.0;
+
+  /// Espaço extra na troca de país (fronteira + portão).
+  static const _extraFronteira = 210.0;
+
+  /// Portão e faixa de fronteira, acima da base do destino que fecha o país.
+  static const _dyPortao = 410.0;
+  static const _dyFaixa = 344.0;
+  static const _xPortao = 170.0;
+
+  /// Folga acima do último marco.
+  static const _topo = 110.0;
 
   /// Índice do destino atual na trilha linear: o marcado `atual`; senão o
   /// primeiro não concluído; senão o último (trilha inteira concluída).
@@ -42,27 +54,54 @@ abstract final class TrilhaMapper {
     return pendente != -1 ? pendente : destinos.length - 1;
   }
 
-  /// Monta a janela do destino [destinoIdx] (índice na trilha linear).
-  static TrilhaMapData janela(Trilha trilha, int destinoIdx) {
+  /// Monta o mapa contínuo da trilha inteira, de baixo (início) para cima.
+  static TrilhaMapData mapaCompleto(Trilha trilha) {
     final destinos = trilha.destinosEmOrdem;
-    final destino = destinos[destinoIdx];
-    final pais = _paisDe(trilha, destino);
-    final anterior = destinoIdx > 0 ? destinos[destinoIdx - 1] : null;
-    final proximo =
-        destinoIdx + 1 < destinos.length ? destinos[destinoIdx + 1] : null;
-    final proximoPais = proximo == null ? null : _paisDe(trilha, proximo);
-    final trocaDePais = proximoPais != null && proximoPais.id != pais.id;
 
-    // A lista de nós é de cima para baixo (ordem que o TrilhaMap espera).
+    // Base (altura acima da borda inferior) de cada destino; a troca de
+    // país abre espaço extra para a fronteira + portão.
+    final bases = <double>[];
+    var base = _yInicio;
+    for (var i = 0; i < destinos.length; i++) {
+      bases.add(base);
+      base += _passo + (_fechaPais(trilha, destinos, i) ? _extraFronteira : 0);
+    }
+    final altura = bases.last + _slots.last.dy + _topo;
+    double y(double acimaDaBase) => altura - acimaDaBase; // p/ top-down
+
+    // Nós de baixo para cima; o TrilhaMap espera de cima para baixo.
     final nos = <MapNode>[
-      if (proximo != null)
-        trocaDePais
-            ? _portao(pais, proximoPais)
-            : _previa(proximo),
-      ..._nosDoDestino(destino).reversed,
-      _ancora(anterior),
+      MapNode(
+        id: 'start',
+        type: NodeType.start,
+        state: NodeState.done,
+        x: _xInicio,
+        y: y(_yInicio),
+        label: 'Início',
+      ),
     ];
+    final fronteiras = <MapFrontier>[];
+    for (var i = 0; i < destinos.length; i++) {
+      final d = destinos[i];
+      final quantos = math.min(d.nosTotal, _slots.length);
+      for (var ordem = 1; ordem <= quantos; ordem++) {
+        final slot = _slots[ordem - 1];
+        nos.add(_no(d, ordem,
+            marco: ordem == quantos, x: slot.x, y: y(bases[i] + slot.dy)));
+      }
+      if (_fechaPais(trilha, destinos, i)) {
+        final pais = _paisDe(trilha, d);
+        final proximoPais = _paisDe(trilha, destinos[i + 1]);
+        fronteiras.add(MapFrontier(
+            label: 'Fronteira · ${proximoPais.nome}',
+            y: y(bases[i] + _dyFaixa)));
+        nos.add(
+            _portao(pais, proximoPais, x: _xPortao, y: y(bases[i] + _dyPortao)));
+      }
+    }
 
+    final atualIdx = indiceAtual(destinos);
+    final pais = _paisDe(trilha, destinos[atualIdx]);
     return TrilhaMapData(
       level: _nivel(destinos),
       xpCurrent: trilha.xpTotal,
@@ -73,10 +112,30 @@ abstract final class TrilhaMapper {
         destinationsDone: pais.destinos.where((d) => d.concluido).length,
         destinationsTotal: pais.destinos.length,
       ),
-      nodes: nos,
-      frontierLabel: trocaDePais ? 'Fronteira · ${proximoPais.nome}' : null,
-      frontierY: _fronteiraY,
+      nodes: nos.reversed.toList(),
+      frontiers: fronteiras,
+      mapHeight: altura,
     );
+  }
+
+  /// Posição vertical (top-down, espaço lógico) do nó atual — alvo do scroll
+  /// inicial. Sem nó atual (trilha concluída), o topo do percorrido.
+  static double yAtual(TrilhaMapData data) {
+    for (final n in data.nodes) {
+      if (n.state == NodeState.current) return n.y;
+    }
+    for (final n in data.nodes) {
+      if (n.state == NodeState.done) return n.y; // lista é top-down
+    }
+    return data.mapHeight;
+  }
+
+  /// O destino [i] é o último do seu país (e há um próximo país)?
+  static bool _fechaPais(
+      Trilha trilha, List<TrilhaDestino> destinos, int i) {
+    if (i + 1 >= destinos.length) return false;
+    return _paisDe(trilha, destinos[i]).id !=
+        _paisDe(trilha, destinos[i + 1]).id;
   }
 
   /// Nível de gamificação = nós concluídos + 1 (mesma regra da Home/Resumo).
@@ -95,31 +154,24 @@ abstract final class TrilhaMapper {
     return pais.concluido ? 'concluído' : 'em breve';
   }
 
-  /// Os 4 nós do destino, de baixo para cima (1..3 comuns, 4 = marco).
+  /// Um nó do destino nas coordenadas dadas (1..3 comuns, último = marco).
   /// Estados: concluídos até `nosConcluidos`; o seguinte é o atual quando o
   /// destino é o atual; o resto bloqueado.
-  static List<MapNode> _nosDoDestino(TrilhaDestino d) {
-    final quantos = math.min(d.nosTotal, _slotsNos.length);
-    return [
-      for (var i = 1; i <= quantos; i++) _no(d, i, marco: i == quantos),
-    ];
-  }
-
-  static MapNode _no(TrilhaDestino d, int ordem, {required bool marco}) {
+  static MapNode _no(TrilhaDestino d, int ordem,
+      {required bool marco, required double x, required double y}) {
     final state = ordem <= d.nosConcluidos
         ? NodeState.done
         : (d.atual && ordem == d.nosConcluidos + 1)
             ? NodeState.current
             : NodeState.locked;
-    final slot = _slotsNos[ordem - 1];
     final atual = state == NodeState.current;
     if (!marco) {
       return MapNode(
         id: 'd${d.id}-n$ordem',
         type: NodeType.comum,
         state: state,
-        x: slot.x,
-        y: slot.y,
+        x: x,
+        y: y,
         // O aside (nome + "Continuar") identifica o nó atual; os demais
         // comuns ficam sem rótulo, como no mockup.
         label: atual ? d.nome : null,
@@ -130,8 +182,8 @@ abstract final class TrilhaMapper {
       id: 'd${d.id}-marco',
       type: NodeType.medal,
       state: state,
-      x: slot.x,
-      y: slot.y,
+      x: x,
+      y: y,
       label: atual ? d.nome : null,
       sub: switch (state) {
         NodeState.done => '${d.nome} · concluído',
@@ -146,66 +198,16 @@ abstract final class TrilhaMapper {
     );
   }
 
-  /// Âncora inferior: bandeira de início (1ª janela) ou o marco do destino
-  /// anterior — contexto de onde o aluno veio.
-  static MapNode _ancora(TrilhaDestino? anterior) {
-    if (anterior == null) {
-      return const MapNode(
-        id: 'start',
-        type: NodeType.start,
-        state: NodeState.done,
-        x: 166,
-        y: 524,
-        label: 'Início',
-      );
-    }
-    final state = anterior.concluido ? NodeState.done : NodeState.locked;
-    return MapNode(
-      id: 'ancora-d${anterior.id}',
-      type: NodeType.medal,
-      state: state,
-      x: _slotAncora.x,
-      y: _slotAncora.y,
-      sub: anterior.atual
-          ? '${anterior.nome} · atual'
-          : '${anterior.nome} · ${anterior.concluido ? 'concluído' : 'bloqueado'}',
-      art: anterior.concluido
-          ? HomeMapper.assetParaCidade(anterior.nome)
-          : null,
-      ghost: anterior.concluido ? null : Landmark.monument,
-      next: anterior.atual,
-    );
-  }
-
-  /// Prévia do próximo destino do mesmo país (topo da janela).
-  static MapNode _previa(TrilhaDestino proximo) {
-    final state = proximo.concluido ? NodeState.done : NodeState.locked;
-    return MapNode(
-      id: 'previa-d${proximo.id}',
-      type: NodeType.medal,
-      state: state,
-      x: _slotPrevia.x,
-      y: _slotPrevia.y,
-      sub: proximo.atual
-          ? '${proximo.nome} · atual'
-          : '${proximo.nome} · ${proximo.concluido ? 'concluído' : 'bloqueado'}',
-      art: proximo.concluido
-          ? HomeMapper.assetParaCidade(proximo.nome)
-          : null,
-      ghost: proximo.concluido ? null : Landmark.monument,
-      next: proximo.atual,
-    );
-  }
-
-  /// Portão do próximo país (última janela de cada país) + fronteira.
-  static MapNode _portao(TrilhaPais paisAtual, TrilhaPais proximoPais) {
+  /// Portão do próximo país (na faixa de fronteira).
+  static MapNode _portao(TrilhaPais paisAtual, TrilhaPais proximoPais,
+      {required double x, required double y}) {
     final aberto = paisAtual.concluido;
     return MapNode(
       id: 'portao-p${proximoPais.id}',
       type: NodeType.gate,
       state: aberto ? NodeState.done : NodeState.locked,
-      x: _slotPortao.x,
-      y: _slotPortao.y,
+      x: x,
+      y: y,
       label: proximoPais.nome,
       sub: aberto
           ? 'Portão · aberto'

@@ -81,6 +81,8 @@ void main() {
       final card = (step as DiscoveryStep).card;
       expect(card.word, 'enorme');
       expect(card.exampleHighlight, 'enorme');
+      // Definição capitalizada na apresentação (banco vem em minúscula).
+      expect(card.definition, 'De tamanho muito grande');
       // Classe gramatical ainda não existe no banco base → linha oculta.
       expect(card.partOfSpeech, isNull);
     });
@@ -93,6 +95,9 @@ void main() {
       expect(q.palavraId, 7);
       expect(q.word, 'enorme');
       expect(q.highlightWord, 'enorme');
+      // Marcadores «» saem do enunciado (destaque vira cor, não caractere).
+      expect(q.stem, 'O que enorme quer dizer?');
+      expect(q.stem, isNot(anyOf(contains('«'), contains('»'))));
       expect([for (final o in q.options) o.key], ['A', 'B', 'C', 'D']);
       // Cliente fino: nenhuma opção carrega a correta.
       expect(q.options.any((o) => o.correct), isFalse);

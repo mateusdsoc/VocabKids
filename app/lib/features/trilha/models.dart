@@ -62,6 +62,16 @@ class MapNode {
   final bool next;
 }
 
+/// Faixa de fronteira (passagem de país) posicionada no mapa contínuo.
+class MapFrontier {
+  const MapFrontier({required this.label, required this.y});
+
+  final String label;
+
+  /// Posição vertical (top-down) no espaço lógico do mapa.
+  final double y;
+}
+
 /// Cabeçalho do país atual (variação "carimbo champanhe").
 class TrilhaCountry {
   const TrilhaCountry({
@@ -88,8 +98,8 @@ class TrilhaMapData {
     required this.xpTarget,
     required this.country,
     required this.nodes,
-    this.frontierLabel,
-    this.frontierY = 122,
+    this.frontiers = const [],
+    this.mapHeight = 540,
   });
 
   final int level;
@@ -98,16 +108,20 @@ class TrilhaMapData {
   final TrilhaCountry country;
   final List<MapNode> nodes;
 
-  /// Faixa única de fronteira (passagem de país).
-  final String? frontierLabel;
-  final double frontierY;
+  /// Faixas de fronteira (passagens de país) — no mapa contínuo pode
+  /// haver várias.
+  final List<MapFrontier> frontiers;
+
+  /// Altura do espaço lógico (340 de largura fixa). 540 no template de
+  /// janela do demo; no mapa contínuo, cresce com a trilha.
+  final double mapHeight;
 
   /// Exemplo que espelha o frame escuro (variação B) do design.
   static const TrilhaMapData sample = TrilhaMapData(
     level: 4,
     xpCurrent: 3120,
     xpTarget: 4500,
-    frontierLabel: 'Fronteira · França',
+    frontiers: [MapFrontier(label: 'Fronteira · França', y: 122)],
     country: TrilhaCountry(
       name: 'Brasil',
       tagline: 'país atual',

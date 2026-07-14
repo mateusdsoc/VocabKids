@@ -81,7 +81,7 @@ class SessionQuestion {
   /// [highlightWord].
   final String? word;
 
-  /// Palavra do enunciado marcada inline (sublinhado pontilhado, reabre o card).
+  /// Palavra do enunciado marcada inline (azul-negrito).
   final String? highlightWord;
 
   /// Quando o enunciado tem uma lacuna ("_____") destacada em vez de palavra.

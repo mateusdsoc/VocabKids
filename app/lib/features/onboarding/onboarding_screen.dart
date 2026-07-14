@@ -293,7 +293,8 @@ class _Boas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final saudacao = nome.isEmpty ? 'Bem-vindo a bordo!' : 'Bem-vindo, $nome!';
+    // "Olá" em vez de "bem-vindo": neutro em gênero (decisão 13/07).
+    final saudacao = nome.isEmpty ? 'Olá! Todos a bordo!' : 'Olá, $nome!';
     return _StepHeader(
       icon: AppIcons.flight,
       title: saudacao,

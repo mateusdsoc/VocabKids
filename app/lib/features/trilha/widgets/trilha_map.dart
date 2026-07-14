@@ -10,12 +10,16 @@ import '../models.dart';
 import 'map_pins.dart';
 import 'trilha_tones.dart';
 
-/// Espaço lógico do mapa (igual ao design): 340 de largura × 540 de altura.
-/// As coordenadas dos nós vivem nesse espaço; o widget escala as POSIÇÕES
-/// proporcionalmente à largura disponível (pins/rótulos mantêm o tamanho
-/// intrínseco) — em vez de um canvas fixo que recorta em telas estreitas.
+/// Espaço lógico do mapa (igual ao design): 340 de largura; a ALTURA vem de
+/// [TrilhaMapData.mapHeight] (540 no template do demo; no mapa contínuo,
+/// cresce com a trilha). As coordenadas dos nós vivem nesse espaço; o widget
+/// escala as POSIÇÕES proporcionalmente à largura disponível (pins/rótulos
+/// mantêm o tamanho intrínseco) — em vez de um canvas fixo que recorta em
+/// telas estreitas.
 const double _mapW = 340;
-const double _mapH = 540;
+
+/// Altura de referência da textura cartográfica do fundo (tela cheia).
+const double _texH = 540;
 
 /// O mapa da Trilha: banhos de cor por país, textura cartográfica, o caminho
 /// sinuoso (percorrido vivo + futuro rebaixado), a fronteira única e os nós.
@@ -40,8 +44,7 @@ class TrilhaMap extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       final w = box.maxWidth.isFinite ? box.maxWidth : _mapW;
       final k = w / _mapW; // escala uniforme: posições acompanham a largura
-      final h = _mapH * k;
-      final fy = data.frontierY * k;
+      final h = data.mapHeight * k;
 
       return ClipRect(
         child: SizedBox(
@@ -54,12 +57,14 @@ class TrilhaMap extends StatelessWidget {
               Positioned.fill(
                   child: CustomPaint(
                       painter: _PathPainter(data.nodes, t,
-                          chegada: chegada, markerColor: c.primary))),
-              // fronteira — só quando a janela cruza de país
-              if (data.frontierLabel != null)
+                          mapH: data.mapHeight,
+                          chegada: chegada,
+                          markerColor: c.primary))),
+              // fronteiras — uma faixa por passagem de país
+              for (final f in data.frontiers)
                 Positioned(
-                  left: 14, right: 14, top: fy - 11,
-                  child: _Frontier(label: data.frontierLabel!, tones: t),
+                  left: 14, right: 14, top: f.y * k - 11,
+                  child: _Frontier(label: f.label, tones: t),
                 ),
               // nós
               for (final n in data.nodes) _positionedPin(n, k),
@@ -422,10 +427,12 @@ class _DashedLine extends CustomPainter {
 }
 
 class _PathPainter extends CustomPainter {
-  _PathPainter(this.nodes, this.t, {this.chegada, required this.markerColor})
+  _PathPainter(this.nodes, this.t,
+      {required this.mapH, this.chegada, required this.markerColor})
       : super(repaint: chegada);
   final List<MapNode> nodes;
   final TrilhaTones t;
+  final double mapH;
 
   /// Animação da chegada (completar nó); `null` = mapa estático.
   final Animation<double>? chegada;
@@ -433,7 +440,7 @@ class _PathPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sx = size.width / _mapW, sy = size.height / _mapH;
+    final sx = size.width / _mapW, sy = size.height / mapH;
     // pontos de baixo para cima (gate desce 50px, como no design)
     final pts = nodes.reversed.map((n) {
       final cy = n.type == NodeType.gate ? n.y + 50 : n.y;
@@ -523,7 +530,7 @@ class _PathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PathPainter old) =>
-      old.nodes != nodes || old.chegada != chegada;
+      old.nodes != nodes || old.chegada != chegada || old.mapH != mapH;
 }
 
 class _TexturePainter extends CustomPainter {
@@ -532,7 +539,7 @@ class _TexturePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sx = size.width / _mapW, sy = size.height / _mapH;
+    final sx = size.width / _mapW, sy = size.height / _texH;
     canvas.save();
     canvas.scale(sx, sy);
 
@@ -560,9 +567,9 @@ class _TexturePainter extends CustomPainter {
 
     // rota pontilhada
     final route = Path()
-      ..moveTo(300, _mapH - 30)
-      ..cubicTo(200, _mapH - 130, 320, _mapH * 0.55, 200, _mapH * 0.45)
-      ..cubicTo(120, _mapH * 0.36, 70, 200, 110, 60);
+      ..moveTo(300, _texH - 30)
+      ..cubicTo(200, _texH - 130, 320, _texH * 0.55, 200, _texH * 0.45)
+      ..cubicTo(120, _texH * 0.36, 70, 200, 110, 60);
     _dashPath(canvas, route, t.topo2);
 
     // pontos espalhados

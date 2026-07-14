@@ -22,11 +22,11 @@ import 'widgets/trilha_map.dart';
 /// Trilha (mapa) — aterrissagem pós-sessão (produto 3.7). Porte do design
 /// `Refino/Vocab - Trilha (mapa) v5 escuro` (variação B · Capa do Passaporte).
 ///
-/// **Janela com template fixo** (decisão do dono, 12/07): o desenho travado
-/// (340×540) mostra **um destino por vez** — âncora de contexto embaixo, os
-/// 4 nós do destino, prévia do próximo (ou portão do país) em cima. Swipe ou
-/// chevrons ao lado do carimbo do país trocam de janela; abre na janela do nó
-/// atual. Em `AppConfig.demo`, a janela única de exemplo ([TrilhaMapData.sample]).
+/// **Mapa vertical contínuo** (decisão do dono, 13/07 — revisa a janela
+/// paginada de 12/07): a trilha inteira vive num canvas único que rola
+/// livremente para cima/baixo; a tela abre centrada no nó atual. Sem
+/// paginação nem chevrons. Em `AppConfig.demo`, a janela única de exemplo
+/// ([TrilhaMapData.sample]).
 ///
 /// Profundidade por relevo, nós como pontos tocáveis, e a recompensa **não**
 /// se revela aqui — fica embaçada até o Passaporte. **Sem bob/flutuação
@@ -61,9 +61,9 @@ class _TrilhaScreenState extends ConsumerState<TrilhaScreen>
   bool _hapticDado = false;
   bool _reduzido = false;
 
-  /// Janela (destino) exibida; criada quando os dados chegam, na janela atual.
-  PageController? _paginas;
-  int? _pagina;
+  /// Scroll do mapa contínuo; criado quando os dados chegam, centrado no
+  /// nó atual (reverse: offset 0 = base do mapa, o início da jornada).
+  ScrollController? _scroll;
 
   @override
   void initState() {
@@ -97,7 +97,7 @@ class _TrilhaScreenState extends ConsumerState<TrilhaScreen>
   @override
   void dispose() {
     _chegada.dispose();
-    _paginas?.dispose();
+    _scroll?.dispose();
     super.dispose();
   }
 
@@ -172,50 +172,48 @@ class _TrilhaScreenState extends ConsumerState<TrilhaScreen>
     );
   }
 
-  /// Mapa real: uma janela por destino, abrindo na do nó atual.
+  /// Folga na base do scroll para o mapa não terminar sob a bottom nav.
+  static const double _padBase = 96;
+
+  /// Mapa real: canvas contínuo da trilha inteira, rolando na vertical;
+  /// abre centrado no nó atual.
   Widget _mapa(Trilha trilha) {
-    final destinos = trilha.destinosEmOrdem;
-    if (destinos.isEmpty) {
+    if (trilha.destinosEmOrdem.isEmpty) {
       return _ErrorView(onRetry: () => ref.invalidate(trilhaProvider));
     }
-    final atual = TrilhaMapper.indiceAtual(destinos);
-    _paginas ??= PageController(initialPage: atual);
-    final pagina = (_pagina ?? atual).clamp(0, destinos.length - 1);
-    final janela = TrilhaMapper.janela(trilha, pagina);
+    final data = TrilhaMapper.mapaCompleto(trilha);
 
     return Column(
       children: [
-        _Header(
-          data: janela,
-          onAnterior: pagina > 0 ? () => _irPara(pagina - 1) : null,
-          onProximo:
-              pagina < destinos.length - 1 ? () => _irPara(pagina + 1) : null,
-        ),
+        _Header(data: data),
         Expanded(
-          child: PageView.builder(
-            controller: _paginas,
-            onPageChanged: (i) => setState(() => _pagina = i),
-            itemCount: destinos.length,
-            itemBuilder: (_, i) => Align(
-              alignment: Alignment.topCenter,
-              child: TrilhaMap(
-                data: TrilhaMapper.janela(trilha, i),
-                // A celebração pertence à janela do nó atual.
-                chegada: i == atual ? _chegadaAtiva : null,
-                onContinue: _abrirSessao,
+          child: LayoutBuilder(builder: (context, box) {
+            final k = box.maxWidth / 340; // mesma escala do TrilhaMap
+            final alturaMapa = data.mapHeight * k;
+            // reverse: offset = distância rolada a partir da base.
+            final alvo = _padBase +
+                (alturaMapa - TrilhaMapper.yAtual(data) * k) -
+                box.maxHeight / 2;
+            final maximo = alturaMapa + _padBase - box.maxHeight;
+            _scroll ??= ScrollController(
+                initialScrollOffset:
+                    alvo.clamp(0.0, maximo < 0 ? 0.0 : maximo));
+            return SingleChildScrollView(
+              controller: _scroll,
+              reverse: true,
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: _padBase),
+                child: TrilhaMap(
+                  data: data,
+                  chegada: _chegadaAtiva,
+                  onContinue: _abrirSessao,
+                ),
               ),
-            ),
-          ),
+            );
+          }),
         ),
       ],
-    );
-  }
-
-  void _irPara(int pagina) {
-    _paginas?.animateToPage(
-      pagina,
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
     );
   }
 
@@ -243,18 +241,14 @@ class _TrilhaScreenState extends ConsumerState<TrilhaScreen>
   }
 }
 
-/// Cabeçalho: título + nível/XP e o carimbo do país da janela, flanqueado
-/// pelos chevrons de navegação entre destinos (quando há para onde ir).
+/// Cabeçalho: título + nível/XP e o carimbo do país atual do aluno.
 class _Header extends StatelessWidget {
-  const _Header({required this.data, this.onAnterior, this.onProximo});
+  const _Header({required this.data});
   final TrilhaMapData data;
-  final VoidCallback? onAnterior;
-  final VoidCallback? onProximo;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final comChevrons = onAnterior != null || onProximo != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
       child: Column(
@@ -284,52 +278,8 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              if (comChevrons) ...[
-                _Chevron(icon: AppIcons.back, onTap: onAnterior),
-                const SizedBox(width: 8),
-              ],
-              Expanded(child: CountryStamp(country: data.country)),
-              if (comChevrons) ...[
-                const SizedBox(width: 8),
-                _Chevron(icon: AppIcons.chevron, onTap: onProximo),
-              ],
-            ],
-          ),
+          CountryStamp(country: data.country),
         ],
-      ),
-    );
-  }
-}
-
-/// Botão redondo de navegação entre janelas (desabilitado nas pontas).
-class _Chevron extends StatelessWidget {
-  const _Chevron({required this.icon, this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final ativo = onTap != null;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color.alphaBlend(c.paper, c.bg),
-            border: Border.all(color: c.line, width: 1),
-          ),
-          child: Icon(icon,
-              size: 22,
-              color: ativo ? c.ink : c.muted.withValues(alpha: 0.45)),
-        ),
       ),
     );
   }

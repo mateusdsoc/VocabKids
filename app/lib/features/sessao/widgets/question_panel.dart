@@ -6,8 +6,8 @@ import '../models.dart';
 import 'highlighted_text.dart';
 
 /// Painel do enunciado: cartão com gradiente sutil (azul→dourado) e selos de
-/// viagem ao fundo. Destaca a palavra marcada (sublinhado pontilhado) ou a
-/// lacuna "_____" das questões de completar.
+/// viagem ao fundo. Destaca a palavra marcada (azul-negrito) ou a lacuna
+/// "_____" das questões de completar.
 class QuestionPanel extends StatelessWidget {
   const QuestionPanel({super.key, required this.question});
 
@@ -29,6 +29,8 @@ class QuestionPanel extends StatelessWidget {
             color: c.primary, fontWeight: FontWeight.w800, letterSpacing: 1),
       );
     } else if (question.highlightWord != null) {
+      // Palavra-alvo do enunciado: só cor (azul-negrito). Sozinha não precisa
+      // de sublinhado — a cor já a destaca (decisão do dono, 14/07).
       stem = HighlightedText(
         text: question.stem,
         baseStyle: stemStyle,
@@ -36,9 +38,6 @@ class QuestionPanel extends StatelessWidget {
         tokenStyle: TextStyle(
           color: c.primary,
           fontWeight: FontWeight.w800,
-          decoration: TextDecoration.underline,
-          decorationStyle: TextDecorationStyle.dotted,
-          decorationColor: c.primary.withValues(alpha: 0.5),
         ),
       );
     } else {

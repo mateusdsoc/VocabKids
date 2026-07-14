@@ -92,79 +92,77 @@ void main() {
     });
   });
 
-  group('TrilhaMapper.janela', () {
-    test('janela do destino atual: âncora + 4 nós + prévia, CTA no nó atual',
-        () {
-      final j = TrilhaMapper.janela(_trilha(), 1); // Foz (2/4)
+  group('TrilhaMapper.mapaCompleto', () {
+    test('mapa contínuo: início + 16 nós + portão, CTA no nó atual', () {
+      final m = TrilhaMapper.mapaCompleto(_trilha());
 
-      // Cabeçalho: nível = nós concluídos (4+2) + 1; XP do contrato.
-      expect(j.level, 7);
-      expect(j.xpCurrent, 27000);
-      expect(j.xpTarget, 31500);
-      expect(j.country.name, 'Brasil');
-      expect(j.country.tagline, 'país atual');
-      expect(j.country.destinationsDone, 1); // só o Rio
-      expect(j.country.destinationsTotal, 2);
+      // Cabeçalho: nível = nós concluídos (4+2) + 1; XP do contrato; o
+      // carimbo é o do país ATUAL do aluno (Brasil).
+      expect(m.level, 7);
+      expect(m.xpCurrent, 27000);
+      expect(m.xpTarget, 31500);
+      expect(m.country.name, 'Brasil');
+      expect(m.country.tagline, 'país atual');
+      expect(m.country.destinationsDone, 1); // só o Rio
+      expect(m.country.destinationsTotal, 2);
 
-      // Estrutura (de cima para baixo): portão França (Foz é o último do
-      // Brasil) → marco → nós 3..1 → âncora (Rio concluído).
-      expect(j.nodes, hasLength(6));
-      expect(j.nodes.first.type, NodeType.gate);
-      expect(j.nodes.first.label, 'França');
-      expect(j.nodes.first.state, NodeState.locked);
-      expect(j.frontierLabel, 'Fronteira · França');
+      // Estrutura: bandeira de início + 4 destinos × 4 nós + 1 portão.
+      expect(m.nodes, hasLength(18));
+      expect(m.nodes.last.type, NodeType.start);
+      expect(m.nodes.last.label, 'Início');
+      expect(m.mapHeight, greaterThan(540)); // canvas cresce com a trilha
 
-      final marco = j.nodes[1];
-      expect(marco.type, NodeType.medal);
-      expect(marco.state, NodeState.locked);
-      expect(marco.sub, 'Foz do Iguaçu · marco');
+      // A lista é de cima para baixo: y estritamente crescente.
+      for (var i = 1; i < m.nodes.length; i++) {
+        expect(m.nodes[i].y, greaterThan(m.nodes[i - 1].y));
+      }
 
-      // Nós 3 (atual, com CTA), 2 e 1 (concluídos).
-      expect(j.nodes[2].state, NodeState.current);
-      expect(j.nodes[2].cta, isTrue);
-      expect(j.nodes[2].label, 'Foz do Iguaçu');
-      expect(j.nodes[3].state, NodeState.done);
-      expect(j.nodes[4].state, NodeState.done);
+      // Nó atual único (Foz nó 3), com CTA.
+      final atuais = m.nodes.where((n) => n.state == NodeState.current);
+      expect(atuais, hasLength(1));
+      expect(atuais.first.cta, isTrue);
+      expect(atuais.first.label, 'Foz do Iguaçu');
+      expect(atuais.first.id, 'd2-n3');
 
-      final ancora = j.nodes.last;
-      expect(ancora.type, NodeType.medal);
-      expect(ancora.state, NodeState.done);
-      expect(ancora.sub, 'Rio de Janeiro · concluído');
-      expect(ancora.art, 'assets/images/rio.png');
+      // Marcos: Rio concluído (com arte), Foz bloqueado.
+      final rio = m.nodes.singleWhere((n) => n.id == 'd1-marco');
+      expect(rio.state, NodeState.done);
+      expect(rio.sub, 'Rio de Janeiro · concluído');
+      expect(rio.art, 'assets/images/rio.png');
+      final foz = m.nodes.singleWhere((n) => n.id == 'd2-marco');
+      expect(foz.sub, 'Foz do Iguaçu · marco');
     });
 
-    test('primeira janela: âncora é a bandeira de início', () {
-      final j = TrilhaMapper.janela(_trilha(), 0); // Rio
-      expect(j.nodes.last.type, NodeType.start);
-      expect(j.nodes.last.label, 'Início');
-      // Rio concluído: sem nó atual na janela; prévia aponta o Foz atual.
-      expect(j.nodes.every((n) => n.state != NodeState.current), isTrue);
-      final previa = j.nodes.first;
-      expect(previa.type, NodeType.medal);
-      expect(previa.sub, 'Foz do Iguaçu · atual');
-      expect(previa.next, isTrue);
-      expect(j.frontierLabel, isNull); // sem troca de país nesta janela
+    test('fronteira única entre Brasil e França, portão travado no meio', () {
+      final m = TrilhaMapper.mapaCompleto(_trilha());
+      expect(m.frontiers, hasLength(1));
+      expect(m.frontiers.single.label, 'Fronteira · França');
+
+      final portao = m.nodes.singleWhere((n) => n.type == NodeType.gate);
+      expect(portao.label, 'França');
+      expect(portao.state, NodeState.locked); // Brasil não concluído
+
+      // Geometria: a faixa fica entre o marco do Foz e o portão; o portão,
+      // entre a faixa e o primeiro nó de Paris (y é top-down).
+      final foz = m.nodes.singleWhere((n) => n.id == 'd2-marco');
+      final paris1 = m.nodes.singleWhere((n) => n.id == 'd3-n1');
+      expect(m.frontiers.single.y, lessThan(foz.y));
+      expect(m.frontiers.single.y, greaterThan(portao.y));
+      expect(portao.y, greaterThan(paris1.y));
     });
 
-    test('janela futura: tudo bloqueado, âncora referencia o destino atual',
-        () {
-      final j = TrilhaMapper.janela(_trilha(), 2); // Paris
-      expect(j.country.name, 'França');
-      expect(j.country.tagline, 'em breve');
-      expect(
-          j.nodes
-              .where((n) => n.type == NodeType.comum)
-              .every((n) => n.state == NodeState.locked),
-          isTrue);
-      expect(j.nodes.last.sub, 'Foz do Iguaçu · atual');
+    test('destinos futuros ficam todos bloqueados', () {
+      final m = TrilhaMapper.mapaCompleto(_trilha());
+      final futuros = m.nodes
+          .where((n) => n.id.startsWith('d3-') || n.id.startsWith('d4-'));
+      expect(futuros, hasLength(8));
+      expect(futuros.every((n) => n.state == NodeState.locked), isTrue);
     });
 
-    test('última janela da trilha: sem topo nem fronteira', () {
-      final j = TrilhaMapper.janela(_trilha(), 3); // Lyon
-      expect(j.frontierLabel, isNull);
-      // âncora + 4 nós, sem prévia/portão.
-      expect(j.nodes, hasLength(5));
-      expect(j.nodes.first.type, NodeType.medal); // marco do próprio Lyon
+    test('yAtual aponta o nó atual; sem atual, o topo do percorrido', () {
+      final m = TrilhaMapper.mapaCompleto(_trilha());
+      final atual = m.nodes.singleWhere((n) => n.state == NodeState.current);
+      expect(TrilhaMapper.yAtual(m), atual.y);
     });
   });
 }

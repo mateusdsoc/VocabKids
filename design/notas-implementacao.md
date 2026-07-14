@@ -74,6 +74,20 @@ cada tela implementada.
 - **Posições proporcionais** (10/06): o espaço lógico 340×540 virou referência —
   as posições dos nós escalam com a largura real (`LayoutBuilder`); rótulos e o
   aside "Continuar" clampam nas bordas em vez de recortar em telas estreitas.
+- **Mapa vertical contínuo (decisão do dono, 13/07 — REVISA a "janela com
+  template fixo" de 12/07)**: testando no aparelho, a navegação lateral
+  (PageView + chevrons) pareceu errada — a progressão pedia um scroll
+  **vertical, simples e contínuo**. A trilha inteira agora vive num canvas
+  único (largura 340, altura calculada): a serpentina de 4 nós repete-se por
+  destino de baixo para cima, com **portão + faixa de fronteira** entre
+  países; a tela rola livremente (`SingleChildScrollView` reverso) e abre
+  **centrada no nó atual**. Sem paginação nem chevrons; o carimbo do cabeçalho
+  é o do **país atual do aluno** (fixo). `TrilhaMapper.janela` →
+  `mapaCompleto`; `TrilhaMapData` ganhou `mapHeight` e `frontiers` (lista).
+  Docs atualizados junto: `telas.md` §6 e `brief-mockup-trilha.md`.
+- **Saudação neutra no onboarding (13/07)**: "Bem-vindo(a)" tratava toda
+  criança no masculino. Trocado por **"Olá, {nome}!"** (e "Olá! Todos a
+  bordo!" sem nome) — neutro sem hífens nem "(a)".
 
 ### Perfil / Configurações (`features/identidade/`, `features/configuracoes/`)
 - Perfil e Passaporte são **telas distintas** (produto §3.10): o Perfil é

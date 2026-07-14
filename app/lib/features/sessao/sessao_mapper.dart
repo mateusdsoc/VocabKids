@@ -41,10 +41,16 @@ abstract final class SessaoMapper {
 
   static SessionDiscovery discoveryDe(CardPalavraDto p) => SessionDiscovery(
         word: p.lema,
-        definition: p.definicao,
+        definition: _capitalizar(p.definicao),
         example: p.exemploUso,
         exampleHighlight: p.lema,
       );
+
+  /// Primeira letra maiúscula. As definições do banco base vêm em minúscula
+  /// ("que se move..."); no cartão elas abrem a frase, então maiúscula fica
+  /// mais profissional. Apresentação, não conteúdo.
+  static String _capitalizar(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   /// Slot de questão → [SessionQuestion]. O `nivel` (1..4) guia a condução
   /// visual (produto 3.2): N1 significado, N2 sinônimo, N3 completar (lacuna),
@@ -57,10 +63,12 @@ abstract final class SessaoMapper {
       _ => QuestionKind.julgarUso,
     };
     // O painel destaca o token fixo '_____'; o banco escreve a lacuna com 3+
-    // underscores — normaliza aqui (apresentação, não conteúdo).
+    // underscores — normaliza aqui (apresentação, não conteúdo). Também tira os
+    // marcadores «» (e <<>>) que o banco põe em volta da palavra-alvo: não são
+    // didáticos; o destaque vira cor na apresentação, não caractere no texto.
     final temLacuna = RegExp('_{3,}').hasMatch(q.enunciado);
-    final stem =
-        temLacuna ? q.enunciado.replaceAll(RegExp('_{3,}'), '_____') : q.enunciado;
+    var stem = q.enunciado.replaceAll(RegExp('[«»]|<<|>>'), '');
+    if (temLacuna) stem = stem.replaceAll(RegExp('_{3,}'), '_____');
 
     return SessionQuestion(
       kind: kind,
@@ -68,9 +76,9 @@ abstract final class SessaoMapper {
       questaoId: q.questaoId,
       palavraId: q.palavraId,
       word: q.lema,
-      // Sublinha a palavra no enunciado só quando ela aparece de fato.
+      // Destaca a palavra no enunciado (só cor) quando ela aparece de fato.
       highlightWord:
-          !temLacuna && q.enunciado.toLowerCase().contains(q.lema.toLowerCase())
+          !temLacuna && stem.toLowerCase().contains(q.lema.toLowerCase())
               ? q.lema
               : null,
       blank: temLacuna,
