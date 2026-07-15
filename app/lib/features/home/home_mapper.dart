@@ -103,10 +103,12 @@ abstract final class HomeMapper {
       );
 
   /// Resolve a arte de um destino pelos assets empacotados. O Brasil tem os
-  /// 5 destinos ilustrados; os demais caem no placeholder do widget (`null`).
+  /// 5 destinos ilustrados e a França 6 dos 7 (falta Versalhes); os demais
+  /// caem no placeholder do widget (`null`).
   // TODO(backend): servir asset_ref por destino na /v1/trilha.
   static String? assetParaCidade(String nome) {
     final n = _normalizar(nome);
+    // Brasil
     if (n.contains('rio')) return 'assets/images/rio.webp';
     if (n.contains('iguacu') || n.contains('foz')) {
       return 'assets/images/foz_iguacu.webp';
@@ -114,7 +116,16 @@ abstract final class HomeMapper {
     if (n.contains('amazonia')) return 'assets/images/amazonia.webp';
     if (n.contains('noronha')) return 'assets/images/noronha.webp';
     if (n.contains('lencois')) return 'assets/images/lencois.webp';
+    // França ("blanc"/"michel" evitam a colisão entre Mont Blanc e
+    // Mont-Saint-Michel, ambos com "mont").
     if (n.contains('paris')) return 'assets/images/paris.webp';
+    if (n.contains('michel')) return 'assets/images/mont_saint_michel.webp';
+    if (n.contains('provenca')) return 'assets/images/provenca.webp';
+    if (n.contains('loire')) return 'assets/images/loire.webp';
+    if (n.contains('nice') || n.contains('costa azul')) {
+      return 'assets/images/costa_azul.webp';
+    }
+    if (n.contains('blanc')) return 'assets/images/mont_blanc.webp';
     return null;
   }
 

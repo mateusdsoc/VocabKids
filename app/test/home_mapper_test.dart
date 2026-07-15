@@ -127,7 +127,21 @@ void main() {
           'assets/images/noronha.webp');
       expect(HomeMapper.assetParaCidade('Lençóis Maranhenses'),
           'assets/images/lencois.webp');
-      expect(HomeMapper.assetParaCidade('Mont-Saint-Michel'), isNull);
+      // França (nomes exatos do seed_trilha.py). "Mont Blanc" e
+      // "Mont-Saint-Michel" não podem colidir.
+      expect(HomeMapper.assetParaCidade('Mont-Saint-Michel'),
+          'assets/images/mont_saint_michel.webp');
+      expect(HomeMapper.assetParaCidade('Provença — campos de lavanda'),
+          'assets/images/provenca.webp');
+      expect(HomeMapper.assetParaCidade('Vale do Loire — Château de Chambord'),
+          'assets/images/loire.webp');
+      expect(HomeMapper.assetParaCidade('Costa Azul — Nice/Riviera'),
+          'assets/images/costa_azul.webp');
+      expect(HomeMapper.assetParaCidade('Alpes — Mont Blanc'),
+          'assets/images/mont_blanc.webp');
+      // Versalhes ainda não tem arte → placeholder.
+      expect(HomeMapper.assetParaCidade('Versalhes — palácio e jardins'),
+          isNull);
     });
   });
 }
