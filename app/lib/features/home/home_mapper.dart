@@ -102,13 +102,19 @@ abstract final class HomeMapper {
         imageAsset: assetParaCidade(d.nome),
       );
 
-  /// Resolve a arte de um destino pelos assets empacotados. Só Rio e Paris têm
-  /// ilustração real hoje; os demais caem no placeholder do widget (`null`).
+  /// Resolve a arte de um destino pelos assets empacotados. O Brasil tem os
+  /// 5 destinos ilustrados; os demais caem no placeholder do widget (`null`).
   // TODO(backend): servir asset_ref por destino na /v1/trilha.
   static String? assetParaCidade(String nome) {
     final n = _normalizar(nome);
-    if (n.contains('rio')) return 'assets/images/rio.png';
-    if (n.contains('paris')) return 'assets/images/paris.png';
+    if (n.contains('rio')) return 'assets/images/rio.webp';
+    if (n.contains('iguacu') || n.contains('foz')) {
+      return 'assets/images/foz_iguacu.webp';
+    }
+    if (n.contains('amazonia')) return 'assets/images/amazonia.webp';
+    if (n.contains('noronha')) return 'assets/images/noronha.webp';
+    if (n.contains('lencois')) return 'assets/images/lencois.webp';
+    if (n.contains('paris')) return 'assets/images/paris.webp';
     return null;
   }
 

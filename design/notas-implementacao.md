@@ -404,7 +404,10 @@ O Passaporte agora é a coleção real do aluno, e a fila de reveals é
       real vem de `turma_config.meta_semanal` (professor configura; default por
       ano se nula). Ao definir os defaults, simular contra o ritmo real
       (2 palavras novas/sessão, domínio em ~3+ sessões) para ser batível.
-- [ ] **Arte por destino** na `/v1/trilha` (asset_ref) — hoje só Rio/Paris.
+- [ ] **Arte por destino** na `/v1/trilha` (asset_ref) — o app resolve por
+      nome (`HomeMapper.assetParaCidade`); assets WebP empacotados para os
+      5 destinos do Brasil + Paris (14/07); faltam os demais da França e o
+      Japão.
 
 ---
 

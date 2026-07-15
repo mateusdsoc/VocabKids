@@ -102,7 +102,7 @@ void main() {
       expect(data.lesson!.country, 'Brasil');
       expect(data.lesson!.lessonIndex, 3);
       expect(data.lesson!.lessonTotal, 6);
-      expect(data.lesson!.imageAsset, 'assets/images/rio.png');
+      expect(data.lesson!.imageAsset, 'assets/images/rio.webp');
     });
 
     test('fita = anterior · atual · próximo, com status correto', () {
@@ -117,9 +117,17 @@ void main() {
 
     test('resolve arte só para destinos com asset', () {
       expect(HomeMapper.assetParaCidade('Rio de Janeiro'),
-          'assets/images/rio.png');
-      expect(HomeMapper.assetParaCidade('Paris'), 'assets/images/paris.png');
-      expect(HomeMapper.assetParaCidade('Foz do Iguaçu'), isNull);
+          'assets/images/rio.webp');
+      expect(HomeMapper.assetParaCidade('Paris'), 'assets/images/paris.webp');
+      expect(HomeMapper.assetParaCidade('Foz do Iguaçu — Cataratas'),
+          'assets/images/foz_iguacu.webp');
+      expect(HomeMapper.assetParaCidade('Amazônia — Encontro das Águas'),
+          'assets/images/amazonia.webp');
+      expect(HomeMapper.assetParaCidade('Fernando de Noronha'),
+          'assets/images/noronha.webp');
+      expect(HomeMapper.assetParaCidade('Lençóis Maranhenses'),
+          'assets/images/lencois.webp');
+      expect(HomeMapper.assetParaCidade('Mont-Saint-Michel'), isNull);
     });
   });
 }

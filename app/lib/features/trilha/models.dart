@@ -137,7 +137,7 @@ class TrilhaMapData {
           y: 54,
           label: 'França',
           sub: 'Portão · ao concluir o Brasil',
-          art: 'assets/images/paris.png',
+          art: 'assets/images/paris.webp',
           ghost: Landmark.eiffel),
       MapNode(
           id: 'brasilia',
@@ -165,7 +165,7 @@ class TrilhaMapData {
           x: 252,
           y: 354,
           label: 'Rio de Janeiro',
-          art: 'assets/images/rio.png',
+          art: 'assets/images/rio.webp',
           cta: true),
       MapNode(
           id: 's3', type: NodeType.comum, state: NodeState.done, x: 166, y: 432),
@@ -176,7 +176,7 @@ class TrilhaMapData {
           x: 90,
           y: 472,
           sub: 'Salvador · concluído',
-          art: 'assets/images/rio.png'),
+          art: 'assets/images/rio.webp'),
       MapNode(
           id: 'start',
           type: NodeType.start,

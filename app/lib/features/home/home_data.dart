@@ -96,21 +96,21 @@ class HomeData {
           country: 'Brasil',
           lessonIndex: 3,
           lessonTotal: 6,
-          imageAsset: 'assets/images/rio.png',
+          imageAsset: 'assets/images/rio.webp',
         ),
         trail: [
           TrailNode(
               name: 'Salvador',
               status: TrailNodeStatus.done,
-              imageAsset: 'assets/images/rio.png'),
+              imageAsset: 'assets/images/rio.webp'),
           TrailNode(
               name: 'Rio',
               status: TrailNodeStatus.current,
-              imageAsset: 'assets/images/rio.png'),
+              imageAsset: 'assets/images/rio.webp'),
           TrailNode(
               name: 'Paris',
               status: TrailNodeStatus.locked,
-              imageAsset: 'assets/images/paris.png'),
+              imageAsset: 'assets/images/paris.webp'),
         ],
       );
 }

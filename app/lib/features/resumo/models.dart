@@ -147,7 +147,7 @@ class SessionSummary {
       kicker: 'Novo no Passaporte!',
       title: 'Cartão-postal do Rio',
       subtitle: 'Você desbloqueou um carimbo de viagem.',
-      imageAsset: 'assets/images/rio.png',
+      imageAsset: 'assets/images/rio.webp',
       conquista: Conquista.sampleRio,
     ),
   );

@@ -128,7 +128,7 @@ void main() {
       final rio = m.nodes.singleWhere((n) => n.id == 'd1-marco');
       expect(rio.state, NodeState.done);
       expect(rio.sub, 'Rio de Janeiro · concluído');
-      expect(rio.art, 'assets/images/rio.png');
+      expect(rio.art, 'assets/images/rio.webp');
       final foz = m.nodes.singleWhere((n) => n.id == 'd2-marco');
       expect(foz.sub, 'Foz do Iguaçu · marco');
     });
