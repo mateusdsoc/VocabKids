@@ -85,6 +85,16 @@ cada tela implementada.
   é o do **país atual do aluno** (fixo). `TrilhaMapper.janela` →
   `mapaCompleto`; `TrilhaMapData` ganhou `mapHeight` e `frontiers` (lista).
   Docs atualizados junto: `telas.md` §6 e `brief-mockup-trilha.md`.
+- **Anel de progresso no nó atual (14/07)**: um nó leva 2–4 sessões (~4.500
+  XP) e a aterrissagem pós-sessão é a Trilha — na maioria das sessões o mapa
+  parecia idêntico, como se nada tivesse acontecido. O "anel" do nó atual
+  (que era um halo sólido) agora é um **anel de progresso**: enche com o XP
+  dentro do nó (`xp_inicio`→`xp_limiar` do `/v1/trilha`, que já existiam no
+  contrato e o app ignorava). Anima 1× ao abrir (600 ms) e assenta estático
+  (coerente com "sem flutuação contínua", 11/06); custo ~zero: um
+  `CustomPainter` de dois arcos num único nó, `TweenAnimationBuilder` sem
+  ticker residual. O limiar de 4.500 XP/nó **não muda** (cadência de
+  colecionáveis calibrada para o ano letivo). `telas.md` §6 atualizado junto.
 - **Saudação neutra no onboarding (13/07)**: "Bem-vindo(a)" tratava toda
   criança no masculino. Trocado por **"Olá, {nome}!"** (e "Olá! Todos a
   bordo!" sem nome) — neutro sem hífens nem "(a)".

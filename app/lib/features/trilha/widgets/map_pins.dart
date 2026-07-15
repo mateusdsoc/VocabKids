@@ -1,3 +1,4 @@
+import 'dart:math' show pi;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -83,23 +84,27 @@ class MapPin extends StatelessWidget {
           child: Icon(AppIcons.check, size: 14, color: Colors.white.withValues(alpha: 0.92)),
         );
       case NodeState.current:
-        return Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              center: const Alignment(0, -0.64),
-              radius: 0.95,
-              colors: [Color.lerp(c.primary, Colors.white, 0.4)!, c.primary, t.primaryDeep],
-              stops: const [0, 0.6, 1],
+        return _comAnel(
+          c,
+          folga: 3,
+          espessura: 4,
+          disco: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                center: const Alignment(0, -0.64),
+                radius: 0.95,
+                colors: [Color.lerp(c.primary, Colors.white, 0.4)!, c.primary, t.primaryDeep],
+                stops: const [0, 0.6, 1],
+              ),
+              boxShadow: [
+                BoxShadow(color: t.contactStrong, blurRadius: 16, offset: const Offset(0, 12), spreadRadius: -5),
+                BoxShadow(color: t.primaryDeep, offset: const Offset(0, 5)),
+                BoxShadow(color: paper, spreadRadius: 3),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(color: t.contactStrong, blurRadius: 16, offset: const Offset(0, 12), spreadRadius: -5),
-              BoxShadow(color: t.primaryDeep, offset: const Offset(0, 5)),
-              BoxShadow(color: c.primary, spreadRadius: 5),
-              BoxShadow(color: paper, spreadRadius: 3),
-            ],
           ),
         );
       case NodeState.locked:
@@ -129,25 +134,29 @@ class MapPin extends StatelessWidget {
   Widget _medal(AppColors c, TrilhaTones t, Color paper) {
     switch (node.state) {
       case NodeState.current:
-        return SizedBox(
-          width: 82,
-          height: 82,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: t.contactStrong, blurRadius: 32, offset: const Offset(0, 28), spreadRadius: -8),
-                BoxShadow(color: t.medalWallCur, offset: const Offset(0, 10)),
-                BoxShadow(color: c.primary, spreadRadius: 7),
-                BoxShadow(color: paper, spreadRadius: 4),
-              ],
-            ),
-            child: ClipOval(
-              child: Stack(fit: StackFit.expand, children: [
-                if (node.art != null)
-                  Image.asset(node.art!, fit: BoxFit.cover, alignment: const Alignment(0, 0.2)),
-                _gloss(),
-              ]),
+        return _comAnel(
+          c,
+          folga: 4,
+          espessura: 5,
+          disco: SizedBox(
+            width: 82,
+            height: 82,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: t.contactStrong, blurRadius: 32, offset: const Offset(0, 28), spreadRadius: -8),
+                  BoxShadow(color: t.medalWallCur, offset: const Offset(0, 10)),
+                  BoxShadow(color: paper, spreadRadius: 4),
+                ],
+              ),
+              child: ClipOval(
+                child: Stack(fit: StackFit.expand, children: [
+                  if (node.art != null)
+                    Image.asset(node.art!, fit: BoxFit.cover, alignment: const Alignment(0, 0.2)),
+                  _gloss(),
+                ]),
+              ),
             ),
           ),
         );
@@ -386,6 +395,32 @@ class MapPin extends StatelessWidget {
     );
   }
 
+  /// Anel do nó atual (telas.md §6): trilho apagado + arco que enche com o
+  /// progresso de XP dentro do nó (`MapNode.progresso`; sem dado → cheio,
+  /// preservando o visual do halo sólido). Anima 1× ao montar e **assenta
+  /// estático** — sem ticker contínuo (decisão do dono, 11/06).
+  Widget _comAnel(AppColors c,
+      {required Widget disco, required double folga, required double espessura}) {
+    final alvo = (node.progresso ?? 1.0).clamp(0.0, 1.0);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: alvo),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      // `child` fixo: só o arco repinta durante a animação.
+      builder: (context, valor, child) => CustomPaint(
+        foregroundPainter: _AnelProgresso(
+          progresso: valor,
+          cor: c.primary,
+          trilho: c.primary.withValues(alpha: 0.25),
+          folga: folga,
+          espessura: espessura,
+        ),
+        child: child,
+      ),
+      child: disco,
+    );
+  }
+
   Widget _gloss() => DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -401,6 +436,47 @@ class MapPin extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Trilho + arco de progresso ao redor do disco do nó atual. Desenha fora dos
+/// bounds do child (o mapa não clipa os pins); arco parte do topo, horário.
+class _AnelProgresso extends CustomPainter {
+  const _AnelProgresso({
+    required this.progresso,
+    required this.cor,
+    required this.trilho,
+    required this.folga,
+    required this.espessura,
+  });
+
+  final double progresso; // 0..1
+  final Color cor;
+  final Color trilho;
+  final double folga; // respiro entre o disco e o anel
+  final double espessura;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centro = size.center(Offset.zero);
+    final raio = size.width / 2 + folga + espessura / 2;
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessura
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(centro, raio, p..color = trilho);
+    if (progresso > 0) {
+      canvas.drawArc(Rect.fromCircle(center: centro, radius: raio), -pi / 2,
+          2 * pi * progresso, false, p..color = cor);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_AnelProgresso old) =>
+      old.progresso != progresso ||
+      old.cor != cor ||
+      old.trilho != trilho ||
+      old.folga != folga ||
+      old.espessura != espessura;
 }
 
 IconData _ghostIcon(Landmark? l) => switch (l) {

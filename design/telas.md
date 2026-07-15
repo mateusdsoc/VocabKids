@@ -200,8 +200,11 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 ## 6. Trilha (mapa) — produto 3.7
 
 - **Objetivo:** **aterrissagem pós-sessão**; senso de progresso e próximo passo.
-- **Conteúdo:** mapa visual da trilha; **nó atual em destaque** (maior, anel,
-  caminho percorrido vivo — **sem selo "você está aqui"**, decisão revisada: a
+- **Conteúdo:** mapa visual da trilha; **nó atual em destaque** (maior,
+  **anel de progresso** — o anel enche com o XP dentro do nó, de `xp_inicio`
+  a `xp_limiar` do `GET /v1/trilha`, para que **toda sessão mova algo visível**
+  mesmo sem cruzar nó (precisão de 14/07); caminho percorrido vivo — **sem
+  selo "você está aqui"**, decisão revisada: a
   própria trilha já comunica a posição pelo progresso); nós do destino;
   agrupamento por **destino** e **país**; próximo nó/destino.
   Estrutura: **País → Destino → Nó** (3 países, 20 destinos, 80 nós).

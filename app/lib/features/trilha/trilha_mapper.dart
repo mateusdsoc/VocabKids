@@ -54,9 +54,20 @@ abstract final class TrilhaMapper {
     return pendente != -1 ? pendente : destinos.length - 1;
   }
 
+  /// Progresso de XP dentro do nó atual (0..1) — o anel do pin (telas.md §6).
+  /// O `/v1/trilha` manda `xp_inicio`/`xp_limiar` cumulativos justamente para
+  /// este cálculo ficar no cliente sem somatórios.
+  static double? progressoDoNoAtual(Trilha trilha) {
+    final no = trilha.noAtual;
+    if (no == null || no.xpLimiar <= no.xpInicio) return null;
+    return ((trilha.xpTotal - no.xpInicio) / (no.xpLimiar - no.xpInicio))
+        .clamp(0.0, 1.0);
+  }
+
   /// Monta o mapa contínuo da trilha inteira, de baixo (início) para cima.
   static TrilhaMapData mapaCompleto(Trilha trilha) {
     final destinos = trilha.destinosEmOrdem;
+    final progressoAtual = progressoDoNoAtual(trilha);
 
     // Base (altura acima da borda inferior) de cada destino; a troca de
     // país abre espaço extra para a fronteira + portão.
@@ -87,7 +98,10 @@ abstract final class TrilhaMapper {
       for (var ordem = 1; ordem <= quantos; ordem++) {
         final slot = _slots[ordem - 1];
         nos.add(_no(d, ordem,
-            marco: ordem == quantos, x: slot.x, y: y(bases[i] + slot.dy)));
+            marco: ordem == quantos,
+            x: slot.x,
+            y: y(bases[i] + slot.dy),
+            progresso: progressoAtual));
       }
       if (_fechaPais(trilha, destinos, i)) {
         final pais = _paisDe(trilha, d);
@@ -156,9 +170,12 @@ abstract final class TrilhaMapper {
 
   /// Um nó do destino nas coordenadas dadas (1..3 comuns, último = marco).
   /// Estados: concluídos até `nosConcluidos`; o seguinte é o atual quando o
-  /// destino é o atual; o resto bloqueado.
+  /// destino é o atual; o resto bloqueado. [progresso] só se aplica ao atual.
   static MapNode _no(TrilhaDestino d, int ordem,
-      {required bool marco, required double x, required double y}) {
+      {required bool marco,
+      required double x,
+      required double y,
+      double? progresso}) {
     final state = ordem <= d.nosConcluidos
         ? NodeState.done
         : (d.atual && ordem == d.nosConcluidos + 1)
@@ -176,6 +193,7 @@ abstract final class TrilhaMapper {
         // comuns ficam sem rótulo, como no mockup.
         label: atual ? d.nome : null,
         cta: atual,
+        progresso: atual ? progresso : null,
       );
     }
     return MapNode(
@@ -185,6 +203,7 @@ abstract final class TrilhaMapper {
       x: x,
       y: y,
       label: atual ? d.nome : null,
+      progresso: atual ? progresso : null,
       sub: switch (state) {
         NodeState.done => '${d.nome} · concluído',
         NodeState.current => null,

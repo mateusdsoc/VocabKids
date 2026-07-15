@@ -39,6 +39,7 @@ class MapNode {
     this.ghost,
     this.cta = false,
     this.next = false,
+    this.progresso,
   });
 
   final String id;
@@ -60,6 +61,10 @@ class MapNode {
 
   /// Realça o rótulo como "próximo".
   final bool next;
+
+  /// Progresso de XP dentro do nó (0..1) — só o nó atual carrega; alimenta o
+  /// anel de progresso do pin (telas.md §6). `null` = sem anel de progresso.
+  final double? progresso;
 }
 
 /// Faixa de fronteira (passagem de país) posicionada no mapa contínuo.
@@ -166,7 +171,8 @@ class TrilhaMapData {
           y: 354,
           label: 'Rio de Janeiro',
           art: 'assets/images/rio.webp',
-          cta: true),
+          cta: true,
+          progresso: 0.69), // 3120/4500 do frame do design
       MapNode(
           id: 's3', type: NodeType.comum, state: NodeState.done, x: 166, y: 432),
       MapNode(

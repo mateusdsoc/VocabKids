@@ -6,7 +6,7 @@ import 'package:vocabkids/features/trilha/trilha_mapper.dart';
 /// Trilha de exemplo: 2 países × 2 destinos × 4 nós.
 /// Rio concluído; Foz é o atual (2 nós concluídos → nó 3 é o atual);
 /// Paris e Lyon bloqueados.
-Trilha _trilha({TrilhaNoAtual? noAtual}) {
+Trilha _trilha({TrilhaNoAtual? noAtual, int xpTotal = 27000}) {
   TrilhaDestino destino(int id, String nome,
           {required int concluidos, bool atual = false}) =>
       TrilhaDestino(
@@ -20,7 +20,7 @@ Trilha _trilha({TrilhaNoAtual? noAtual}) {
       );
 
   return Trilha(
-    xpTotal: 27000,
+    xpTotal: xpTotal,
     noAtual: noAtual ??
         TrilhaNoAtual(
           destinoId: 2,
@@ -163,6 +163,47 @@ void main() {
       final m = TrilhaMapper.mapaCompleto(_trilha());
       final atual = m.nodes.singleWhere((n) => n.state == NodeState.current);
       expect(TrilhaMapper.yAtual(m), atual.y);
+    });
+  });
+
+  group('TrilhaMapper.progressoDoNoAtual (anel do nó atual)', () {
+    test('fração de xp_inicio→xp_limiar, clampada em 0..1', () {
+      // Nó de 27000→31500; aluno com 29250 = metade do caminho.
+      expect(TrilhaMapper.progressoDoNoAtual(_trilha(xpTotal: 29250)), 0.5);
+      expect(TrilhaMapper.progressoDoNoAtual(_trilha(xpTotal: 27000)), 0.0);
+      expect(TrilhaMapper.progressoDoNoAtual(_trilha(xpTotal: 99999)), 1.0);
+    });
+
+    test('sem nó atual (trilha concluída) ou limiar degenerado → null', () {
+      expect(
+          TrilhaMapper.progressoDoNoAtual(Trilha(
+            xpTotal: 27000,
+            noAtual: null,
+            paises: _trilha().paises,
+          )),
+          isNull);
+      expect(
+          TrilhaMapper.progressoDoNoAtual(_trilha(
+            noAtual: TrilhaNoAtual(
+              destinoId: 2,
+              destinoNome: 'Foz do Iguaçu',
+              paisNome: 'Brasil',
+              noOrdem: 3,
+              xpInicio: 31500,
+              xpLimiar: 31500,
+            ),
+          )),
+          isNull);
+    });
+
+    test('mapaCompleto: só o nó atual carrega o progresso', () {
+      final m = TrilhaMapper.mapaCompleto(_trilha(xpTotal: 29250));
+      final atual = m.nodes.singleWhere((n) => n.state == NodeState.current);
+      expect(atual.progresso, 0.5);
+      expect(
+          m.nodes.where((n) => n.state != NodeState.current)
+              .every((n) => n.progresso == null),
+          isTrue);
     });
   });
 }
