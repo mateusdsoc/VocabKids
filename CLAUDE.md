@@ -43,6 +43,7 @@ uv run alembic upgrade head            # cria as tabelas
 uv run python -m app.seed              # turma demo (código DEMO7A) + professora — idempotente
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha (países/destinos/nós) + colecionáveis
+uv run python -m app.seed_demo         # alunos "vitrine" p/ apresentação — re-rodar = reset
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
 
 # Migrations — o schema vive em app/schema.py; o Alembic autogera a partir dele

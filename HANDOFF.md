@@ -175,6 +175,7 @@ uv run alembic upgrade head
 uv run python -m app.seed            # turma DEMO7A + Professora Demo (imprime token)
 uv run python -m app.seed_vocabulario
 uv run python -m app.seed_trilha
+uv run python -m app.seed_demo       # alunos vitrine p/ apresentação (re-rodar = reset)
 uv run uvicorn app.main:app --port 8000   # deixa rodando
 
 # 2. App web apontando direto para a API (NÃO usar --dart-define=DEMO)

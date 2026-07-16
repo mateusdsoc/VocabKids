@@ -634,3 +634,38 @@ spec, conforme a regra das decisões revisadas).
     dado real: rotular o campo de acesso como **"apelido"** (não "nome") no app
     e nos textos — pendente da sua confirmação (é a única mudança pequena que
     valeria já; não fiz para não mexer no que você testa sem combinar).
+
+---
+
+## 🎬 Apresentação em 5–10 min — alunos "vitrine" no backend real (15/07)
+
+**Problema:** demonstrando com o backend real (o caminho de produção), um
+aluno novo não cruza XP suficiente em 5–10 min para mostrar cartão postal,
+carimbo, dois países ou o Modo Conquista. E o modo `DEMO` do app do aluno
+ficou defasado (mapa/movimentação atrás do backend real).
+
+**Decisão (dono pediu "o que for melhor para apresentar"):**
+
+- **Novo `backend/app/seed_demo.py`** cria dois alunos na turma DEMO7A com
+  progresso rico, usando a **própria lógica de produção**
+  (`trilha.service.processar_recompensas`) — o seed define o XP alvo e as
+  recompensas saem das mesmas regras do jogo, então não há estado inventado
+  que possa divergir quando as regras mudarem:
+  - **"Ana Viajante"** — Brasil concluído + 2 destinos da França (XP 128.600):
+    5 cartões BR + carimbo BR + 2 cartões FR + selos `combo_10` e
+    `dominadas_25`; 3 palavras dominadas na semana corrente (Home mostra 3/5
+    da meta); o cartão de Mont-Saint-Michel fica **ganho e não revelado** —
+    o Modo Conquista dispara ao vivo ao abrir o Passaporte.
+  - **"Beto Explorador"** — meio da jornada (Rio + Foz, XP 37.800), 2 cartões.
+  - Ambos jogam **sessão real** na hora (palavras em nivel_2/3 alimentam a
+    revisão; sobram palavras do banco base para as novas).
+- **Idempotente e restaurador:** re-rodar (`uv run python -m app.seed_demo`)
+  devolve as personas ao estado alvo — rearmar a vitrine entre apresentações
+  leva segundos. Testes em `tests/test_seed_demo.py` (suíte 110/110).
+- **Roteiro sugerido:** entrar em DEMO7A com um **nome novo** (onboarding +
+  diagnóstico + sessão ao vivo) → sair e entrar como **"Ana Viajante"**
+  (Home com meta parcial, Trilha avançada, Passaporte cheio + reveal ao vivo).
+- **Modo `DEMO` do app do aluno: despriorizado.** Com a vitrine no backend
+  real, não vale ressincronizar os `*.sample` do aluno a cada evolução; o
+  `DEMO` segue **necessário só para o site do professor** (até o login do
+  professor existir). Não é mudança de contrato de tela — nenhum brief muda.
