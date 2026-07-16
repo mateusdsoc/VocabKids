@@ -669,3 +669,32 @@ ficou defasado (mapa/movimentação atrás do backend real).
   real, não vale ressincronizar os `*.sample` do aluno a cada evolução; o
   `DEMO` segue **necessário só para o site do professor** (até o login do
   professor existir). Não é mudança de contrato de tela — nenhum brief muda.
+
+---
+
+## 🖼️ Cartão-postal com arte real no Passaporte (16/07)
+
+**Problema (achado no teste da vitrine "Ana Viajante"):** o reveal do Modo
+Conquista e a coleção do Passaporte mostravam a **cena estilizada** (degradê +
+sol + colina) mesmo para destinos **com arte empacotada** (ex.: Mont Blanc).
+O `PostcardFace` nasceu quando "a arte real ainda não existia" e não foi
+atualizado quando as 11 artes entraram no repo — Home, Trilha e Resumo já as
+usavam. Resultado: o aluno via o Mont Blanc real no teaser do Resumo e uma
+figura genérica ao tocar para revelar.
+
+**Correção:** o `PostcardFace` resolve a arte pelo mesmo caminho das outras
+telas (`HomeMapper.assetParaCidade`) e usa `Image.asset` quando ela existe;
+sem arte (Versalhes, Japão), continua caindo na cena estilizada. **Não é
+decisão revisada** — `telas.md` §7 sempre previu "animação genérica 'abrir
+com toque', reutilizada nos 28; só o asset muda". De passagem, a nota
+defasada do `brief-mockup-trilha.md` ("arte real só de Rio e Paris") foi
+atualizada para o estado atual (11 destinos ilustrados).
+
+**Pendências relacionadas (registradas em 16/07):**
+- [ ] Arte de **Versalhes** e dos **8 destinos do Japão** (hoje: cena
+      estilizada em todas as telas).
+- [ ] Arte dos **3 carimbos** de país (o reveal usa o widget `Carimbo`, anel
+      com iniciais) e dos **5 selos** (ícones do catálogo do cliente).
+- [ ] Backend servir `asset_ref` por destino na `/v1/trilha` e aposentar o
+      matching por substring do nome (`TODO(backend)` em `home_mapper.dart`
+      — renomear destino no seed hoje derruba a arte em silêncio).

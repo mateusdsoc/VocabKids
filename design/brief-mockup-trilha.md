@@ -110,8 +110,10 @@ Topo: "França — desbloqueia ao concluir o Brasil" → Paris 🔒
 Frame 3: Salvador → Cartão-postal embaçado (reveal só no Passaporte)
 Nível 4 · 3.120 / 4.500 XP (se útil no topo)
 ```
-> Arte real só de **Rio** e **Paris**. Outros destinos → **placeholder** (medalhão
-> 3D com inicial/ícone). Não rotular a foto do Rio como outra cidade.
+> Arte real dos **11 destinos ilustrados** (5 do Brasil + 6 da França — falta
+> Versalhes; Japão ainda sem arte). Destinos sem arte → **placeholder**
+> (medalhão 3D com inicial/ícone). Não rotular a foto de um destino como outra
+> cidade. *(Nota atualizada em 16/07 — antes dizia "só Rio e Paris".)*
 
 ---
 

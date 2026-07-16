@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_icons.dart';
+import '../../home/home_mapper.dart';
 import '../models.dart';
 import '../tones.dart';
 
-/// Cartão-postal de um destino (produto §3.10). Como a arte real (20 peças)
-/// ainda não existe, a "cena" é um placeholder estilizado: degradê na tinta do
-/// país + sol + colina, a cidade ao pé e um **selo postal** carimbado no canto.
+/// Cartão-postal de um destino (produto §3.10). Conquistado = a **arte real**
+/// do destino quando empacotada (mesma resolução da Home/Trilha/Resumo, via
+/// [HomeMapper.assetParaCidade]); destinos ainda sem arte (Versalhes, Japão)
+/// caem na cena estilizada: degradê na tinta do país + sol + colina. Nos dois
+/// casos, a cidade ao pé e um **selo postal** carimbado no canto.
 /// Bloqueado = silhueta com cadeado (o destino ainda por conquistar).
 ///
 /// A face é só o conteúdo; cada variação decide a moldura (polaroid, grade,
@@ -71,7 +74,7 @@ class PostcardFace extends StatelessWidget {
       );
     }
 
-    final tone = paisTone(context, pais);
+    final arte = HomeMapper.assetParaCidade(destino.cidade);
     return ClipRRect(
       borderRadius: br,
       child: SizedBox(
@@ -80,16 +83,20 @@ class PostcardFace extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: tone.scene,
+            if (arte != null)
+              Image.asset(arte, fit: BoxFit.cover)
+            else ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: paisTone(context, pais).scene,
+                  ),
                 ),
               ),
-            ),
-            CustomPaint(painter: _Scene(height)),
+              CustomPaint(painter: _Scene(height)),
+            ],
             // Scrim para legibilidade do texto.
             const DecoratedBox(
               decoration: BoxDecoration(

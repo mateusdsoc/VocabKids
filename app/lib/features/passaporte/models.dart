@@ -7,8 +7,9 @@
 /// - **Selos (feitos)** — 5 conquistas individuais.
 ///
 /// Itens ainda não conquistados aparecem como silhueta/cadeado (mostra o que
-/// falta — motivador). Aqui só o que a UI precisa; a arte (28 peças) é trabalho
-/// à parte, então os itens conquistados são placeholders estilizados por ora.
+/// falta — motivador). Aqui só o que a UI precisa; os cartões usam a **arte
+/// real** do destino quando empacotada (ver `PostcardFace`) e caem em cena
+/// estilizada sem arte; carimbos e selos (ainda sem asset) seguem desenhados.
 library;
 
 import 'package:flutter/material.dart';
