@@ -698,3 +698,52 @@ atualizada para o estado atual (11 destinos ilustrados).
 - [ ] Backend servir `asset_ref` por destino na `/v1/trilha` e aposentar o
       matching por substring do nome (`TODO(backend)` em `home_mapper.dart`
       — renomear destino no seed hoje derruba a arte em silêncio).
+
+---
+
+## 🚪 Portão sem rótulos + vista-fantasma só como placeholder (17/07)
+
+**Problema (achado no teste da vitrine "Ana Viajante"):** na região do portão
+de país empilhavam-se três textos — o rótulo do portão ("França"), o
+micro-status ("PORTÃO · AO CONCLUIR O BRASIL") e a faixa de fronteira
+("FRONTEIRA · FRANÇA"), que ficava **atrás** dos outros e ilegível. Além
+disso, o ícone de "vista-fantasma" (`Icons.cell_tower` para a Eiffel) era
+desenhado **por cima** da arte do portão — uma "antena" sobre a França.
+
+**Decisões (dono, 17/07):**
+- O portão **não tem rótulo nem sub**: a identificação do país é a **faixa de
+  fronteira**, que agora mostra **só o nome do país** (sem o prefixo
+  "Fronteira ·" e sem o ícone de pin) e desceu alguns px para não encavalar
+  com o portão. O estado aberto/travado fica só no visual do pin (arte em
+  cor × dessaturada + cadeado).
+- A **vista-fantasma** volta à intenção original: **placeholder de nó sem
+  arte** — nunca sobreposta à arte (vale para portão e marco bloqueado).
+- De passagem (desempenho, sem mudança visual): as artes dos pins do mapa
+  decodificam com `cacheWidth` proporcional ao exibido (assets de 1024px
+  viravam bitmaps de ~2,8 MB para discos de ~80px). O Passaporte segue
+  decodificando cheio (postal em tela grande).
+
+Na mesma conversa, o dono decidiu os dois pontos que estavam em análise:
+
+- **Marco concluído NÍTIDO (revisa o "embaçado na Trilha" do brief):** o
+  blur não protegia surpresa nenhuma — o nó **atual** já mostrava a mesma
+  arte nítida enquanto o aluno trabalhava nele — e ainda custava GPU (um
+  passe gaussiano por medalhão no scroll). O disco concluído agora mostra a
+  arte **nítida** (selo de check mantido) e o **mini-postal do canto foi
+  removido** (dono: "nem precisa dele"). O produto não muda: o **postal**
+  continua sendo revelado **só no Passaporte** — a coreografia é o momento;
+  o mapa mostra a arte da cidade, não o postal.
+- **Portão = arco preenchido pela bandeira do país (pintada em código):** o
+  arco meia-lua usava a arte da 1ª cidade do país — a Torre Eiffel aparecia
+  no portão E no marco de Paris. O arco (com o relevo/sombras originais)
+  fica, mas o preenchimento virou a **bandeira do país** desenhada em
+  `CustomPainter` (`_FlagPainter`): zero assets, nítida em qualquer escala,
+  e resolve também o Japão (sem arte de cidade). Scrim mais leve que na
+  época da foto (não há mais texto por cima); travado = tons dessaturados
+  (lerp para o tom "gravado" do tema, sem ColorFilter) + cadeado central;
+  aberto = cores plenas. *(Testamos a variante mastro + pano tremulando na
+  mesma conversa; o dono preferiu o arco preenchido.)* Upgrade futuro
+  possível: arte-herói por país no lugar da bandeira, sem mexer na
+  estrutura.
+
+Brief atualizado no mesmo commit (`brief-mockup-trilha.md`).

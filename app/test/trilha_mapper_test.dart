@@ -136,10 +136,13 @@ void main() {
     test('fronteira única entre Brasil e França, portão travado no meio', () {
       final m = TrilhaMapper.mapaCompleto(_trilha());
       expect(m.frontiers, hasLength(1));
-      expect(m.frontiers.single.label, 'Fronteira · França');
+      // A faixa identifica o país sozinha (decisão 17/07): sem "Fronteira ·"
+      // e sem rótulo/sub no portão — o estado fica só no visual do pin.
+      expect(m.frontiers.single.label, 'França');
 
       final portao = m.nodes.singleWhere((n) => n.type == NodeType.gate);
-      expect(portao.label, 'França');
+      expect(portao.label, isNull);
+      expect(portao.sub, isNull);
       expect(portao.state, NodeState.locked); // Brasil não concluído
 
       // Geometria: a faixa fica entre o marco do Foz e o portão; o portão,

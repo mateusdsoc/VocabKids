@@ -1,5 +1,4 @@
 import 'dart:math' show pi;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -15,6 +14,12 @@ class MapPin extends StatelessWidget {
   const MapPin({super.key, required this.node});
 
   final MapNode node;
+
+  /// Largura de decode das artes (px físicos, ~3× o tamanho lógico): os
+  /// assets têm 1024px e viram discos de ~80px — sem o teto, cada nó
+  /// descompacta ~2,8 MB de bitmap à toa (o Passaporte, que mostra o postal
+  /// grande, segue decodificando cheio).
+  static const _decodeMedal = 384;
 
   /// Tamanho do disco por tipo×estado — o mapa usa para ancorar o centro em (x,y).
   static Size discSize(MapNode n) {
@@ -153,7 +158,10 @@ class MapPin extends StatelessWidget {
               child: ClipOval(
                 child: Stack(fit: StackFit.expand, children: [
                   if (node.art != null)
-                    Image.asset(node.art!, fit: BoxFit.cover, alignment: const Alignment(0, 0.2)),
+                    Image.asset(node.art!,
+                        fit: BoxFit.cover,
+                        alignment: const Alignment(0, 0.2),
+                        cacheWidth: _decodeMedal),
                   _gloss(),
                 ]),
               ),
@@ -177,14 +185,15 @@ class MapPin extends StatelessWidget {
               ),
               child: ClipOval(
                 child: Stack(fit: StackFit.expand, children: [
+                  // Arte NÍTIDA (decisão 17/07 — antes vinha embaçada): o
+                  // blur não protegia o postal (o nó atual já mostrava a
+                  // mesma arte nítida) e custava um passe de GPU por nó.
+                  // O reveal do postal segue exclusivo do Passaporte.
                   if (node.art != null)
-                    ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                      child: Transform.scale(
-                        scale: 1.14,
-                        child: Image.asset(node.art!, fit: BoxFit.cover),
-                      ),
-                    ),
+                    Image.asset(node.art!,
+                        fit: BoxFit.cover,
+                        alignment: const Alignment(0, 0.2),
+                        cacheWidth: _decodeMedal),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -218,32 +227,6 @@ class MapPin extends StatelessWidget {
                 child: const Icon(AppIcons.check, size: 13, color: Colors.white),
               ),
             ),
-            // cantinho de postal (embaçado — reveal só no Passaporte)
-            if (node.art != null)
-              Positioned(
-                top: -9,
-                right: -10,
-                child: Transform.rotate(
-                  angle: 0.23,
-                  child: Container(
-                    width: 28,
-                    height: 21,
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.78),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [BoxShadow(color: t.contact, blurRadius: 10, offset: const Offset(0, 5), spreadRadius: -3)],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                        child: Image.asset(node.art!, fit: BoxFit.cover),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ]),
         );
       case NodeState.locked:
@@ -265,13 +248,17 @@ class MapPin extends StatelessWidget {
                       opacity: 0.65,
                       child: ColorFiltered(
                         colorFilter: const ColorFilter.matrix(_grayscaleDark),
-                        child: Image.asset(node.art!, fit: BoxFit.cover),
+                        child: Image.asset(node.art!,
+                            fit: BoxFit.cover, cacheWidth: _decodeMedal),
                       ),
                     ),
-                  Center(
-                    child: Icon(_ghostIcon(node.ghost),
-                        size: 38, color: t.ghostInk.withValues(alpha: 0.55)),
-                  ),
+                  // Vista-fantasma: placeholder de nó SEM arte (não
+                  // sobrepõe a arte quando ela existe — decisão 17/07).
+                  if (node.art == null)
+                    Center(
+                      child: Icon(_ghostIcon(node.ghost),
+                          size: 38, color: t.ghostInk.withValues(alpha: 0.55)),
+                    ),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -305,7 +292,12 @@ class MapPin extends StatelessWidget {
     }
   }
 
-  // ---------- GATE (portão / fronteira) ----------
+  // ---------- GATE (portão / fronteira): arco com a bandeira ----------
+  /// Decisão 17/07: a arte de cidade no arco duplicava a arte do 1º marco do
+  /// país (Torre Eiffel 2×). O arco meia-lua fica, mas o preenchimento é a
+  /// **bandeira do país pintada em código**: zero assets, nítida em qualquer
+  /// escala, e países sem arte (Japão) também ganham portão. Travado = tons
+  /// dessaturados + cadeado; aberto = cores plenas.
   Widget _gate(AppColors c, TrilhaTones t, Color paper) {
     final locked = node.state == NodeState.locked;
     const radius = BorderRadius.only(
@@ -329,13 +321,17 @@ class MapPin extends StatelessWidget {
         child: ClipRRect(
           borderRadius: radius,
           child: Stack(fit: StackFit.expand, children: [
-            if (node.art != null)
-              node.state == NodeState.locked
-                  ? ColorFiltered(
-                      colorFilter: const ColorFilter.matrix(_grayscaleDarker),
-                      child: Image.asset(node.art!, fit: BoxFit.cover, alignment: const Alignment(0, -0.4)),
-                    )
-                  : Image.asset(node.art!, fit: BoxFit.cover, alignment: const Alignment(0, -0.4)),
+            CustomPaint(
+              painter: _FlagPainter(
+                flag: node.flag,
+                locked: locked,
+                fallback: t.gateFill,
+                carve: t.carveFill,
+              ),
+            ),
+            // Scrim do arco original: dá profundidade e suaviza as cores da
+            // bandeira (paleta sóbria); mais leve que na época da foto,
+            // que precisava segurar texto branco por cima.
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -343,15 +339,9 @@ class MapPin extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: locked
                       ? [const Color(0x52081220), const Color(0xB8081220)]
-                      : [const Color(0x1A081220), const Color(0x8C081220)],
+                      : [const Color(0x14081220), const Color(0x66081220)],
                 ),
               ),
-            ),
-            Center(
-              child: Icon(_ghostIcon(node.ghost),
-                  size: 58,
-                  color: Colors.white
-                      .withValues(alpha: locked ? 0.30 : 0.5)),
             ),
             if (locked)
               Center(
@@ -479,6 +469,73 @@ class _AnelProgresso extends CustomPainter {
       old.espessura != espessura;
 }
 
+/// Bandeira do país preenchendo o portão (o arco meia-lua recorta via
+/// ClipRRect): faixas/círculo/losango escalados ao tamanho, cores levemente
+/// suavizadas para a paleta sóbria. Travada, os tons são puxados para o
+/// [carve] do tema (dessaturação barata, sem ColorFilter/saveLayer).
+class _FlagPainter extends CustomPainter {
+  const _FlagPainter({
+    required this.flag,
+    required this.locked,
+    required this.fallback,
+    required this.carve,
+  });
+
+  final CountryFlag? flag;
+  final bool locked;
+  final Color fallback; // fundo de país sem bandeira mapeada
+  final Color carve; // alvo da dessaturação (tom "gravado" do tema)
+
+  // Cores das bandeiras, levemente suavizadas para a paleta sóbria.
+  static const _azulFr = Color(0xFF3A5CA8);
+  static const _pano = Color(0xFFF3EFE4);
+  static const _vermelho = Color(0xFFCE4A44);
+  static const _verdeBr = Color(0xFF2F9963);
+  static const _amareloBr = Color(0xFFE3C04B);
+  static const _azulBr = Color(0xFF2C4E8E);
+
+  Color _cor(Color cor) => locked ? Color.lerp(cor, carve, 0.55)! : cor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    // Emblemas no centro exato — concêntricos com o chip de cadeado do
+    // estado travado (desalinhado parecia acidente).
+    final centro = Offset(w / 2, h / 2);
+    switch (flag) {
+      case CountryFlag.franca:
+        final faixa = w / 3;
+        final cores = [_azulFr, _pano, _vermelho];
+        for (var i = 0; i < cores.length; i++) {
+          canvas.drawRect(Rect.fromLTRB(i * faixa, 0, (i + 1) * faixa, h),
+              Paint()..color = _cor(cores[i]));
+        }
+      case CountryFlag.japao:
+        canvas.drawRect(Offset.zero & size, Paint()..color = _cor(_pano));
+        canvas.drawCircle(centro, h * 0.24, Paint()..color = _cor(_vermelho));
+      case CountryFlag.brasil:
+        canvas.drawRect(Offset.zero & size, Paint()..color = _cor(_verdeBr));
+        final losango = Path()
+          ..moveTo(centro.dx, h * 0.14)
+          ..lineTo(w * 0.84, centro.dy)
+          ..lineTo(centro.dx, h * 0.86)
+          ..lineTo(w * 0.16, centro.dy)
+          ..close();
+        canvas.drawPath(losango, Paint()..color = _cor(_amareloBr));
+        canvas.drawCircle(centro, h * 0.19, Paint()..color = _cor(_azulBr));
+      case null:
+        canvas.drawRect(Offset.zero & size, Paint()..color = _cor(fallback));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FlagPainter old) =>
+      old.flag != flag ||
+      old.locked != locked ||
+      old.fallback != fallback ||
+      old.carve != carve;
+}
+
 IconData _ghostIcon(Landmark? l) => switch (l) {
       Landmark.eiffel => Icons.cell_tower,
       Landmark.monument => Icons.account_balance,
@@ -491,11 +548,5 @@ const List<double> _grayscaleDark = [
   0.09, 0.30, 0.03, 0, 0, //
   0.09, 0.30, 0.03, 0, 0, //
   0.09, 0.30, 0.03, 0, 0, //
-  0, 0, 0, 1, 0,
-];
-const List<double> _grayscaleDarker = [
-  0.10, 0.33, 0.03, 0, 0, //
-  0.10, 0.33, 0.03, 0, 0, //
-  0.10, 0.33, 0.03, 0, 0, //
   0, 0, 0, 1, 0,
 ];

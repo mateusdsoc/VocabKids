@@ -383,19 +383,12 @@ class _Frontier extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: c.line, width: 1),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(AppIcons.pin, size: 10, color: c.muted),
-              const SizedBox(width: 5),
-              Text(label.toUpperCase(),
-                  style: AppType.mono(
-                      size: 9,
-                      weight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                      color: c.muted)),
-            ],
-          ),
+          child: Text(label.toUpperCase(),
+              style: AppType.mono(
+                  size: 9,
+                  weight: FontWeight.w700,
+                  letterSpacing: 1.4,
+                  color: c.muted)),
         ),
       ],
     );

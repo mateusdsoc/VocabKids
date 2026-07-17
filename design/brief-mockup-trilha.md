@@ -73,12 +73,18 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
 - **Nós = cidades** com o tratamento 3D acima; rótulo nome + micro-status
   (CONCLUÍDO · ATUAL · BLOQUEADO). Nó atual domina (sem selo "você está aqui").
 - **Cabeçalho de país** (carimbo em relevo) com progresso "3 de 6 destinos";
-  próximo país bloqueado ("desbloqueia ao concluir o Brasil").
+  próximo país = **portão** (arco meia-lua) **preenchido pela bandeira do
+  país** pintada em código (decisão 17/07 — substitui a arte de cidade, que
+  duplicava a arte do 1º marco). Sem rótulo/micro-status no portão: a
+  identificação é a **faixa de fronteira** com o nome do país; travado =
+  tons dessaturados + cadeado central, aberto = cores plenas.
 - **Recompensas** (colecionáveis, **sem bônus de jogo**): destino → postal;
-  país → carimbo. Indique destinos que já renderam postal. **A Trilha NÃO
-  revela o postal** (decisão revisada): ele aparece **embaçado** + selo
-  discreto; o reveal nítido é exclusivo do **Passaporte**. O **frame 3** mostra
-  esse estado embaçado + atalho "Ver no Passaporte".
+  país → carimbo. Indique destinos que já renderam postal (selo de check).
+  **A Trilha NÃO mostra o postal** (decisão revisada 17/07 — antes ele
+  aparecia embaçado no marco): o marco concluído exibe a **arte nítida da
+  cidade** + selo de check; o postal e seu reveal são exclusivos do
+  **Passaporte**. O **frame 3** mostra o detalhe do marco concluído + atalho
+  "Ver no Passaporte".
 - **Ações:** CTA chunky para continuar a sessão a partir do nó atual; acesso ao
   Passaporte; **barra inferior** com aba **"Trilha" ativa** (Início · Trilha ·
   Praticar · Eventos · Perfil), igual à da Home.
@@ -92,9 +98,9 @@ Pense em **objetos com volume sobre uma superfície**, com luz vindo de cima:
    profundidade descrita.**
 2. **Mapa · escuro** (Capa do Passaporte) — mesmo relevo; no escuro, o highlight
    é mais sutil e o dourado dá o brilho.
-3. **Detalhe de recompensa · claro** — popover com o **cartão-postal embaçado**
-   (com volume/perspectiva) + atalho "Ver no Passaporte" — o reveal nítido
-   acontece só no Passaporte.
+3. **Detalhe de recompensa · claro** — popover do marco concluído (arte
+   nítida da cidade) + atalho "Ver no Passaporte" — o postal e o reveal
+   acontecem só no Passaporte (decisão revisada 17/07).
 
 ---
 
@@ -106,8 +112,8 @@ País: Brasil · "3 de 6 destinos"
   Rio de Janeiro — ATUAL ← foco
   Foz do Iguaçu — BLOQUEADO 🔒 (próximo)
   Brasília — BLOQUEADO 🔒
-Topo: "França — desbloqueia ao concluir o Brasil" → Paris 🔒
-Frame 3: Salvador → Cartão-postal embaçado (reveal só no Passaporte)
+Topo: portão da França com a bandeira (faixa "FRANÇA"; travado até concluir o Brasil) 🔒
+Frame 3: Salvador → detalhe do marco concluído (postal/reveal só no Passaporte)
 Nível 4 · 3.120 / 4.500 XP (se útil no topo)
 ```
 > Arte real dos **11 destinos ilustrados** (5 do Brasil + 6 da França — falta

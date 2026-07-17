@@ -37,8 +37,10 @@ abstract final class TrilhaMapper {
   static const _extraFronteira = 210.0;
 
   /// Portão e faixa de fronteira, acima da base do destino que fecha o país.
+  /// A faixa fica abaixo da borda inferior do portão (410 − 62 = 348) com
+  /// respiro — antes encavalava com os rótulos do portão (decisão 17/07).
   static const _dyPortao = 410.0;
-  static const _dyFaixa = 344.0;
+  static const _dyFaixa = 330.0;
   static const _xPortao = 170.0;
 
   /// Folga acima do último marco.
@@ -107,8 +109,7 @@ abstract final class TrilhaMapper {
         final pais = _paisDe(trilha, d);
         final proximoPais = _paisDe(trilha, destinos[i + 1]);
         fronteiras.add(MapFrontier(
-            label: 'Fronteira · ${proximoPais.nome}',
-            y: y(bases[i] + _dyFaixa)));
+            label: proximoPais.nome, y: y(bases[i] + _dyFaixa)));
         nos.add(
             _portao(pais, proximoPais, x: _xPortao, y: y(bases[i] + _dyPortao)));
       }
@@ -217,7 +218,11 @@ abstract final class TrilhaMapper {
     );
   }
 
-  /// Portão do próximo país (na faixa de fronteira).
+  /// Portão do próximo país: a **bandeira** pintada em código (decisão
+  /// 17/07 — a arte da 1ª cidade duplicava a arte do 1º marco do país).
+  /// Sem rótulo/sub próprios: a identificação do país é a faixa de
+  /// fronteira logo abaixo; o estado (aberto/travado) fica só no visual do
+  /// pin (cores plenas × dessaturadas + cadeado).
   static MapNode _portao(TrilhaPais paisAtual, TrilhaPais proximoPais,
       {required double x, required double y}) {
     final aberto = paisAtual.concluido;
@@ -227,23 +232,15 @@ abstract final class TrilhaMapper {
       state: aberto ? NodeState.done : NodeState.locked,
       x: x,
       y: y,
-      label: proximoPais.nome,
-      sub: aberto
-          ? 'Portão · aberto'
-          : 'Portão · ao concluir o ${paisAtual.nome}',
-      art: HomeMapper.assetParaCidade(_cidadeSimbolo(proximoPais)),
-      ghost: _marcoDoPais(proximoPais.nome),
+      flag: _bandeiraDoPais(proximoPais.nome),
     );
   }
 
-  /// Primeira cidade do país — usada só para tentar resolver uma arte.
-  static String _cidadeSimbolo(TrilhaPais pais) =>
-      pais.destinos.isEmpty ? pais.nome : pais.destinos.first.nome;
-
-  static Landmark _marcoDoPais(String nome) {
+  static CountryFlag? _bandeiraDoPais(String nome) {
     final n = nome.toLowerCase();
-    if (n.contains('fran')) return Landmark.eiffel;
-    if (n.contains('jap')) return Landmark.mountain;
-    return Landmark.monument;
+    if (n.contains('fran')) return CountryFlag.franca;
+    if (n.contains('jap')) return CountryFlag.japao;
+    if (n.contains('bra')) return CountryFlag.brasil;
+    return null; // país sem bandeira mapeada → pano neutro
   }
 }

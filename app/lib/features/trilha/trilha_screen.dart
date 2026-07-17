@@ -28,8 +28,9 @@ import 'widgets/trilha_map.dart';
 /// paginação nem chevrons. Em `AppConfig.demo`, a janela única de exemplo
 /// ([TrilhaMapData.sample]).
 ///
-/// Profundidade por relevo, nós como pontos tocáveis, e a recompensa **não**
-/// se revela aqui — fica embaçada até o Passaporte. **Sem bob/flutuação
+/// Profundidade por relevo, nós como pontos tocáveis. O marco concluído
+/// mostra a **arte nítida** da cidade (decisão 17/07); o **postal** não
+/// aparece no mapa — o reveal é exclusivo do Passaporte. **Sem bob/flutuação
 /// contínua no nó atual** (decisão do dono, 11/06).
 ///
 /// [celebrarChegada] toca a animação de **completar nó** ao aterrissar (o

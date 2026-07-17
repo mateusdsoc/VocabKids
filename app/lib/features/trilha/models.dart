@@ -25,6 +25,10 @@ enum NodeState { done, current, locked }
 /// Marco geográfico desenhado como "vista-fantasma" nos nós bloqueados.
 enum Landmark { eiffel, monument, mountain }
 
+/// Bandeira de país **pintada em código** — a cara do portão (decisão 17/07:
+/// o arco com arte de cidade duplicava a arte do 1º marco do país).
+enum CountryFlag { brasil, franca, japao }
+
 /// Um nó posicionado no mapa (coordenadas no espaço 340×540 do design).
 class MapNode {
   const MapNode({
@@ -37,6 +41,7 @@ class MapNode {
     this.sub,
     this.art,
     this.ghost,
+    this.flag,
     this.cta = false,
     this.next = false,
     this.progresso,
@@ -55,6 +60,9 @@ class MapNode {
 
   /// Marco fantasma do nó bloqueado.
   final Landmark? ghost;
+
+  /// Bandeira do país (só nos portões).
+  final CountryFlag? flag;
 
   /// Mostra o botão "Continuar" ao lado (só no nó atual).
   final bool cta;
@@ -126,7 +134,7 @@ class TrilhaMapData {
     level: 4,
     xpCurrent: 3120,
     xpTarget: 4500,
-    frontiers: [MapFrontier(label: 'Fronteira · França', y: 122)],
+    frontiers: [MapFrontier(label: 'França', y: 134)],
     country: TrilhaCountry(
       name: 'Brasil',
       tagline: 'país atual',
@@ -140,10 +148,7 @@ class TrilhaMapData {
           state: NodeState.locked,
           x: 170,
           y: 54,
-          label: 'França',
-          sub: 'Portão · ao concluir o Brasil',
-          art: 'assets/images/paris.webp',
-          ghost: Landmark.eiffel),
+          flag: CountryFlag.franca),
       MapNode(
           id: 'brasilia',
           type: NodeType.medal,
