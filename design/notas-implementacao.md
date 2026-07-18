@@ -747,3 +747,59 @@ Na mesma conversa, o dono decidiu os dois pontos que estavam em análise:
   estrutura.
 
 Brief atualizado no mesmo commit (`brief-mockup-trilha.md`).
+
+---
+
+## 📝 Redação — fatia 1: envio real do aluno (18/07)
+
+Primeira fatia do completo de redação (Bloco 2b fatiado em: **1 envio** →
+2 fila/estados → 3 ingestão → 4 análise → 5 extração/atribuição → 6 sinal de
+turma). A lista e o envio saíram do mock: `GET /v1/redacoes` responde as
+**atribuições da turma sob a ótica do aluno** (envio dele aninhado, `null` =
+aberta) e `POST /v1/redacoes/{atribuicao}/envio` recebe multipart (fotos das
+folhas ou um PDF). `pytest` 119/119 (9 novos), `flutter analyze` limpo,
+`flutter test` 46/46 (4 novos do `RedacaoMapper`), smoke em runtime ok
+(atribuição→envio→lista, arquivos no disco).
+
+Decisões (datadas aqui; contratos em `telas.md` §8.1 e `arquitetura.md`):
+
+1. **Contrato da lista por atribuição** — o shape mock (`id/tema/status`
+   achatados) confundia atribuição com envio; o real separa
+   (`atribuicao_id` + objeto `redacao` opcional). O app nunca tinha sido
+   ligado nessa rota, então não houve quebra de consumidor.
+2. **`arquivo_ref` = JSON de chaves de storage** (uma por página, em ordem).
+   Um manuscrito tem 1–2 folhas fotografadas; o pipeline fará OCR página a
+   página. PDF digital é lista de um item. Sem migração — a coluna já era
+   `Text` livre.
+3. **Storage atrás de interface** (`redacao/storage.py`): `Armazenamento`
+   (protocolo salvar/ler/remover) com provider local em dev
+   (`REDACOES_DIR`, default `backend/dados/redacoes`, no `.gitignore`);
+   R2 na produção é só outro provider — chamadores não mudam.
+4. **Validação por assinatura (magic bytes)**, não por content-type
+   declarado: JPEG/PNG/WEBP → `manuscrita`; um único `%PDF` → `digital`;
+   mistura ou tipo estranho → 422 `arquivo_invalido`. Limites: 6 páginas,
+   10 MB cada (413 `arquivo_grande` / 422 `paginas_demais`).
+5. **Reenvio substitui até a análise sair** (mesma linha, status volta a
+   `enviada`, arquivos antigos removidos em melhor esforço); depois de
+   `analisada` → 409 `redacao_ja_analisada` (a análise vinculou palavras à
+   trilha; trocar o texto por baixo quebraria o vínculo).
+6. **Rotas do aluno com `require_papel("aluno")`** — professor/coordenador
+   acompanham pelas rotas de `professor` (403 aqui). Atribuição de outra
+   turma responde **404** (não vaza o que existe).
+7. **Análise segue mock** (`GET /redacoes/{id}/analise` intocado): é o
+   contrato executável da tela §8.1 até a fatia 4; o app não o chama — a
+   tela de resultado continua placeholder honesto.
+8. **App**: padrão das outras telas (DTOs em `features/redacao/data/` →
+   `RedacaoMapper` puro → `redacoesProvider` autoDispose). Envio real na
+   `EnvioScreen` (multipart via `ApiClient.postMultipart`, sem content-type
+   por parte — o backend valida pela assinatura mesmo); a área aplica o 201
+   como espelho otimista e invalida o provider. `DEMO` continua com a
+   amostra e o envio simulado. No mapper, `erro_*` aparece como "em
+   análise" até o pipeline existir (aí ganha tratamento próprio de reenvio).
+9. **UI de PDF continua "em breve"**: o backend já aceita PDF, mas o picker
+   de arquivo digital no app fica para quando o fluxo digital for
+   priorizado (decisão de produto §4.6 intacta).
+
+Pendência registrada: verificação **visual** das duas telas (área + envio)
+em claro/escuro contra o backend real — a lógica está coberta por testes,
+mas o runtime visual não foi conferido nesta sessão.

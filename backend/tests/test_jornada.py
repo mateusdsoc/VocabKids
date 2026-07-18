@@ -110,9 +110,9 @@ async def test_jornada_completa_do_apresentavel(client):
     passaporte = (await client.get("/v1/passaporte", headers=h)).json()
     assert passaporte["total"] == 28
 
-    # 9. Telas mockadas da fatia A respondem.
+    # 9. Redação real (fatia 1): sem atribuição do professor, a lista é vazia.
     redacoes = (await client.get("/v1/redacoes", headers=h)).json()
-    assert redacoes["mock"] is True and len(redacoes["itens"]) >= 1
+    assert redacoes == {"itens": []}
     # O painel é do professor — o token de aluno bate na porta e leva 403
     # (papel exigido pelas rotas de professor; ver test_professor.py).
     painel = await client.get("/v1/professor/turmas/1/painel", headers=h)

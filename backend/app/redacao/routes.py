@@ -1,52 +1,57 @@
-"""Redação — telas MOCKADAS/estáticas na fatia A.
-
-No apresentável estas telas existem para a demo, mas devolvem dados fixos: o
-pipeline real de redação (OCR→análise→extração→atribuição) com dados de verdade
-é da fatia C (Bloco 2b). Mesmas rotas, sem reescrita depois. (O painel do
-professor saiu daqui para o domínio `professor`.)
+"""Redação — lado do aluno. Lista e envio REAIS (fatia 1 do completo, 18/07);
+a análise segue MOCKADA (contrato executável da tela §8.1) até o pipeline
+OCR→análise→extração→atribuição (Bloco 2b) existir — mesmas rotas, sem
+reescrita depois. (O painel do professor vive no domínio `professor`.)
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.api.deps import get_conn
 from app.errors import ApiError
-from app.identidade.auth import get_usuario_atual
+from app.identidade.auth import UsuarioAutenticado, require_papel
+from app.redacao import service
+from app.redacao.schemas import EnvioOut, RedacoesAlunoOut
 
-router = APIRouter(tags=["redacao"], dependencies=[Depends(get_usuario_atual)])
+router = APIRouter(tags=["redacao"])
 
+_Conn = Annotated[AsyncConnection, Depends(get_conn)]
+# Área do aluno: professor/coordenador acompanham pelas rotas de `professor`.
+_Aluno = Annotated[UsuarioAutenticado, Depends(require_papel("aluno"))]
 
-class RedacaoMock(BaseModel):
-    id: int
-    tema: str
-    prazo: str | None
-    status: str
-
-
-class RedacoesOut(BaseModel):
-    mock: bool
-    itens: list[RedacaoMock]
-
-
-# Dados fixos só para a demo (fatia A).
-_REDACOES = [
-    {"id": 1, "tema": "Minhas férias dos sonhos", "prazo": "2026-06-20", "status": "pendente"},
-    {"id": 2, "tema": "Um herói brasileiro", "prazo": "2026-06-10", "status": "analisada"},
-    {"id": 3, "tema": "Se eu pudesse mudar o mundo", "prazo": None, "status": "rascunho"},
-]
 
 @router.get(
     "/redacoes",
-    response_model=RedacoesOut,
-    summary="Lista de redações (MOCK estático na fatia A)",
+    response_model=RedacoesAlunoOut,
+    summary="Atribuições da turma sob a ótica do aluno (envio dele, se houver)",
 )
-async def listar_redacoes():
-    return {"mock": True, "itens": _REDACOES}
+async def listar_redacoes(conn: _Conn, usuario: _Aluno):
+    return await service.listar(conn, usuario.id)
+
+
+@router.post(
+    "/redacoes/{atribuicao_id}/envio",
+    response_model=EnvioOut,
+    status_code=201,
+    summary="Envia a redação (fotos das folhas OU um PDF, multipart)",
+)
+async def enviar_redacao(
+    atribuicao_id: int,
+    conn: _Conn,
+    usuario: _Aluno,
+    arquivos: Annotated[list[UploadFile], File(description="Páginas do envio")],
+):
+    conteudos = [await arquivo.read() for arquivo in arquivos]
+    return await service.enviar(conn, usuario.id, atribuicao_id, conteudos)
 
 
 # --- Análise da redação (MOCK) ---------------------------------------------
 # Contrato em docs/arquitetura.md (pipeline §2). Esta rota devolve a view-model
 # que a tela do aluno (telas §8.1) consome: anotações + palavras novas + texto.
+# Segue estática (ids fixos abaixo) até a análise real (fatia 4 de redação);
+# o app não a chama na fatia 1 — a tela de resultado é um placeholder honesto.
 #
 # As âncoras são declaradas como (trecho, ocorrência) e RESOLVIDAS em offsets a
 # cada request — é o próprio passo do contrato "o backend resolve, não confia no
@@ -92,6 +97,14 @@ class AnaliseOut(BaseModel):
     analise: Analise | None
     palavras_novas: list[PalavraNova]
 
+
+# Amostra fixa do mock da análise (era a lista da fatia A inteira; hoje só
+# esta rota usa — a lista real vem do banco).
+_REDACOES = [
+    {"id": 1, "tema": "Minhas férias dos sonhos", "prazo": "2026-06-20", "status": "pendente"},
+    {"id": 2, "tema": "Um herói brasileiro", "prazo": "2026-06-10", "status": "analisada"},
+    {"id": 3, "tema": "Se eu pudesse mudar o mundo", "prazo": None, "status": "rascunho"},
+]
 
 # Texto "transcrito" da redação 2 ("Um herói brasileiro"), com erros plantados
 # em três dimensões marcáveis (vocabulário, acentuação, pontuação).
@@ -223,9 +236,9 @@ def _montar_analise_heroi() -> Analise:
 @router.get(
     "/redacoes/{redacao_id}/analise",
     response_model=AnaliseOut,
-    summary="Análise da redação (MOCK estático na fatia A)",
+    summary="Análise da redação (MOCK estático até a fatia 4)",
 )
-async def analise_redacao(redacao_id: int):
+async def analise_redacao(redacao_id: int, usuario: _Aluno):
     item = next((r for r in _REDACOES if r["id"] == redacao_id), None)
     if item is None:
         raise ApiError(404, "redacao_nao_encontrada", "Redação não encontrada.")

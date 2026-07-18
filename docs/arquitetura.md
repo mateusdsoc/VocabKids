@@ -130,7 +130,7 @@ Conteúdo, não dado de aluno. ~80 nós + 28 peças (seção 3.7/3.10), praticam
 | Tabela | Campos-chave | Notas | Fase |
 |---|---|---|---|
 | `redacao_atribuicao` | `id`, `turma_id→turma`, `professor_associacao_id→associacao`, `tema`, `prazo` | Professor atribui à turma (seção 4.6). | C (mock em A) |
-| `redacao` | `id`, `atribuicao_id→redacao_atribuicao`, `usuario_id→usuario`, `formato` (`manuscrita`\|`digital`), `arquivo_ref` (R2), `texto_extraido`, `status`, `enviada_em`, `analisada_em` (nullable) | Aluno envia (foto/PDF). `arquivo_ref` aponta p/ R2. | C (mock em A) |
+| `redacao` | `id`, `atribuicao_id→redacao_atribuicao`, `usuario_id→usuario`, `formato` (`manuscrita`\|`digital`), `arquivo_ref`, `texto_extraido`, `status`, `enviada_em`, `analisada_em` (nullable) | Aluno envia (foto/PDF). `arquivo_ref` = **JSON de chaves de storage**, uma por página (fatia 1, 18/07) — local em dev, R2 em produção (`redacao/storage.py`). | **C fatia 1 (envio real)** |
 | `redacao_analise` | `redacao_id→redacao`, `anotacoes` (JSONB por dimensão) | Multidimensional (seção 4.2). Anotações coloridas vêm daqui. | C (mock em A) |
 | `redacao_palavra` | `id`, `redacao_id→redacao`, `texto`, `lema`, `tipo` (`fraca`\|`superutilizada`), `virou_atribuicao` (bool) | Palavras extraídas que alimentam a trilha (seção 4.5). `lema` via spaCy. | C |
 | `sinal_turma` | `turma_id→turma`, `palavra_id→palavra`, `periodo`, `pct`, `computado_em` | Palavra fraca/superutilizada em ≥30% da turma (seção 3.5). Computado/materializado. | C |
@@ -684,13 +684,15 @@ Organização **por domínio** (não por camada técnica), espelhando o Bloco 1:
 | `adaptacao` | sinal limpo + histerese; roda no fim da sessão (Bloco 2a) | A |
 | `progressao` | XP/combo, `aluno_progresso`, avanço de `trilha_no`, recompensas | A |
 | `trilha` | catálogo `pais/destino/trilha_no/colecionavel`; passaporte (`aluno_colecionavel`) | A |
-| `redacao` | atribuição/envio + orquestração do pipeline (Bloco 2b) | C (mock em A) |
+| `redacao` | lista+envio do aluno (**reais — fatia 1, 18/07**; storage atrás de interface) + orquestração do pipeline (Bloco 2b, pendente) | C (fatia 1 real) |
 | `report` | `report_questao`, auto-ocultar, anti-abuso (Bloco 2b/QA) | C (mock em A) |
 | `professor` | painel de turma/aluno, meta semanal, atribuição de redação (telas §8.2, §3.11) | C (mock em A) |
 | `telemetria` | `sessao`/`evento` (analytics agregada, seção 07) | C |
 
-> No apresentável, `redacao`/`report`/`professor` existem como **rotas mockadas** (devolvem dados
-> fixos) — a tela é real, o backend não grava (decisão "schema único", Bloco 1).
+> Dos domínios que nasceram mockados no apresentável: `professor` é **real desde 13/07**
+> (fatia C) e `redacao` tem **lista+envio reais desde 18/07** (fatia 1; análise segue
+> mock até o pipeline). Só `report` continua inteiramente mock — as telas sempre foram
+> reais, o que muda é o miolo (decisão "schema único", Bloco 1).
 
 ### Fronteira síncrono × assíncrono
 
@@ -722,7 +724,8 @@ recursos de **A** (não exaustivo; versão sob `/v1`):
 | `GET` | `/v1/passaporte` | coleção (até 28) + pendentes de reveal (`conquistado && !revelado`) | trilha |
 | `POST` | `/v1/passaporte/{id}/revelado` | Modo Conquista tocou o item → marca revelado (idempotente) | trilha |
 | `POST` | `/v1/questoes/{id}/report` | report do aluno (mock em A) | report |
-| `GET` | `/v1/redacoes` | tela mockada/estática (A) | redacao |
+| `GET` | `/v1/redacoes` | atribuições da turma sob a ótica do aluno + envio dele (**real — fatia 1**) | redacao |
+| `POST` | `/v1/redacoes/{atribuicao}/envio` | envia a redação (multipart: fotos das folhas ou 1 PDF; reenvio substitui até `analisada`) (**real — fatia 1**) | redacao |
 | `GET` | `/v1/professor/turmas` · `/v1/professor/turmas/{id}/painel` · `/v1/professor/escola` · `/v1/professor/alunos/{id}` | painel do professor/coordenador + detalhe do aluno (**real na fatia C**: escopo por associação, §3.11) | professor |
 | `POST` | `/v1/professor/turmas/{id}/redacoes` | atribuir redação à turma — tema + prazo (§4.6; persiste `redacao_atribuicao`) | professor |
 | `PUT` | `/v1/professor/turmas/{id}/meta` | configurar meta semanal da turma (§3.5; persiste `turma_config`) | professor |
@@ -748,7 +751,8 @@ fino, então o peso é baixo. Telas mapeadas ao produto (seção 3.7/3.10):
 | **Trilha (mapa)** | aterrissagem pós-sessão; "você está aqui" | 3.7 |
 | **Passaporte** | perfil + coleção; Conquista (animado) / Exploração (estático) | 3.10 / `referencia_arte.md` |
 | **Onboarding** | código de turma → boas-vindas → 2 demos → diagnóstico → 1ª palavra | 3.5 |
-| **Redação / Report** | **mockadas/estáticas** no apresentável | seção 08 |
+| **Redação** | lista+envio **reais** (fatia 1); resultado placeholder até a análise (fatias 2–4) | 4.4/4.6 / telas §8.1 |
+| **Report** | **mockada/estática** no apresentável | seção 08 |
 | **Professor (web)** | app web separado (`main_professor.dart`): painel turma/aluno, meta, atribuir redação | §8.2 / 3.11 |
 
 A animação (passaporte, confete de nó) segue `referencia_arte.md`; ferramenta em aberto

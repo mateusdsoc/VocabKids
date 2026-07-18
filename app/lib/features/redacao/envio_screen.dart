@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/api_exception.dart';
+import '../../core/config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
@@ -9,21 +12,24 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/surface_card.dart';
 import 'format.dart';
 import 'models.dart';
+import 'redacao_mapper.dart';
+import 'redacao_providers.dart';
 import 'widgets/redacao_background.dart';
 
 /// Tela de envio (produto §4.6 manuscrita): o aluno fotografa a redação. Como
 /// uma redação à mão tem 1–2 folhas, aceita **várias fotos** por envio (câmera
 /// ou galeria), com remover. O caminho digital (PDF) entra ao lado.
 ///
-/// Sem backend ainda: ao confirmar, devolve a contagem de páginas pra área
-/// marcar a redação como "em análise". OCR/análise são fatia C.
-class EnvioScreen extends StatefulWidget {
+/// Upload real (`POST /v1/redacoes/{atribuicao}/envio`, multipart): confirma e
+/// devolve o item já como "em análise" para a área. OCR/análise vêm nas fatias
+/// seguintes. Em `DEMO`, simula o envio como antes.
+class EnvioScreen extends ConsumerStatefulWidget {
   const EnvioScreen({super.key, required this.redacao});
 
   final Redacao redacao;
 
   @override
-  State<EnvioScreen> createState() => _EnvioScreenState();
+  ConsumerState<EnvioScreen> createState() => _EnvioScreenState();
 }
 
 class _Pagina {
@@ -32,7 +38,7 @@ class _Pagina {
   final Uint8List bytes;
 }
 
-class _EnvioScreenState extends State<EnvioScreen> {
+class _EnvioScreenState extends ConsumerState<EnvioScreen> {
   final _picker = ImagePicker();
   final List<_Pagina> _paginas = [];
   bool _enviando = false;
@@ -69,10 +75,30 @@ class _EnvioScreenState extends State<EnvioScreen> {
 
   Future<void> _enviar() async {
     setState(() => _enviando = true);
-    // Apresentável: simula o upload. O POST real (multipart) é da fatia C.
-    await Future.delayed(const Duration(milliseconds: 1100));
-    if (!mounted) return;
-    Navigator.of(context).pop(_paginas.length);
+
+    if (AppConfig.demo) {
+      await Future.delayed(const Duration(milliseconds: 1100));
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.redacao.copyWith(
+        status: RedacaoStatus.emAnalise,
+        enviadaEm: DateTime.now(),
+        paginas: _paginas.length,
+      ));
+      return;
+    }
+
+    try {
+      final envio = await ref.read(redacaoRepositoryProvider).enviar(
+            widget.redacao.atribuicaoId,
+            [for (final p in _paginas) (nome: p.nome, bytes: p.bytes)],
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(RedacaoMapper.aposEnvio(widget.redacao, envio));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _enviando = false);
+      _avisar(e.message);
+    }
   }
 
   void _avisar(String msg) {

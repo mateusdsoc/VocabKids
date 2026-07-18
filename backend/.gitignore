@@ -4,3 +4,5 @@ __pycache__/
 .env
 *.egg-info/
 .pytest_cache/
+# Arquivos de redação enviados em dev (storage local — ver redacao/storage.py)
+dados/

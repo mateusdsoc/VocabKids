@@ -5,8 +5,9 @@
 /// pipeline real (OCR → análise → atribuição de palavras) é da fatia C; por
 /// isso o resultado fica num placeholder honesto, sem métricas inventadas.
 ///
-/// Espelha `backend/app/redacao/routes.py` (`GET /redacoes`, hoje mockado):
-/// `tema`, `prazo`, `status`.
+/// Alimentado pelo backend real (`GET /v1/redacoes` — fatia 1): o item é a
+/// **atribuição** sob a ótica do aluno; o envio dele (se houver) dá o status.
+/// A tradução DTO→modelo vive no `RedacaoMapper`.
 library;
 
 /// Onde a redação está no ciclo do aluno.
@@ -23,15 +24,22 @@ enum RedacaoStatus {
 
 class Redacao {
   const Redacao({
-    required this.id,
+    required this.atribuicaoId,
     required this.tema,
     required this.status,
+    this.redacaoId,
     this.prazo,
     this.enviadaEm,
     this.paginas = 0,
   });
 
-  final int id;
+  /// Id da atribuição do professor — identidade do item e alvo do envio.
+  final int atribuicaoId;
+
+  /// Id do envio deste aluno; `null` enquanto aberta. É a chave da análise
+  /// (`GET /redacoes/{id}/analise`, fatia 4).
+  final int? redacaoId;
+
   final String tema;
   final RedacaoStatus status;
 
@@ -48,11 +56,13 @@ class Redacao {
 
   Redacao copyWith({
     RedacaoStatus? status,
+    int? redacaoId,
     DateTime? enviadaEm,
     int? paginas,
   }) =>
       Redacao(
-        id: id,
+        atribuicaoId: atribuicaoId,
+        redacaoId: redacaoId ?? this.redacaoId,
         tema: tema,
         prazo: prazo,
         status: status ?? this.status,
@@ -60,21 +70,22 @@ class Redacao {
         paginas: paginas ?? this.paginas,
       );
 
-  /// Amostra para o apresentável: 1 redação aberta (caso comum) + histórico.
+  /// Amostra para `DEMO=true`: 1 redação aberta (caso comum) + histórico.
   /// Prazos são relativos a "agora" para a urgência fazer sentido em qualquer
-  /// dia. Trocar por `GET /redacoes` quando ligar no backend.
+  /// dia. Fora do demo, os dados vêm de `GET /v1/redacoes`.
   static List<Redacao> sample() {
     final hoje = DateTime.now();
     DateTime emDias(int d) => DateTime(hoje.year, hoje.month, hoje.day + d);
     return [
       Redacao(
-        id: 1,
+        atribuicaoId: 1,
         tema: 'Minhas férias dos sonhos',
         status: RedacaoStatus.aberta,
         prazo: emDias(3),
       ),
       Redacao(
-        id: 2,
+        atribuicaoId: 2,
+        redacaoId: 102,
         tema: 'Um herói brasileiro',
         status: RedacaoStatus.analisada,
         prazo: emDias(-9),
@@ -82,7 +93,8 @@ class Redacao {
         paginas: 2,
       ),
       Redacao(
-        id: 3,
+        atribuicaoId: 3,
+        redacaoId: 103,
         tema: 'Se eu pudesse mudar o mundo',
         status: RedacaoStatus.emAnalise,
         prazo: emDias(-2),

@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # professor entra aqui quando for publicado). Vazio = CORS desligado.
     cors_origins: str = ""
 
+    # Armazenamento dos arquivos de redação (fotos/PDF). Em dev é um diretório
+    # local; produção troca o provider por R2 sem mudar chamador (redacao/storage.py).
+    redacoes_dir: str = "dados/redacoes"
+
     # Rate limiting (janela fixa de 60s, em memória — vale por processo; se a
     # API escalar horizontalmente, mover o estado para Redis).
     rate_limit_habilitado: bool = True

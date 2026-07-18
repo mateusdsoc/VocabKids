@@ -6,7 +6,37 @@
 
 ---
 
-## Estado atual (13/07, noite)
+## Estado atual (18/07)
+
+**📝 Redação — fatia 1 FEITA: envio real do aluno, de ponta a ponta.** Primeira
+fatia do completo de redação (plano em 6 fatias: 1 envio → 2 fila/estados →
+3 ingestão → 4 análise → 5 extração/atribuição → 6 sinal de turma). O que saiu
+do mock:
+
+- **Backend**: `GET /v1/redacoes` real (atribuições da turma sob a ótica do
+  aluno, envio dele aninhado) e `POST /v1/redacoes/{atribuicao}/envio`
+  (multipart — fotos das folhas ou 1 PDF; validação por **magic bytes**;
+  reenvio substitui até `analisada`, depois 409). Storage atrás de interface
+  (`redacao/storage.py`: local em dev via `REDACOES_DIR`, R2 depois é só outro
+  provider). `arquivo_ref` = JSON de chaves (uma por página). Dep nova:
+  `python-multipart`. A **análise segue mock** (contrato da fatia 4).
+- **App**: `features/redacao/` ligado no padrão das outras telas (DTOs →
+  `RedacaoMapper` → `redacoesProvider`); `EnvioScreen` faz o upload real
+  (`ApiClient.postMultipart`); `DEMO` continua com amostra + envio simulado.
+- **Verificação**: `pytest` **119/119** (9 novos em `test_redacao.py`),
+  `flutter analyze` limpo, `flutter test` **46/46** (4 novos do mapper), smoke
+  em runtime ok (professora atribui → aluno envia 2 fotos → lista reflete →
+  arquivos no disco). ⚠️ Pendência: conferência **visual** das duas telas em
+  claro/escuro (lógica coberta; visual não olhado nesta sessão).
+
+Decisões datadas em `design/notas-implementacao.md` ("📝 Redação — fatia 1");
+`telas.md` §8.1 e `arquitetura.md` atualizados junto. **Próxima fatia
+sugerida: 2 (fila `procrastinate` + máquina de estados), depois 3 (ingestão
+PDF primeiro — OCR de manuscrita precisa de credencial GCP do dono).**
+
+---
+
+## Estado anterior (13/07, noite)
 
 **📚 Seed de vocabulário expandido FEITO** — 8 → **37 palavras** curadas,
 distribuídas nos níveis 1–10 (3–4 por nível; antes faltavam por completo os
@@ -140,8 +170,15 @@ cliente — até lá o site roda em `DEMO` e o token real sai do seed) e o job d
 **sinal de turma** (é do pipeline de redação, fatia C de redação).
 
 **~~1. Integridade do gameplay~~ ✅ feita (13/07, noite)** — ver "Estado
-atual". Com isso, **não há mais pendência de código mapeada** antes das
+anterior". Com isso, não havia mais pendência de código mapeada antes das
 tarefas do dono e das decisões de produto abaixo.
+
+**Frente atual: completo de redação (Bloco 2b), em 6 fatias** — ✅ **1 envio
+real** (18/07, ver "Estado atual") · 2 fila `procrastinate` + máquina de
+estados · 3 ingestão (PDF primeiro; OCR manuscrita pede credencial GCP) ·
+4 análise LLM atrás de interface (modelo de produção segue adiado ao 1º
+cliente) · 5 extração/atribuição à trilha (fecha o ciclo do produto) ·
+6 sinal de turma (acende o painel do professor).
 
 **Dever do dono (adiado de propósito, não é código):**
 - **Revisão pedagógica do diagnóstico** — **só será feita quando estivermos em

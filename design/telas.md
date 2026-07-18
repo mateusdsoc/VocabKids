@@ -263,13 +263,18 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 
 Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
 
-### 8.1 Redação (estática) — produto 4.4
+### 8.1 Redação — produto 4.4/4.6 (lista+envio reais desde 18/07)
 - **Objetivo:** mostrar o **diferencial pedagógico** (redação → vocabulário).
-- **Conteúdo:** o texto do aluno **anotado** com marcações coloridas por dimensão
-  (vocabulário repetido/fraco, acentuação, vírgula/pontuação, estrutura/coesão);
-  área de envio (foto/PDF) **desenhada**, sem OCR/LLM rodando; dashboards de
-  correção (da última redação e do ano) com dados fictícios.
-- **Dados:** `GET /v1/redacoes` (mock estático).
+- **Conteúdo:** área **herói + histórico** (a atribuição aberta é o herói; as
+  enviadas dão corpo embaixo); envio **real** por fotos das folhas (multipart;
+  PDF aceito pelo backend, picker digital "em breve" na UI); resultado ainda
+  **placeholder honesto** — o texto anotado com marcações por dimensão
+  (vocabulário, acentuação, pontuação, coesão) entra quando o pipeline
+  OCR→análise rodar (fatias 2–4 de redação).
+- **Dados:** `GET /v1/redacoes` (atribuições da turma + envio do aluno, real) e
+  `POST /v1/redacoes/{atribuicao}/envio` (real; reenvio substitui até a análise
+  sair). `GET /redacoes/{id}/analise` segue **mock** (contrato da fatia 4).
+  Decisões datadas em `notas-implementacao.md` → "📝 Redação — fatia 1".
 
 ### 8.2 Superfície do Professor (web) — produto 07 + §3.11
 - **Plataforma:** app **web** separado (entrypoint `app/lib/main_professor.dart`),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -48,6 +49,27 @@ class ApiClient {
           headers: await _headers(auth: auth),
           body: body == null ? null : jsonEncode(body),
         ));
+  }
+
+  /// POST multipart (upload de arquivos). O content-type de cada parte não é
+  /// declarado de propósito: o backend valida pela assinatura do arquivo
+  /// (magic bytes), que é o que ele confere de qualquer forma.
+  Future<dynamic> postMultipart(
+    String path, {
+    required String campo,
+    required List<({String nome, Uint8List bytes})> arquivos,
+  }) async {
+    return _send(() async {
+      final req = http.MultipartRequest('POST', _uri(path));
+      final token = await _tokens.read();
+      if (token != null) req.headers['Authorization'] = 'Bearer $token';
+      for (final a in arquivos) {
+        req.files.add(
+          http.MultipartFile.fromBytes(campo, a.bytes, filename: a.nome),
+        );
+      }
+      return http.Response.fromStream(await _http.send(req));
+    });
   }
 
   /// Executa a requisição e normaliza o resultado: decodifica JSON no sucesso,
