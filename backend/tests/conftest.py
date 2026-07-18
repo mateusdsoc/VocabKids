@@ -20,10 +20,12 @@ os.environ["CORS_ORIGINS"] = "http://cors-permitido.test"
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
+from procrastinate import testing as procrastinate_testing  # noqa: E402
 from sqlalchemy import create_engine, text  # noqa: E402
 
 from app.config import settings  # noqa: E402
 from app.db import engine  # noqa: E402
+from app.fila import fila  # noqa: E402
 from app.main import app  # noqa: E402
 from app.schema import metadata  # noqa: E402
 
@@ -46,6 +48,25 @@ def _tabelas_limpas():
         conn.execute(text(f"TRUNCATE {nomes} RESTART IDENTITY CASCADE"))
     sync.dispose()
     yield
+
+
+@pytest.fixture(autouse=True)
+def storage_dir(tmp_path, monkeypatch):
+    """Storage local de redações num diretório temporário por teste — asserts
+    de arquivo olham o disco de verdade sem sujar o repositório."""
+    monkeypatch.setattr(settings, "redacoes_dir", str(tmp_path))
+    return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def fila_em_memoria():
+    """Fila com conector em memória: o defer das rotas funciona sem as tabelas
+    `procrastinate_*` (os testes criam o schema via metadata, não via Alembic)
+    e sem worker externo. Testes do pipeline inspecionam `.jobs` e rodam o
+    worker inline (`fila.run_worker_async(wait=False, ...)`)."""
+    conector = procrastinate_testing.InMemoryConnector()
+    with fila.replace_connector(conector):
+        yield conector
 
 
 @pytest_asyncio.fixture

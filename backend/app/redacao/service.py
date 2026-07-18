@@ -1,8 +1,9 @@
 """Serviço do domínio redação — lado do aluno (fatia 1 do completo).
 
-Cobre a lista (`GET /redacoes`) e o envio (`POST .../envio`). O pipeline
-assíncrono (OCR → análise → extração → atribuição, Bloco 2b) entra nas fatias
-seguintes: aqui o envio para em `status='enviada'`.
+Cobre a lista (`GET /redacoes`) e o envio (`POST .../envio`). Todo envio (e
+reenvio) **enfileira o pipeline** (fatia 2 — `tarefas.ingestao` na fila
+`procrastinate`); os miolos das etapas (OCR/LLM/extração) entram nas fatias
+3–5 — até lá o pipeline para honesto em `status='processando'`.
 
 Decisões da fatia 1 (datadas em design/notas-implementacao.md):
 - O tipo do arquivo é validado pela **assinatura** (magic bytes), não pelo
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.errors import ApiError
 from app.redacao import repository as repo
+from app.redacao import tarefas
 from app.redacao.schemas import EnvioOut, RedacaoAlunoOut, RedacoesAlunoOut
 from app.redacao.storage import armazenamento
 
@@ -165,6 +167,10 @@ async def enviar(
                 await storage.remover(chave)
             except OSError:
                 pass
+
+    # Dispara o pipeline (Bloco 2b). A fila usa conexão própria; se o worker
+    # acordar antes do commit desta request, a ingestão faz retry (tarefas.py).
+    await tarefas.ingestao.defer_async(redacao_id=redacao_id)
 
     return EnvioOut(
         redacao_id=redacao_id,

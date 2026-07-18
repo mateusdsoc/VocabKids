@@ -8,6 +8,7 @@ digital é a lista de um item só.
 from datetime import datetime
 
 from sqlalchemy import and_, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -116,3 +117,64 @@ async def substituir_envio(
         )
     )
     await conn.execute(stmt)
+
+
+# ─────────────────── pipeline (tarefas da fila — Bloco 2b) ───────────────────
+
+
+async def buscar_redacao(conn: AsyncConnection, redacao_id: int) -> Row | None:
+    r = schema.redacao
+    stmt = select(
+        r.c.id, r.c.status, r.c.formato, r.c.arquivo_ref, r.c.texto_extraido
+    ).where(r.c.id == redacao_id)
+    return (await conn.execute(stmt)).first()
+
+
+async def atualizar_status(
+    conn: AsyncConnection, redacao_id: int, status: str
+) -> None:
+    r = schema.redacao
+    await conn.execute(
+        update(r).where(r.c.id == redacao_id).values(status=status)
+    )
+
+
+async def gravar_texto(conn: AsyncConnection, redacao_id: int, texto: str) -> None:
+    r = schema.redacao
+    await conn.execute(
+        update(r).where(r.c.id == redacao_id).values(texto_extraido=texto)
+    )
+
+
+async def gravar_analise(
+    conn: AsyncConnection, redacao_id: int, anotacoes: dict
+) -> None:
+    """Upsert: um reenvio reprocessado sobrescreve a análise anterior."""
+    ra = schema.redacao_analise
+    stmt = (
+        pg_insert(ra)
+        .values(redacao_id=redacao_id, anotacoes=anotacoes)
+        .on_conflict_do_update(
+            index_elements=[ra.c.redacao_id], set_={"anotacoes": anotacoes}
+        )
+    )
+    await conn.execute(stmt)
+
+
+async def buscar_analise(conn: AsyncConnection, redacao_id: int) -> Row | None:
+    ra = schema.redacao_analise
+    stmt = select(ra.c.redacao_id, ra.c.anotacoes).where(
+        ra.c.redacao_id == redacao_id
+    )
+    return (await conn.execute(stmt)).first()
+
+
+async def finalizar_analisada(
+    conn: AsyncConnection, redacao_id: int, quando: datetime
+) -> None:
+    r = schema.redacao
+    await conn.execute(
+        update(r)
+        .where(r.c.id == redacao_id)
+        .values(status="analisada", analisada_em=quando)
+    )

@@ -1,29 +1,23 @@
 """Redação (lado do aluno) — lista e envio reais da fatia 1.
 
 O storage local aponta para um diretório temporário por teste (fixture
-`storage_dir`), então os asserts de arquivo gravado/removido olham o disco de
-verdade sem sujar o repositório.
+`storage_dir`, no conftest), então os asserts de arquivo gravado/removido
+olham o disco de verdade sem sujar o repositório. A fila roda em memória
+(fixture `fila_em_memoria`); o pipeline em si é testado em
+`test_redacao_pipeline.py`.
 """
 import json
 from pathlib import Path
 
-import pytest
 from sqlalchemy import insert, select, update
 
 from app import schema
-from app.config import settings
 from app.db import engine
 
 # Conteúdos mínimos com assinatura válida (o serviço valida por magic bytes).
 JPEG = b"\xff\xd8\xff\xe0" + b"a" * 32
 PNG = b"\x89PNG\r\n\x1a\n" + b"b" * 32
 PDF = b"%PDF-1.4\n" + b"c" * 32
-
-
-@pytest.fixture(autouse=True)
-def storage_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "redacoes_dir", str(tmp_path))
-    return tmp_path
 
 
 async def _atribuir(client, professor, tema="Minhas férias", prazo=None):

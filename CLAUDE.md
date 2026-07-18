@@ -45,6 +45,7 @@ uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — ide
 uv run python -m app.seed_trilha       # trilha (países/destinos/nós) + colecionáveis
 uv run python -m app.seed_demo         # alunos "vitrine" p/ apresentação — re-rodar = reset
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
+uv run procrastinate --app=app.fila.fila worker   # worker da fila (pipeline de redação)
 
 # Migrations — o schema vive em app/schema.py; o Alembic autogera a partir dele
 uv run alembic revision --autogenerate -m "descrição"
@@ -82,9 +83,10 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 - Domínios: `identidade`, `vocabulario`, `sessao`, `diagnostico`, `trilha`,
   `progressao` (regras puras de XP/combo, semana letiva e meta default),
   `adaptacao` (regra pura de nível), `professor` (**real desde 13/07**:
-  queries + escopo por associação; login do professor pendente) e os
-  **mocks restantes da fatia A**: `report`, `redacao` (viram reais depois sem
-  mudar contratos).
+  queries + escopo por associação; login do professor pendente), `redacao`
+  (**lista/envio reais desde 18/07**; fila `procrastinate` + máquina de
+  estados do pipeline reais, miolos OCR/LLM em stub — fatias 3–5) e o
+  **mock restante da fatia A**: `report`.
 - **Schema único** em `app/schema.py` (25 tabelas, SQLAlchemy Core) — fonte
   tanto das migrations quanto do `create_all` dos testes. Tabelas da fatia C
   já existem (vazias no apresentável). PK `BIGINT IDENTITY`; enums via

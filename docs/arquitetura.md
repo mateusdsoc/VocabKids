@@ -420,6 +420,15 @@ Tudo aqui é **assíncrono e caro** (OCR, LLM): roda na fila `procrastinate` no 
 `questao` (banco global), `aluno_palavra`, `sinal_turma`, `report_questao`. Nenhuma
 tabela nova é necessária — o Bloco 1 já previu todas (decisão "schema único", item 4).
 
+> **Estado (18/07 — fatia 2 real):** a fila (`app/fila.py`), o worker, o
+> enfileiramento no envio e a **máquina de estados** (`enviada → processando →
+> analisada | erro_*`, tarefas encadeadas com retry/backoff em
+> `redacao/tarefas.py`) estão implementados; os **miolos** das etapas
+> (`redacao/pipeline.py`) são stubs — o pipeline para honesto em `processando`
+> até as fatias 3 (ingestão), 4 (análise) e 5 (extração/atribuição). As
+> tabelas `procrastinate_*` entram por migration Alembic (cadeia única;
+> autogenerate as ignora via filtro no env.py).
+
 ### Visão geral
 
 ```
@@ -701,8 +710,10 @@ Organização **por domínio** (não por camada técnica), espelhando o Bloco 1:
   operacional. É o caminho que existe em **A**.
 - **Assíncrono (`procrastinate` no Postgres):** o pipeline de redação do Bloco 2b
   (OCR→análise→extração→atribuição) e o job periódico de **sinal de turma**. Roda num
-  **worker separado** (processo Cloud Run distinto da API, mesma imagem/codebase),
-  dirigido por `redacao.status`, com retry/backoff e idempotência. Entra em **C**.
+  **worker separado** (processo Cloud Run distinto da API, mesma imagem/codebase;
+  em dev: `uv run procrastinate --app=app.fila.fila worker`), dirigido por
+  `redacao.status`, com retry/backoff e idempotência. **Real desde 18/07 (fatia 2)**
+  — miolos das etapas em stub até as fatias 3–5.
 - Sem Redis: a fila é o próprio Postgres (seção 12). Cache adiado.
 
 ### Superfície de API (apresentável)

@@ -17,6 +17,8 @@ dependencies = [
     "pyjwt>=2.8",
     # Upload multipart do envio de redação (FastAPI UploadFile).
     "python-multipart>=0.0.9",
+    # Fila do pipeline de redação (Bloco 2b) — jobs no próprio Postgres.
+    "procrastinate>=3.0",
 ]
 
 [project.optional-dependencies]

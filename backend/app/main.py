@@ -1,9 +1,11 @@
 """App FastAPI — ponto de entrada.
 
-No apresentável (fatia A) o backend é síncrono (sem OCR/LLM em runtime). As rotas de
-domínio (identidade, sessão, trilha…) entram aqui à medida que forem implementadas.
+As rotas de domínio (identidade, sessão, trilha…) entram via `api_router`. O
+trabalho pesado (pipeline de redação, Bloco 2b) NÃO roda aqui: a API só
+enfileira; o worker (`procrastinate ... worker`) executa em processo próprio.
 """
 import hashlib
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,9 +17,19 @@ from app.api.v1 import api_router
 from app.config import settings
 from app.db import engine
 from app.errors import register_error_handlers
+from app.fila import fila
 from app.seguranca.rate_limit import LimitadorJanelaFixa
 
-app = FastAPI(title="VocabBR Kids API", version="0.1.0")
+
+@asynccontextmanager
+async def _ciclo_de_vida(_: FastAPI):
+    # Conector da fila aberto pelo processo (pool psycopg próprio, fora da
+    # transação por request) — necessário para o defer das rotas de envio.
+    async with fila.open_async():
+        yield
+
+
+app = FastAPI(title="VocabBR Kids API", version="0.1.0", lifespan=_ciclo_de_vida)
 register_error_handlers(app)
 app.include_router(api_router)
 

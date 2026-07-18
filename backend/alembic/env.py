@@ -18,6 +18,15 @@ if config.config_file_name is not None:
 target_metadata = metadata
 
 
+def _fora_do_metadata(object, name, type_, reflected, compare_to):
+    """Ignora no autogenerate o que não é nosso: as tabelas `procrastinate_*`
+    (fila — schema aplicado por migration própria) não estão no metadata e,
+    sem este filtro, o autogenerate as marcaria para DROP."""
+    if type_ == "table" and name.startswith("procrastinate_"):
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=settings.sync_database_url,
@@ -25,6 +34,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=_fora_do_metadata,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -41,6 +51,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            include_object=_fora_do_metadata,
         )
         with context.begin_transaction():
             context.run_migrations()

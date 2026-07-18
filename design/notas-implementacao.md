@@ -803,3 +803,54 @@ Decisões (datadas aqui; contratos em `telas.md` §8.1 e `arquitetura.md`):
 Pendência registrada: verificação **visual** das duas telas (área + envio)
 em claro/escuro contra o backend real — a lógica está coberta por testes,
 mas o runtime visual não foi conferido nesta sessão.
+
+---
+
+## ⚙️ Redação — fatia 2: fila + máquina de estados (18/07)
+
+Os trilhos do pipeline (Bloco 2b) ficaram reais; os miolos das etapas seguem
+como **stubs declarados**. `pytest` 127/127 (8 novos em
+`test_redacao_pipeline.py`); smoke em runtime com **worker de verdade**
+(envio → defer → worker processa → `processando`; job `succeeded` na fila).
+Sem mudança de contrato de API nem de app — o aluno continua vendo
+"em análise", agora dirigido pela máquina de estados real.
+
+Decisões:
+
+1. **Fila = o próprio Postgres** (`procrastinate`, produto §12): sem Redis,
+   sem serviço novo, sem credencial. `app/fila.py` cria o `App` da fila com
+   conninfo derivado da `DATABASE_URL`; a API **só enfileira** (defer no
+   `service.enviar`, conector aberto no lifespan do FastAPI); executa o
+   **worker** (`uv run procrastinate --app=app.fila.fila worker`).
+2. **Máquina de estados em `redacao.status`** (única fonte):
+   `enviada → processando → analisada | erro_ingestao | erro_analise`.
+   Três tarefas encadeadas (`redacao.ingestao` → `redacao.analise` →
+   `redacao.extracao_atribuicao`) em `redacao/tarefas.py`, cada uma com
+   guarda de estado (job atrasado/duplicado sobre estado superado retorna
+   sem efeito) e **retry exponencial** (5 tentativas).
+3. **Contrato de erro dos miolos** (`redacao/pipeline.py`): exceção
+   PERMANENTE (`ErroIngestao`/`ErroAnalise` — o problema é da redação) vira
+   `status erro_*` e o job encerra normal; qualquer outra exceção é
+   TRANSITÓRIA (infra) e a fila reagenda. Reenvio após `erro_*` volta a
+   `enviada` e reprocessa (coberto por teste).
+4. **Corrida defer×commit**: o defer sai durante a request, mas a transação
+   da API comita depois (middleware) e a fila usa conexão própria — a
+   ingestão trata "redação não visível" como transitório (retry resolve).
+   Coberto por teste.
+5. **Stubs param honesto**: miolo devolvendo `None` = etapa não
+   implementada → pipeline fica em `processando` (tela: "em análise"),
+   sem inventar resultado. Fatia 3 troca `extrair_texto`, 4 `analisar`,
+   5 `extrair_palavras` — a orquestração e os testes de transição não mudam.
+6. **Schema da fila por migration Alembic** (cadeia única): a revision
+   `d4f7c2a91b30` aplica o `schema.sql` do pacote lockado (3.9) direto na
+   conexão do driver (o parsing de placeholders do psycopg quebraria com o
+   `%` do plpgsql); downgrade varre funções E tipos por prefixo
+   (roundtrip up→down→up validado). O autogenerate **ignora**
+   `procrastinate_*` (filtro `include_object` no env.py — sem ele, um
+   autogenerate futuro marcaria as tabelas da fila para DROP).
+7. **Testes sem worker externo**: conector em memória
+   (`procrastinate.testing.InMemoryConnector`) trocado por fixture autouse
+   no conftest; o worker roda inline (`run_worker_async(wait=False)`).
+   Miolos simulados por monkeypatch exercitam TODAS as transições
+   (inclusive `analisada` com `redacao_analise` gravada). O fixture de
+   storage temporário subiu para o conftest (suíte inteira).

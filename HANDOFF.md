@@ -6,7 +6,33 @@
 
 ---
 
-## Estado atual (18/07)
+## Estado atual (18/07, noite)
+
+**⚙️ Redação — fatia 2 FEITA: fila `procrastinate` + máquina de estados.**
+Os trilhos do pipeline (Bloco 2b) são reais; os miolos (OCR/LLM/extração)
+seguem stubs — o pipeline para honesto em `processando` até as fatias 3–5.
+
+- **Fila no próprio Postgres** (sem Redis, sem serviço externo, sem
+  credencial): `app/fila.py`; a API só enfileira (defer no envio); executa o
+  worker — `cd backend && uv run procrastinate --app=app.fila.fila worker`.
+- **Máquina de estados** em `redacao.status`
+  (`enviada → processando → analisada | erro_ingestao | erro_analise`):
+  3 tarefas encadeadas com guardas de idempotência e retry exponencial
+  (`redacao/tarefas.py`); miolos por fatia em `redacao/pipeline.py`.
+- **Migration nova** `d4f7c2a91b30` (tabelas `procrastinate_*`) — rodar
+  `uv run alembic upgrade head` nas duas máquinas após o pull. O
+  autogenerate ignora essas tabelas (filtro no env.py).
+- **Verificação**: `pytest` **127/127** (8 novos), smoke em runtime com
+  worker real (envio → `processando`, job `succeeded`). Roundtrip da
+  migration (up→down→up) validado. Zero mudança no app Flutter.
+
+Decisões datadas em `design/notas-implementacao.md` ("⚙️ Redação — fatia 2").
+**Próxima fatia: 3 (ingestão — PDF primeiro, sem custo; OCR de manuscrita
+pede credencial GCP do dono).**
+
+---
+
+## Estado anterior (18/07, tarde)
 
 **📝 Redação — fatia 1 FEITA: envio real do aluno, de ponta a ponta.** Primeira
 fatia do completo de redação (plano em 6 fatias: 1 envio → 2 fila/estados →
@@ -174,11 +200,11 @@ anterior". Com isso, não havia mais pendência de código mapeada antes das
 tarefas do dono e das decisões de produto abaixo.
 
 **Frente atual: completo de redação (Bloco 2b), em 6 fatias** — ✅ **1 envio
-real** (18/07, ver "Estado atual") · 2 fila `procrastinate` + máquina de
-estados · 3 ingestão (PDF primeiro; OCR manuscrita pede credencial GCP) ·
-4 análise LLM atrás de interface (modelo de produção segue adiado ao 1º
-cliente) · 5 extração/atribuição à trilha (fecha o ciclo do produto) ·
-6 sinal de turma (acende o painel do professor).
+real** (18/07) · ✅ **2 fila `procrastinate` + máquina de estados** (18/07,
+ver "Estado atual") · 3 ingestão (PDF primeiro; OCR manuscrita pede
+credencial GCP) · 4 análise LLM atrás de interface (modelo de produção segue
+adiado ao 1º cliente) · 5 extração/atribuição à trilha (fecha o ciclo do
+produto) · 6 sinal de turma (acende o painel do professor).
 
 **Dever do dono (adiado de propósito, não é código):**
 - **Revisão pedagógica do diagnóstico** — **só será feita quando estivermos em
@@ -214,6 +240,8 @@ uv run python -m app.seed_vocabulario
 uv run python -m app.seed_trilha
 uv run python -m app.seed_demo       # alunos vitrine p/ apresentação (re-rodar = reset)
 uv run uvicorn app.main:app --port 8000   # deixa rodando
+# Pipeline de redação (fatia 2+): worker da fila, noutro terminal
+uv run procrastinate --app=app.fila.fila worker
 
 # 2. App web apontando direto para a API (NÃO usar --dart-define=DEMO)
 cd app
