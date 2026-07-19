@@ -16,6 +16,35 @@ resposta correta antecipada.
 > não tente `flutter analyze`/`flutter test`; registre a pendência de
 > verificação).
 
+## Frente de trabalho atual — completo de redação (Bloco 2b)
+
+O **apresentável (fatia A) está completo**: o app do aluno consome o backend
+real de ponta a ponta e o backend do professor é real (fatia C). A frente
+ativa é o **completo de redação** — o ciclo central do produto (a redação do
+aluno revela a dificuldade → a trilha ensina a alternativa), fatiado para cada
+etapa entregar algo verificável. **O estado exato e como retomar ficam no topo
+do `HANDOFF.md`**; as decisões datadas de cada fatia, em
+`design/notas-implementacao.md`.
+
+Plano — 6 fatias, uma por vez (cada uma = 1 commit, com os docs contratuais no
+mesmo commit; ver a "Regra das decisões revisadas" abaixo):
+
+1. ✅ **Envio real do aluno** (18/07) — lista + upload multipart; storage atrás
+   de interface (local em dev, R2 depois).
+2. ✅ **Fila + máquina de estados** (18/07) — `procrastinate` no Postgres;
+   trilhos e transições reais, **miolos das etapas em stub**.
+3. ⏳ **Ingestão** — extração de PDF (local, sem custo) primeiro; OCR de
+   manuscrita via Google Vision (**pede credencial GCP do dono**).
+4. **Análise** — LLM multidimensional atrás de interface (modelo de produção
+   adiado ao 1º cliente; provider fake nos testes).
+5. **Extração + atribuição à trilha** — Hunspell/spaCy + `buscar_ou_gerar`;
+   **é a fatia que fecha o ciclo do produto**.
+6. **Sinal de turma** — job periódico; acende o "sinal" no painel do professor.
+
+Dev do pipeline: a API só **enfileira**; o **worker** executa noutro processo
+(`uv run procrastinate --app=app.fila.fila worker`). Enquanto os miolos de uma
+etapa forem stub, o pipeline para honesto em `processando` (tela "em análise").
+
 ## Comandos
 
 ### Backend (`backend/`) — FastAPI + SQLAlchemy Core + Alembic + PostgreSQL
@@ -90,7 +119,19 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 - **Schema único** em `app/schema.py` (25 tabelas, SQLAlchemy Core) — fonte
   tanto das migrations quanto do `create_all` dos testes. Tabelas da fatia C
   já existem (vazias no apresentável). PK `BIGINT IDENTITY`; enums via
-  `VARCHAR + CHECK`. Migrations Alembic **lineares** (uma cadeia única).
+  `VARCHAR + CHECK`. Migrations Alembic **lineares** (uma cadeia única). As
+  tabelas `procrastinate_*` (fila) entram por migration própria e o
+  autogenerate as **ignora** (filtro `include_object` em `alembic/env.py` — sem
+  ele, um `revision --autogenerate` marcaria a fila para DROP).
+- **Pipeline de redação** (`redacao`, Bloco 2b) — além do trio
+  rotas→serviço→repo, o domínio tem `storage.py` (arquivos enviados atrás de
+  uma interface: disco local em dev via `REDACOES_DIR`, R2 depois), a fila em
+  `app/fila.py` (o `App` do `procrastinate`), as tarefas encadeadas em
+  `redacao/tarefas.py` e os **miolos por etapa** em `redacao/pipeline.py`
+  (funções puras, trocadas fatia a fatia sem mexer na orquestração). A
+  **máquina de estados** é o `redacao.status`
+  (`enviada → processando → analisada | erro_ingestao | erro_analise`); a
+  correção de estado é sempre server-side, o app só lê o status.
 - **Auth**: entrada por `codigo_turma`; sessão em **JWT HS256 com expiração**
   (`app/identidade/auth.py` — exige `JWT_SECRET` no ambiente, gere com
   `openssl rand -hex 32`; TTL via `JWT_TTL_HORAS`). Rotas do professor exigem
@@ -123,10 +164,12 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   backend.
 - Estado atual do wiring: **o app do aluno consome o backend real de ponta a
   ponta** — auth, Home (incl. meta semanal real do `/me`), Sessão→Resumo,
-  Passaporte (coleção e Modo Conquista), mapa da Trilha (janela por destino) e
-  diagnóstico do onboarding. O **backend do professor é real** (fatia C), mas o
-  **site** do professor ainda roda em `DEMO` — falta o login do professor
-  (decisão de produto pendente). Estado e próximos passos em `HANDOFF.md`.
+  Passaporte (coleção e Modo Conquista), mapa da Trilha (janela por destino),
+  diagnóstico do onboarding e a área de **Redação** (lista + envio real; o
+  resultado da análise ainda é placeholder até as fatias 3–5 do pipeline). O
+  **backend do professor é real** (fatia C), mas o **site** do professor ainda
+  roda em `DEMO` — falta o login do professor (decisão de produto pendente).
+  Estado e próximos passos em `HANDOFF.md`.
 
 ## Mapa dos documentos
 
