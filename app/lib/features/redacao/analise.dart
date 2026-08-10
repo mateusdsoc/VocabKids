@@ -1,7 +1,3 @@
-import 'package:flutter/widgets.dart';
-
-import '../../core/theme/app_colors.dart';
-
 /// Modelo da **redação corrigida** (produto 4.2–4.5).
 ///
 /// Espelha 1:1 o contrato `GET /v1/redacoes/{id}/analise`
@@ -14,6 +10,10 @@ import '../../core/theme/app_colors.dart';
 /// modo demo, parte de [AnaliseRedacao.demo]. O *shape* é o mesmo que a fatia C
 /// (OCR→LLM) vai preencher, então esta tela não se reescreve depois.
 library;
+
+import 'package:flutter/widgets.dart';
+
+import '../../core/theme/app_colors.dart';
 
 /// Dimensão de análise (produto 4.2). `id` casa com o backend; [rotulo] é o
 /// texto da UI; [cor] vem do token de tema (nunca hardcoded).
