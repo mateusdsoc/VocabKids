@@ -101,7 +101,10 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   faixa), `redacao` (real desde a Fase 4 — rubrica pura por faixa, triagem de
   risco + análise via Claude, `redacao_atribuicao` compartilhada com o
   professor congelado por `turma_id` XOR `usuario_id`, ver §7.4 de
-  `docs/plano_b2c.md`), `professor` (**congelado, B2B** — queries reais +
+  `docs/plano_b2c.md`), `responsavel` (real desde a Fase 5 — PIN da Área do
+  Responsável em `conta.pin_hash`, resumo semanal por perfil: meta/minutos/
+  sessões, 5 palavras aprendidas, evolução da redação por dimensão),
+  `professor` (**congelado, B2B** — queries reais +
   escopo por associação seguem funcionando, mas fora do produto atual) e o
   **mock restante da fatia A**: `report` (vira real depois da Fase 5, se a
   Área do Responsável precisar).

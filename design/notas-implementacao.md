@@ -845,3 +845,68 @@ falta de infra ou de conteúdo que não existiam antes desta sessão):
   ainda não tem a integração de ML Kit que produz esse texto a partir de uma
   foto de caderno. Isso só pode ser feito na máquina do dono (Flutter SDK não
   está disponível no container do agente, ver `CLAUDE.md` "Ambiente").
+
+## 👪 Fase 5 — Área do Responsável, backend só (25/08)
+
+Implementado na mesma sessão da Fase 4, a partir de `docs/plano_b2c.md` §08:
+domínio novo `backend/app/responsavel/`. Portão PIN (`GET/POST /conta/pin`,
+`POST /conta/pin/verificar` — hash argon2 em `conta.pin_hash`, coluna que já
+existia no schema desde a Fase 1 mas nunca tinha sido usada) e resumo semanal
+por perfil (`GET /responsavel/perfis/{id}/resumo`): meta/minutos/sessões da
+semana, 5 palavras dominadas com definição, evolução da redação por
+dimensão. 9 testes novos (169 no total do backend).
+
+**Retrofit na Fase 4 pra viabilizar o item 2 (evolução por dimensão,
+R-RD-6):** o pipeline de análise da redação (`redacao/analisador.py`) só
+produzia anotações qualitativas — sem uma nota por dimensão não dava pra
+montar um gráfico de evolução. Adicionado `niveis_dimensao` (4 níveis
+nomeados: começando/avançando/consolidando/dominando) na mesma chamada ao
+Claude, guardado dentro de `redacao_analise.anotacoes` (sem migration — é
+JSONB) e **nunca exposto pela rota do aluno** (`GET
+/redacoes/{id}/analise`), só pela do responsável — reforça R-RD-5 (a criança
+nunca vê nota) na própria modelagem, não só por convenção de UI.
+
+**Decisão de leitura de R-RS-2, registrada aqui por ser um ponto onde o
+próprio texto do plano é ambíguo:** §08 pede mostrar "minutos" no resumo
+(item 1), mas R-RS-2 diz "não mostrar tempo/velocidade — vale também para o
+pai". Interpretação adotada: R-RS-2 mira métrica de DESEMPENHO por questão
+(tempo de resposta, velocidade), que o produto trata como pressão
+competitiva; "minutos" do item 1 é tempo total investido na semana, uma
+métrica de ENGAJAMENTO, não de performance — mais parecida com "quantas
+sessões" do que com "quão rápido ele respondeu". Se o dono achar que isso
+ainda fere o espírito da R-RS-2, é fácil tirar (`minutos_na_semana` sai da
+resposta e do schema sem tocar em mais nada).
+
+**Achado de segurança corrigido na hora, não só documentado:**
+`/conta/pin/verificar` é uma rota autenticada comum — sem tratamento
+especial, cairia no teto genérico de rate limit por token
+(`rl_autenticado_por_minuto`, default 240/min), e um PIN de 4 dígitos
+(10.000 combinações) seria força-bruteável por completo em ~42min por
+qualquer coisa/pessoa que já tivesse o token do responsável (ex.: token
+vazado, ou a própria criança pegando o celular destravado). Movido pro
+mesmo teto apertado do login (`rl_login_por_minuto`, default 5/min) em
+`app/main.py`, chaveado por token (não por IP, pra não punir todo mundo
+atrás do mesmo NAT). Teste dedicado em `test_seguranca.py`.
+
+**Pendências explícitas** (nenhuma delas é código de backend faltando — são
+trabalho de app ou decisão do dono):
+
+- **Nenhuma tela Flutter existe** para a Área do Responsável
+  (`app/lib/features/responsavel/` não foi criado) nem pro fluxo de PIN —
+  esta sessão foi só backend. A tela de redação do app (`redacao_screen.dart`)
+  também segue 100% em `Redacao.sample()`, sem chamar `/v1/redacoes` de
+  verdade ainda (confirmado lendo o arquivo antes de mudar o contrato da API
+  — **não há breaking change no app hoje**, mas alguém vai precisar ligar os
+  dois lados nas Fases 4 e 5 do app).
+- **R-RS-1 ("portão ANTES de qualquer dado") só é imposto de verdade pelo
+  app**, não pelo backend. O backend valida o PIN e devolve 204/401; quem
+  decide SE mostra a tela de resumo antes ou depois dessa checagem é o
+  Flutter — hoje nada impede (a nível de backend) alguém com o token do
+  responsável chamar `GET /responsavel/perfis/{id}/resumo` sem nunca ter
+  passado pelo PIN. Isto é aceitável (a app real seria a única a expor esse
+  token) mas vale registrar que o "portão" de fato é uma decisão de UX ainda
+  não implementada.
+- **Gerenciar assinatura/perfis/exclusão (item 4 de §08) não ganhou rota
+  nova** — reaproveita `GET /v1/assinatura`, `GET/POST /v1/conta/perfis`,
+  `DELETE /v1/conta`, que já existiam. Fica registrado que isto foi decisão
+  deliberada (evitar duplicar contrato), não esquecimento.

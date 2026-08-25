@@ -62,8 +62,13 @@ async def rate_limit(request: Request, call_next):
 
     Chaves: login e cadastro (`/sessao`, `/conta`) contam por IP com limite
     próprio — é a porta de brute-force de senha e de criação de contas em
-    massa (B2C, docs/plano_b2c.md Fase 1). Rotas autenticadas contam por
-    token. O resto conta por IP.
+    massa (B2C, docs/plano_b2c.md Fase 1). `/conta/pin/verificar` conta por
+    TOKEN com o mesmo limite apertado — um PIN de 4 dígitos (10.000
+    combinações) sob o teto genérico de rotas autenticadas (240/min) seria
+    forçável por completo em ~42min por quem já tem o token do responsável
+    (Fase 5, R-RS-1: o PIN só vale como portão se não for de graça
+    força-bruta). Demais rotas autenticadas contam por token no teto normal;
+    o resto conta por IP.
     """
     if not settings.rate_limit_habilitado or request.method == "OPTIONS":
         return await call_next(request)
@@ -72,8 +77,13 @@ async def rate_limit(request: Request, call_next):
     eh_login_ou_cadastro = request.method == "POST" and (
         request.url.path.endswith("/sessao") or request.url.path.endswith("/conta")
     )
+    eh_verificar_pin = request.method == "POST" and request.url.path.endswith("/conta/pin/verificar")
     if eh_login_ou_cadastro:
         chave = f"login:{_ip_cliente(request)}"
+        limite = settings.rl_login_por_minuto
+    elif eh_verificar_pin and autorizacao:
+        sufixo = hashlib.sha256(autorizacao.encode()).hexdigest()[:16]
+        chave = f"pin:{sufixo}"
         limite = settings.rl_login_por_minuto
     elif autorizacao:
         # Hash do token como chave: não reter credenciais em memória.

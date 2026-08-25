@@ -21,6 +21,11 @@ from app.config import settings
 from app.errors import ApiError
 from app.redacao.rubrica import DIMENSOES, RUBRICA
 
+# R-RD-6: pro RESPONSÁVEL, métrica por dimensão em escala visual nomeada (não
+# número de 0 a 10 — isso é só pra criança, R-RD-5). 4 níveis, do mais cedo ao
+# mais consolidado — nomes neutros, sem "ruim"/"péssimo".
+NIVEIS_DIMENSAO = ("começando", "avançando", "consolidando", "dominando")
+
 
 @dataclass(frozen=True)
 class Ancora:
@@ -51,6 +56,10 @@ class ResultadoAnalise:
     pontos_fortes: list[str] = field(default_factory=list)
     anotacoes: list[AnotacaoAnalise] = field(default_factory=list)
     palavras: list[PalavraExtraida] = field(default_factory=list)
+    # R-RD-6 — só as dimensões efetivamente avaliadas (rubrica pode zerar uma,
+    # ex. coesão aos 7-8); dashboard do responsável (Fase 5) lê isto ao longo
+    # do tempo pra montar a evolução por dimensão.
+    niveis_dimensao: dict[str, str] = field(default_factory=dict)
 
 
 class Analisador(Protocol):
@@ -80,7 +89,12 @@ ortográfica e o tom da rubrica à risca; nunca mostre nota numérica.
 
 Cada anotação pode citar até 2 âncoras (trecho literal do texto + número da \
 ocorrência, contando do início) para grifar no app — omita quando a \
-observação for holística (ex.: estrutura do texto como um todo)."""
+observação for holística (ex.: estrutura do texto como um todo).
+
+3. Classifique CADA dimensão com peso > 0 na rubrica desta faixa em um dos 4 \
+níveis: "começando", "avançando", "consolidando", "dominando" — isto NUNCA é \
+mostrado à criança (só ao responsável, depois, em outra tela), então seja \
+honesto mesmo quando o nível for baixo; não é punição, é calibração."""
 
 
 def _montar_prompt(*, texto: str, faixa_etaria: str, tema: str) -> str:
@@ -141,6 +155,11 @@ _FERRAMENTA_RELATORIO = {
                     "required": ["texto", "lema", "tipo"],
                 },
             },
+            "niveis_dimensao": {
+                "type": "object",
+                "description": "Uma entrada por dimensão com peso > 0 na rubrica da faixa.",
+                "additionalProperties": {"type": "string", "enum": list(NIVEIS_DIMENSAO)},
+            },
         },
         "required": ["risco_sinalizado"],
     },
@@ -169,6 +188,7 @@ def _parse_resposta(entrada: dict) -> ResultadoAnalise:
             PalavraExtraida(texto=p["texto"], lema=p["lema"], tipo=p["tipo"])
             for p in (entrada.get("palavras") or [])
         ],
+        niveis_dimensao=dict(entrada.get("niveis_dimensao") or {}),
     )
 
 

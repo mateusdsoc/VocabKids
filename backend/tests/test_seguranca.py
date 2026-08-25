@@ -111,6 +111,24 @@ async def test_cors_origem_permitida(client):
 
 
 @pytest.mark.asyncio
+async def test_pin_usa_o_teto_apertado_de_login_nao_o_de_rotas_autenticadas(
+    client, rate_limit_ligado, monkeypatch, responsavel
+):
+    """R-RS-1 (Fase 5): um PIN de 4 dígitos sob o teto genérico (240/min)
+    seria força-bruteável por completo por quem já tem o token do
+    responsável — `/conta/pin/verificar` precisa do teto apertado de login,
+    não do teto de rotas autenticadas comuns."""
+    monkeypatch.setattr(settings, "rl_login_por_minuto", 3)
+    monkeypatch.setattr(settings, "rl_autenticado_por_minuto", 100)  # bem folgado
+    headers = responsavel["headers"]
+    for _ in range(3):
+        r = await client.post("/v1/conta/pin/verificar", headers=headers, json={"pin": "0000"})
+        assert r.status_code == 401  # passa pelo limitador, falha no domínio (sem PIN definido)
+    r = await client.post("/v1/conta/pin/verificar", headers=headers, json={"pin": "0000"})
+    assert r.status_code == 429
+
+
+@pytest.mark.asyncio
 async def test_cors_origem_desconhecida_nao_liberada(client):
     r = await client.get("/health", headers={"Origin": "http://intruso.test"})
     assert "access-control-allow-origin" not in r.headers

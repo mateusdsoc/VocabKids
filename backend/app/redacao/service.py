@@ -168,6 +168,7 @@ async def enviar_redacao(
             for a in resultado.anotacoes
         ],
         dimensoes=dimensoes,
+        niveis_dimensao=resultado.niveis_dimensao,
     )
     await repo.gravar_palavras(conn, redacao_id, resultado.palavras)
     return {"redacao_id": redacao_id, "status": "analisada"}

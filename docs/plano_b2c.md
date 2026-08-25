@@ -4,12 +4,12 @@
 > faixa etária, assinatura Apple IAP) feitas e verificadas (147 testes de
 > backend, 42 do app, fluxo completo testado ao vivo no simulador iOS).
 > Detalhe em `design/notas-implementacao.md` § "Pivô B2C" (24/08/2026).
-> **Fase 4 (redação real) parcialmente feita** — pipeline síncrono completo
-> (rubrica por faixa, triagem de risco + análise via Claude, atribuição
-> automática/extra, 160 testes de backend), com pendências explícitas de
-> infra e conteúdo listadas na seção 07 e em `design/notas-implementacao.md`
-> § "Fase 4" (25/08/2026). Fases 5–6 (Área do Responsável, congelamento
-> formal do professor) não começaram.
+> **Fases 4 e 5 parcialmente feitas, só backend** — redação real (rubrica,
+> triagem de risco + análise via Claude, atribuição automática/extra) e Área
+> do Responsável (PIN, resumo semanal com evolução por dimensão) — 169
+> testes de backend, com pendências explícitas de infra/conteúdo/app listadas
+> nas seções 07/08 e em `design/notas-implementacao.md` § "Fase 4"/"Fase 5"
+> (25/08/2026). Fase 6 (congelamento formal do professor) não começou.
 > **Criado em:** 24 de agosto de 2026.
 > **Escopo:** transformar o produto de "software de vocabulário para escolas"
 > (B2B, venda por escola, professor no centro) em "assinatura familiar mobile"
@@ -572,6 +572,27 @@ dela. Um produto que responde a "meu pai me bate" com "sua ortografia melhorou"
 **Duração:** 5–7 dias. Substitui o painel do professor — **mesma pergunta,
 outra pessoa**, então boa parte das queries de `professor/repository.py` serve
 de referência (escopo por conta em vez de por turma).
+
+> **Feito nesta sessão (25/08), backend só:** `backend/app/responsavel/`
+> real — `GET/POST /conta/pin`, `POST /conta/pin/verificar` (R-RS-1, hash
+> argon2 em `conta.pin_hash`, mesmo padrão de `identidade/service.py`),
+> `GET /responsavel/perfis/{id}/resumo` com os 3 primeiros itens do conteúdo
+> abaixo (meta/minutos/sessões, 5 palavras aprendidas, evolução da redação
+> por dimensão — isto exigiu retrofit em `redacao/analisador.py`: a chamada
+> ao Claude agora também classifica cada dimensão da rubrica em 4 níveis
+> nomeados, R-RD-6, guardado em `redacao_analise.anotacoes.niveis_dimensao`
+> e nunca exposto pela rota do aluno). O item 4 (assinatura/perfis/exclusão)
+> **não precisou de rota nova** — já existem (`GET /v1/assinatura`, `GET/POST
+> /v1/conta/perfis`, `DELETE /v1/conta`); a Área do Responsável só os
+> consome. 169 testes de backend (9 novos), incluindo um teto de rate limit
+> dedicado pro PIN (ver pendência abaixo). Detalhe e pendências completas em
+> `design/notas-implementacao.md` § "Fase 5" (25/08/2026) — resumo rápido:
+> **nenhuma tela Flutter foi criada** (`app/lib/features/responsavel/` não
+> existe ainda — isto é trabalho de app, fora deste ambiente); o portão PIN
+> em si é só o backend validando o segredo — quem faz valer R-RS-1 de
+> verdade ("antes de QUALQUER dado") é a tela do app só navegar pra cá depois
+> de `/conta/pin/verificar` responder 204, e isso ainda não existe pra
+> impor nada.
 
 - ➕ `backend/app/responsavel/` (rotas/serviço/repositório).
 - ➕ `app/lib/features/responsavel/` — dentro do app da criança, atrás de

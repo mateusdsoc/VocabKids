@@ -158,12 +158,19 @@ async def gravar_analise(
     pontos_fortes: list[str],
     anotacoes: list[dict],
     dimensoes: list[str],
+    niveis_dimensao: dict[str, str],
 ) -> None:
     r, ra = schema.redacao, schema.redacao_analise
     await conn.execute(
         ra.insert().values(
             redacao_id=redacao_id,
-            anotacoes={"versao": 1, "dimensoes": dimensoes, "pontos_fortes": pontos_fortes, "anotacoes": anotacoes},
+            anotacoes={
+                "versao": 1,
+                "dimensoes": dimensoes,
+                "pontos_fortes": pontos_fortes,
+                "anotacoes": anotacoes,
+                "niveis_dimensao": niveis_dimensao,
+            },
         )
     )
     await conn.execute(
@@ -201,3 +208,16 @@ async def buscar_analise(conn: AsyncConnection, redacao_id: int) -> Row | None:
     ra = schema.redacao_analise
     stmt = select(ra.c.anotacoes).where(ra.c.redacao_id == redacao_id)
     return (await conn.execute(stmt)).first()
+
+
+async def historico_analises(conn: AsyncConnection, usuario_id: int) -> list[Row]:
+    """Análises concluídas do perfil, mais antiga primeiro (Fase 5 — evolução
+    por dimensão ao longo do tempo, R-RD-6)."""
+    r, ra = schema.redacao, schema.redacao_analise
+    stmt = (
+        select(r.c.id.label("redacao_id"), r.c.analisada_em, ra.c.anotacoes)
+        .select_from(ra.join(r, r.c.id == ra.c.redacao_id))
+        .where(r.c.usuario_id == usuario_id)
+        .order_by(r.c.analisada_em)
+    )
+    return list((await conn.execute(stmt)).all())

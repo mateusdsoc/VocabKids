@@ -10,6 +10,7 @@ from app.identidade.routes import router as identidade_router
 from app.professor.routes import router as professor_router
 from app.redacao.routes import router as redacao_router
 from app.report.routes import router as report_router
+from app.responsavel.routes import router as responsavel_router
 from app.sessao.routes import router as sessao_router
 from app.trilha.routes import router as trilha_router
 from app.vocabulario.routes import router as vocabulario_router
@@ -22,7 +23,8 @@ api_router.include_router(sessao_router)
 api_router.include_router(diagnostico_router)
 api_router.include_router(trilha_router)
 api_router.include_router(redacao_router)  # real (Fase 4, docs/plano_b2c.md)
-# Mockado — vira real na Fase 6/pós-B2C se a área do responsável precisar.
+api_router.include_router(responsavel_router)  # real (Fase 5, docs/plano_b2c.md)
+# Mockado (reportar questão ruim) — sem fase B2C prevista pra virar real.
 api_router.include_router(report_router)
 # Congelado (B2B) — fora do caminho crítico do B2C, ver CLAUDE.md.
 api_router.include_router(professor_router)

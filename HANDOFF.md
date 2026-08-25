@@ -6,7 +6,7 @@
 
 ---
 
-## Estado atual (25/08 — Fase 4 do B2C, backend, parcial)
+## Estado atual (25/08 — Fases 4 e 5 do B2C, backend, parciais)
 
 **Redação real substituiu o mock** (`backend/app/redacao/`) —
 `docs/plano_b2c.md` §07, detalhe completo e todas as pendências em
@@ -16,10 +16,24 @@ atribuição de tema automática (a cada 15 dias, best-effort) e sob demanda
 (máx. 2/mês, pedida pelo responsável). Schema: `tema_catalogo` nova;
 `redacao_atribuicao`/`redacao` agora servem B2C e o professor congelado ao
 mesmo tempo (`turma_id` XOR `usuario_id`) — decisão revisada registrada nas
-notas, porque o desenho original do plano quebraria o professor. 160 testes
-de backend (13 novos), todos verdes; **app Flutter não tocado nesta
-sessão** (o cliente já falava com `/v1/redacoes*` mockado — o contrato não
-mudou, só o backend deixou de inventar dado).
+notas, porque o desenho original do plano quebraria o professor.
+
+**Área do Responsável, backend só** (`backend/app/responsavel/`) —
+`docs/plano_b2c.md` §08, notas em § "Fase 5" (25/08/2026). Portão PIN
+(`conta.pin_hash`, já existia no schema desde a Fase 1, nunca usado até
+agora) e resumo semanal por perfil (meta/minutos/sessões, 5 palavras
+aprendidas, evolução da redação por dimensão — exigiu um retrofit pequeno na
+Fase 4: o analisador agora também classifica cada dimensão em 4 níveis
+nomeados, R-RD-6). De quebra, achado e corrigido um rate limit frouxo demais
+no PIN (caía no teto genérico de 240/min — um PIN de 4 dígitos seria
+força-bruteável em ~42min; movido pro teto de login, 5/min).
+
+169 testes de backend (22 novos entre as duas fases), todos verdes. **App
+Flutter não tocado em nenhuma das duas** — conferido antes de mexer no
+contrato: `redacao_screen.dart` hoje é 100% `Redacao.sample()` local, nunca
+chamou `/v1/redacoes` de verdade, então não houve breaking change; a Área do
+Responsável não tem nenhuma tela ainda (`app/lib/features/responsavel/` não
+existe).
 
 **Pendente, explícito (backend roda, mas não está pronto pra produção):**
 sem fila assíncrona (chamada ao Claude é síncrona no request), sem cron real
@@ -28,9 +42,14 @@ pra atribuição, `AnalisadorClaude` nunca chamou a API de verdade nesta sessão
 passo óbvio), sem notificação ao responsável quando cai em revisão humana,
 sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de propósito —
 precisa da mesma revisão humana que o plano exige pro vocabulário base),
+sem telas Flutter pra redação real nem pra Área do Responsável (portão PIN
+incluso — o backend valida, mas ninguém ainda impõe passar por ele antes de
+ver o resumo),
 catálogo de temas com 18 de 120 previstos, e retenção/opt-out contratual do
-provedor de LLM (R-RD-8/R-RD-9) não endereçados. Nada disso foi commitado
-nesta sessão — fica pra revisão do dono antes.
+provedor de LLM (R-RD-8/R-RD-9) não endereçados. Ambas as fases foram
+commitadas nesta sessão (backend); revisão do dono ainda recomendada antes de
+qualquer envio real de criança passar pela triagem de risco (R-RD-7) —
+`AnalisadorClaude` nunca rodou contra a API de verdade.
 
 ---
 
