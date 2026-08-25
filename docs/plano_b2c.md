@@ -4,8 +4,12 @@
 > faixa etária, assinatura Apple IAP) feitas e verificadas (147 testes de
 > backend, 42 do app, fluxo completo testado ao vivo no simulador iOS).
 > Detalhe em `design/notas-implementacao.md` § "Pivô B2C" (24/08/2026).
-> Fases 4–6 (redação real, Área do Responsável, congelamento formal do
-> professor) não começaram.
+> **Fase 4 (redação real) parcialmente feita** — pipeline síncrono completo
+> (rubrica por faixa, triagem de risco + análise via Claude, atribuição
+> automática/extra, 160 testes de backend), com pendências explícitas de
+> infra e conteúdo listadas na seção 07 e em `design/notas-implementacao.md`
+> § "Fase 4" (25/08/2026). Fases 5–6 (Área do Responsável, congelamento
+> formal do professor) não começaram.
 > **Criado em:** 24 de agosto de 2026.
 > **Escopo:** transformar o produto de "software de vocabulário para escolas"
 > (B2B, venda por escola, professor no centro) em "assinatura familiar mobile"
@@ -431,8 +435,23 @@ mata a chance de reativação — e reativação é a métrica que sustenta B2C.
 
 **Duração:** 12–18 dias. **É o que justifica R$ 30 contra um app grátis.**
 
-Hoje [redacao/routes.py](backend/app/redacao/routes.py) devolve 3 registros
-fixos. Não existe nenhuma dependência de IA no `pyproject.toml`.
+> **Feito nesta sessão (25/08):** rubrica pura por faixa (§7.2), pipeline de
+> envio→triagem→análise via Claude (§7.3, síncrono — ver pendência), rotas
+> reais (`GET /redacoes`, `POST /redacoes/{id}/enviar`, `GET
+> /redacoes/{id}/analise`, `POST /redacoes/tema-extra`), atribuição automática
+> a cada 15 dias (best-effort, ver pendência) e sob demanda (R-RD-4), schema
+> migrado com `tema_catalogo` + `redacao_atribuicao`/`redacao` compatíveis com
+> o professor congelado (§7.4, revisado). 160 testes de backend passam
+> (13 novos). Detalhe completo e TODAS as pendências desta sessão em
+> `design/notas-implementacao.md` § "Fase 4" (25/08/2026) — resumo rápido:
+> sem fila assíncrona real (roda no request), sem cron (atribuição é
+> "preguiçosa", só ao abrir o app), sem `AnalisadorClaude` testado contra a
+> API de verdade, sem push de notificação (R-RD-5), sem o passo
+> palavra→trilha (§7.3 passo 4), catálogo de temas com 18 dos 120 previstos
+> (§10.4), e R-RD-8/R-RD-9 (retenção/opt-out contratual do provedor) ainda
+> não endereçados — são trabalho legal/de conteúdo, não código.
+
+Hoje [redacao/routes.py](backend/app/redacao/routes.py) é real (Fase 4).
 
 ### 7.1 Quem atribui o tema (a sua pergunta central)
 
@@ -494,13 +513,17 @@ envio (app)
 Os passos 3 e 4 **já estão especificados** em `docs/arquitetura.md` Bloco 2b —
 reaproveite o desenho, ele não depende de professor.
 
-### 7.4 Schema — migration `b2c_03_redacao`
+### 7.4 Schema — migration `326aa898d291` (revisado 25/08 — implementado)
+
+O desenho original desta seção mandava **remover** `turma_id`/
+`professor_associacao_id` de `redacao_atribuicao`. Isso quebraria
+`app/professor/repository.py` (`criar_atribuicao`/`redacoes_do_aluno`), que o
+professor congelado ainda usa de verdade — CLAUDE.md exige congelar, não
+reescrever. Decisão revisada (registrada em
+`design/notas-implementacao.md`): as duas colunas ficam, mas viram
+**nullable**, e a tabela passa a servir os dois mundos ao mesmo tempo:
 
 ```python
-# redacao_atribuicao: ➖ turma_id, ➖ professor_associacao_id
-#                     ➕ usuario_id (a criança), ➕ origem ('automatica'|'sob_demanda')
-#                     ➕ tema_catalogo_id
-
 tema_catalogo = Table(   # NOVO — o catálogo curado
     "tema_catalogo", metadata, _id(),
     Column("faixa_etaria", Text, nullable=False),
@@ -511,7 +534,19 @@ tema_catalogo = Table(   # NOVO — o catálogo curado
     _created_at(),
 )
 
-# ➖ sinal_turma, ➖ turma_config  → sem professor, não existem
+# redacao_atribuicao:
+#   turma_id                nullable=True   (era False — só B2B usa)
+#   professor_associacao_id nullable=True   (sem mudança)
+#   usuario_id               NOVO, nullable=True  — a criança (só B2C usa)
+#   origem                   NOVO, nullable=True  — 'automatica'|'sob_demanda'
+#   tema_catalogo_id          NOVO, nullable=True
+#   CHECK (turma_id IS NOT NULL) <> (usuario_id IS NOT NULL)  -- nunca os dois
+
+# redacao: + risco_sinalizado (bool), + risco_motivo (text) — R-RD-7
+#          status ganha 'revisao_humana'
+
+# sinal_turma, turma_config seguem existindo — são do professor congelado,
+# não fazem parte do caminho B2C, mas continuam servindo quem já os usa.
 ```
 
 ### 7.5 Segurança de conteúdo (obrigatório, não opcional)

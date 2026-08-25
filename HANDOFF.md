@@ -6,7 +6,35 @@
 
 ---
 
-## Estado atual (24/08, pivô B2C — Fases 1–3 de `docs/plano_b2c.md` feitas)
+## Estado atual (25/08 — Fase 4 do B2C, backend, parcial)
+
+**Redação real substituiu o mock** (`backend/app/redacao/`) —
+`docs/plano_b2c.md` §07, detalhe completo e todas as pendências em
+`design/notas-implementacao.md` § "Fase 4" (25/08/2026). Rubrica pura por
+faixa, triagem de risco + análise pedagógica numa chamada ao Claude,
+atribuição de tema automática (a cada 15 dias, best-effort) e sob demanda
+(máx. 2/mês, pedida pelo responsável). Schema: `tema_catalogo` nova;
+`redacao_atribuicao`/`redacao` agora servem B2C e o professor congelado ao
+mesmo tempo (`turma_id` XOR `usuario_id`) — decisão revisada registrada nas
+notas, porque o desenho original do plano quebraria o professor. 160 testes
+de backend (13 novos), todos verdes; **app Flutter não tocado nesta
+sessão** (o cliente já falava com `/v1/redacoes*` mockado — o contrato não
+mudou, só o backend deixou de inventar dado).
+
+**Pendente, explícito (backend roda, mas não está pronto pra produção):**
+sem fila assíncrona (chamada ao Claude é síncrona no request), sem cron real
+pra atribuição, `AnalisadorClaude` nunca chamou a API de verdade nesta sessão
+(sem `ANTHROPIC_API_KEY` no ambiente do agente — validar isso é o próximo
+passo óbvio), sem notificação ao responsável quando cai em revisão humana,
+sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de propósito —
+precisa da mesma revisão humana que o plano exige pro vocabulário base),
+catálogo de temas com 18 de 120 previstos, e retenção/opt-out contratual do
+provedor de LLM (R-RD-8/R-RD-9) não endereçados. Nada disso foi commitado
+nesta sessão — fica pra revisão do dono antes.
+
+---
+
+## Estado anterior (24/08, pivô B2C — Fases 1–3 de `docs/plano_b2c.md` feitas)
 
 **Pivô B2C em andamento.** Produto saiu de venda por escola pra assinatura
 direto pra família — decisão e racional completos em

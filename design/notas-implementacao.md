@@ -773,3 +773,75 @@ curl contra o backend real — não só nos testes automatizados.
 - RevenueCat/Apple Developer: sem conta/API key/product IDs reais — paywall
   funciona estruturalmente mas mostra "configuração pendente" até o dono
   configurar (`AppConfig.revenueCatApiKey`).
+
+## 🖋️ Fase 4 — Redação real (backend), parcial (25/08)
+
+Implementado nesta sessão, a partir de `docs/plano_b2c.md` §07: domínio
+`backend/app/redacao/` deixou de ser mock. Rotas reais (`GET /redacoes`,
+`POST /redacoes/{id}/enviar`, `GET /redacoes/{id}/analise`, `POST
+/redacoes/tema-extra`), rubrica pura por faixa (`redacao/rubrica.py`, no
+padrão de `progressao/xp.py`), pipeline de triagem de risco (R-RD-7) + análise
+pedagógica numa chamada só ao Claude (`redacao/analisador.py`, `Analisador`
+como Protocol para os testes usarem um fake — nenhum teste faz chamada de
+rede). 13 testes novos, 160 no total (backend).
+
+**Decisão revisada registrada aqui** (`CLAUDE.md` "regra das decisões
+revisadas" — já editado em `docs/plano_b2c.md` §7.4 no mesmo commit): o desenho
+original do plano mandava REMOVER `turma_id`/`professor_associacao_id` de
+`redacao_atribuicao` na migration da Fase 4. Isso quebraria
+`app/professor/repository.py` (`criar_atribuicao`/`redacoes_do_aluno`), que o
+professor congelado ainda usa de verdade em produção — indo contra a regra
+"congelado, não deletado, sem reescrever" do próprio `CLAUDE.md`. Resolvido
+tornando as duas colunas **nullable** e a tabela um XOR entre `turma_id`
+(B2B) e o novo `usuario_id` (B2C), via `CHECK (turma_id IS NOT NULL) <>
+(usuario_id IS NOT NULL)`. Os 8 testes de `test_professor.py` continuam
+verdes sem tocar uma linha do domínio congelado — a coexistência funciona.
+
+**Pendências explícitas desta sessão** (não são bugs — são escopo cortado por
+falta de infra ou de conteúdo que não existiam antes desta sessão):
+
+- **Sem fila assíncrona.** O plano original citava `procrastinate`; não há
+  worker configurado no repo. `enviar_redacao` roda a chamada ao Claude
+  *síncrona*, dentro do request — funciona para validar o MVP, mas a criança
+  fica com a tela presa por alguns segundos, e não escala sob carga real.
+  Trocar por fila de verdade é a próxima dívida técnica óbvia aqui.
+- **Atribuição automática é "preguiçosa"**, não um cron. R-RD-1 pede "a cada
+  15 dias"; sem scheduler no repo, `garantir_atribuicao_atual` só roda quando
+  o app chama `GET /redacoes` e checa se a última atribuição já passou de 15
+  dias. Na prática é equivalente pra um usuário ativo (só importa quando a
+  criança abre o app), mas diverge da leitura literal da regra pra quem fica
+  muito tempo sem abrir.
+- **`AnalisadorClaude` nunca rodou contra a API de verdade.** Sem
+  `ANTHROPIC_API_KEY` no ambiente do agente nesta sessão — o prompt, o
+  schema de tool-use e o parsing estão implementados por inteiro, mas o
+  contrato (o modelo respeitar o schema, a qualidade da triagem de risco,
+  a qualidade pedagógica das anotações) não foi validado ao vivo. Isto é
+  crítico de verificar antes de qualquer envio real de criança — R-RD-7 é a
+  parte que menos pode falhar.
+- **R-RD-5 (notificar o responsável) não implementado.** Não existe canal de
+  push/e-mail no repo. `redacao.risco_motivo` fica gravado para a Fase 5
+  (Área do Responsável) mostrar, mas ninguém é avisado ativamente até lá —
+  hoje uma redação em `revisao_humana` fica silenciosa.
+- **§7.3 passo 4 (palavra extraída → vira `palavra` real → entra na fila de
+  revisão do aluno) não implementado, de propósito.** `redacao_palavra` grava
+  as palavras fracas/superutilizadas que o Claude aponta, mas nada as
+  transforma em conteúdo de vocabulário de verdade. O próprio plano (§10.1
+  passo 5) exige revisão humana por amostragem antes de qualquer palavra
+  gerada por LLM entrar em produção — automatizar esse passo sem essa
+  salvaguarda pularia a única proteção de qualidade que o plano pede. Isto é
+  trabalho de pipeline de conteúdo (parecido com `seed_vocabulario.py`), não
+  um bug a corrigir.
+- **Catálogo de temas incompleto.** `backend/app/seed_temas.py` tem 18 temas
+  (6 por faixa) — o plano (§10.4) pede 120 (40 por faixa) para cobrir um ano
+  sem repetir. Suficiente pra dev/teste rodar, insuficiente pra produção;
+  quando o catálogo de uma faixa esgota, `tema_disponivel` simplesmente não
+  atribui nada (sem erro, mas a criança para de receber tema novo).
+- **R-RD-8/R-RD-9 (opt-out contratual de treino do provedor de LLM; retenção
+  de 24 meses do texto) não endereçados.** São decisão contratual/legal
+  (revisar o DPA da Anthropic, política de retenção) e um job de expurgo
+  agendado — nenhum dos dois é código desta sessão nem depende só de código.
+- **OCR on-device não é trabalho de backend.** O app já manda só
+  `texto_extraido` pro backend (a rota nunca fez OCR) — mas o app Flutter
+  ainda não tem a integração de ML Kit que produz esse texto a partir de uma
+  foto de caderno. Isso só pode ser feito na máquina do dono (Flutter SDK não
+  está disponível no container do agente, ver `CLAUDE.md` "Ambiente").

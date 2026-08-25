@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app import schema
 from app.db import engine
 from app.seed import seed
+from app.seed_temas import seed_temas
 from app.seed_trilha import seed_trilha
 from app.seed_vocabulario import seed_vocabulario
 
@@ -30,6 +31,7 @@ async def test_jornada_completa_do_apresentavel(client):
     await seed()
     await seed_vocabulario()
     await seed_trilha()
+    await seed_temas()
     gabarito = await _gabarito()
 
     # 1. Cadastro do responsável + perfil de criança + entrada (B2C).
@@ -129,9 +131,11 @@ async def test_jornada_completa_do_apresentavel(client):
     passaporte = (await client.get("/v1/passaporte", headers=h)).json()
     assert passaporte["total"] == 11
 
-    # 9. Telas mockadas da fatia A respondem.
+    # 9. Redação real (Fase 4): atribuição automática nasce na 1ª consulta.
     redacoes = (await client.get("/v1/redacoes", headers=h)).json()
-    assert redacoes["mock"] is True and len(redacoes["itens"]) >= 1
+    assert len(redacoes["itens"]) == 1
+    assert redacoes["itens"][0]["status"] is None  # ainda não enviou
+    assert redacoes["extras_restantes_no_mes"] == 2
     # O painel é do professor — o token de aluno bate na porta e leva 403
     # (papel exigido pelas rotas de professor; ver test_professor.py).
     painel = await client.get("/v1/professor/turmas/1/painel", headers=h)

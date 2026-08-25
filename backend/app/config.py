@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # nunca aceito "por engano".
     revenuecat_webhook_secret: str = ""
 
+    # Redação real (B2C, docs/plano_b2c.md Fase 4). Sem default de propósito:
+    # sem a chave, a análise falha com um erro claro ("configuração pendente"),
+    # não com um 500 opaco — mesma convenção do RevenueCat acima.
+    anthropic_api_key: str = ""
+    anthropic_modelo_redacao: str = "claude-sonnet-5"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

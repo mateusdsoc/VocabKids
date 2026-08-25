@@ -392,17 +392,53 @@ colecionavel = Table(
 )
 
 
-# ─────────────────── 6. Redações — isolado por escola (C; mock em A) ───────────────────
+# ─────────────── 6. Redações — B2C real (Fase 4); B2B por turma congelado ───────────────
+#
+# `redacao_atribuicao` serve os dois mundos ao mesmo tempo, sem reescrever o
+# professor congelado (CLAUDE.md "professor congelado, não deletado"): B2B
+# preenche `turma_id`/`professor_associacao_id` (como sempre fez —
+# `professor/repository.py` não mudou uma linha), B2C preenche `usuario_id`
+# (o perfil da criança) + `origem` + `tema_catalogo_id`. Nunca os dois ao
+# mesmo tempo (`ck_redacao_atribuicao_turma_xor_usuario`). Isto é uma revisão
+# do desenho original de `docs/plano_b2c.md` §7.4, que descrevia REMOVER
+# `turma_id`/`professor_associacao_id` — inviável, porque isso quebraria
+# `criar_atribuicao`/`redacoes_do_aluno` do domínio congelado. Registrado em
+# `design/notas-implementacao.md` (Fase 4, 25/08).
+
+tema_catalogo = Table(
+    "tema_catalogo",
+    metadata,
+    _id(),
+    Column("faixa_etaria", Text, nullable=False),
+    Column("titulo", Text, nullable=False),
+    Column("enunciado", Text, nullable=False),
+    Column("apoio", JSONB, nullable=True),  # perguntas-guia (destravam o começo)
+    Column("genero", Text, nullable=False),
+    _created_at(),
+    CheckConstraint("faixa_etaria IN ('7-8','9-10','11-12')", name="faixa_valida"),
+    CheckConstraint(
+        "genero IN ('narrativa','descritiva','opinativa','carta')", name="genero_valido"
+    ),
+)
 
 redacao_atribuicao = Table(
     "redacao_atribuicao",
     metadata,
     _id(),
-    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), nullable=False),
+    # B2B congelado (turma) — nullable pq B2C não usa turma.
+    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), nullable=True),
     Column("professor_associacao_id", BigInteger, ForeignKey("associacao.id", ondelete="SET NULL"), nullable=True),
+    # B2C (Fase 4) — nullable pq B2B não usa perfil direto.
+    Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=True),
+    Column("origem", Text, nullable=True),  # 'automatica' | 'sob_demanda' — só B2C (R-RD-1/R-RD-4)
+    Column("tema_catalogo_id", BigInteger, ForeignKey("tema_catalogo.id", ondelete="SET NULL"), nullable=True),
     Column("tema", Text, nullable=False),
     Column("prazo", Date, nullable=True),
     _created_at(),
+    CheckConstraint(
+        "(turma_id IS NOT NULL) <> (usuario_id IS NOT NULL)", name="turma_xor_usuario"
+    ),
+    CheckConstraint("origem IS NULL OR origem IN ('automatica','sob_demanda')", name="origem_valida"),
 )
 
 redacao = Table(
@@ -415,12 +451,17 @@ redacao = Table(
     Column("arquivo_ref", Text, nullable=True),  # R2
     Column("texto_extraido", Text, nullable=True),
     Column("status", Text, nullable=False, server_default="enviada"),
+    # R-RD-7: sinal de risco (violência/autolesão/abuso) achado na triagem —
+    # quando true, `status='revisao_humana'` e NENHUMA análise automática é
+    # gerada/mostrada à criança. `risco_motivo` é só para o adulto (Fase 5).
+    Column("risco_sinalizado", Boolean, nullable=False, server_default="false"),
+    Column("risco_motivo", Text, nullable=True),
     Column("enviada_em", DateTime(timezone=True), nullable=True),
     Column("analisada_em", DateTime(timezone=True), nullable=True),
     _created_at(),
     CheckConstraint("formato IN ('manuscrita','digital')", name="formato_valido"),
     CheckConstraint(
-        "status IN ('enviada','processando','analisada','erro_ingestao','erro_analise')",
+        "status IN ('enviada','processando','analisada','erro_ingestao','erro_analise','revisao_humana')",
         name="status_valido",
     ),
 )

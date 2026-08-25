@@ -21,7 +21,8 @@ api_router.include_router(vocabulario_router)
 api_router.include_router(sessao_router)
 api_router.include_router(diagnostico_router)
 api_router.include_router(trilha_router)
-# Mockados na fatia A (telas reais, backend fixo) — viram reais na fatia C.
+api_router.include_router(redacao_router)  # real (Fase 4, docs/plano_b2c.md)
+# Mockado — vira real na Fase 6/pós-B2C se a área do responsável precisar.
 api_router.include_router(report_router)
-api_router.include_router(redacao_router)
+# Congelado (B2B) — fora do caminho crítico do B2C, ver CLAUDE.md.
 api_router.include_router(professor_router)

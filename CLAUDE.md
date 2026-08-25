@@ -50,9 +50,11 @@ psql -h localhost -U postgres -c "create database vocabkids_test;"
 cp .env.example .env                   # ajuste DATABASE_URL se preciso
 echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env          # obrigatório (auth JWT)
 echo "REVENUECAT_WEBHOOK_SECRET=troque-isto" >> .env       # obrigatório p/ POST /v1/assinatura/webhook
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env                 # obrigatório p/ POST /v1/redacoes/{id}/enviar (Fase 4)
 uv run alembic upgrade head            # cria as tabelas
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
+uv run python -m app.seed_temas        # catálogo de temas de redação (18 de 120 — ver docs/plano_b2c.md §10.4)
 uv run python -m app.seed_demo         # conta+perfis "vitrine" (com assinatura ativa) p/ demo — reset a cada rodada
 uv run python -m app.seed              # só se for mexer no professor/B2B congelado — turma DEMO7A + professora
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
@@ -96,10 +98,14 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   `vocabulario`, `sessao`, `diagnostico`, `trilha`, `progressao` (regras puras
   de XP/combo, semana letiva, meta por faixa etária e faixa→parâmetros —
   `progressao/faixa.py`), `adaptacao` (regra pura de nível, respeita o teto da
-  faixa), `professor` (**congelado, B2B** — queries reais + escopo por
-  associação seguem funcionando, mas fora do produto atual) e os **mocks
-  restantes da fatia A**: `report`, `redacao` (viram reais na Fase 4 do B2C).
-- **Schema único** em `app/schema.py` (29 tabelas, SQLAlchemy Core) — fonte
+  faixa), `redacao` (real desde a Fase 4 — rubrica pura por faixa, triagem de
+  risco + análise via Claude, `redacao_atribuicao` compartilhada com o
+  professor congelado por `turma_id` XOR `usuario_id`, ver §7.4 de
+  `docs/plano_b2c.md`), `professor` (**congelado, B2B** — queries reais +
+  escopo por associação seguem funcionando, mas fora do produto atual) e o
+  **mock restante da fatia A**: `report` (vira real depois da Fase 5, se a
+  Área do Responsável precisar).
+- **Schema único** em `app/schema.py` (30 tabelas, SQLAlchemy Core) — fonte
   tanto das migrations quanto do `create_all` dos testes. PK `BIGINT
   IDENTITY`; enums via `VARCHAR + CHECK`. Migrations Alembic **lineares** (uma
   cadeia única) — `turma`/`escola`/`associacao_turma`/`turma_config` e

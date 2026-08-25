@@ -1,251 +1,88 @@
-"""Redação — telas MOCKADAS/estáticas na fatia A.
+"""Redação — pipeline real B2C (Fase 4, `docs/plano_b2c.md`).
 
-No apresentável estas telas existem para a demo, mas devolvem dados fixos: o
-pipeline real de redação (OCR→análise→extração→atribuição) com dados de verdade
-é da fatia C (Bloco 2b). Mesmas rotas, sem reescrita depois. (O painel do
-professor saiu daqui para o domínio `professor`.)
+Rotas de leitura/envio (`/redacoes*`) são do escopo `aluno` (o perfil da
+criança). `POST /redacoes/tema-extra` é do escopo `responsavel` (R-RD-4: quem
+decide gastar um dos 2 extras/mês é o adulto, não a criança em pleno jogo —
+mesmo espírito de R-RS-1 na assinatura).
 """
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.api.deps import get_conn
+from app.identidade import repository as identidade_repo
+from app.identidade.auth import UsuarioAutenticado, require_papel
 from app.errors import ApiError
-from app.identidade.auth import get_usuario_atual
+from app.redacao import service
+from app.redacao.analisador import Analisador, get_analisador
+from app.redacao.schemas import AnaliseOut, EnviarRedacaoIn, EnviarRedacaoOut, RedacoesOut, TemaExtraOut
 
-router = APIRouter(tags=["redacao"], dependencies=[Depends(get_usuario_atual)])
-
-
-class RedacaoMock(BaseModel):
-    id: int
-    tema: str
-    prazo: str | None
-    status: str
+router = APIRouter(tags=["redacao"])
 
 
-class RedacoesOut(BaseModel):
-    mock: bool
-    itens: list[RedacaoMock]
+@router.get("/redacoes", response_model=RedacoesOut, summary="Atribuições de redação do perfil")
+async def listar_redacoes(
+    usuario: Annotated[UsuarioAutenticado, Depends(require_papel("aluno"))],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    return await service.listar_redacoes(conn, usuario.id)
 
 
-# Dados fixos só para a demo (fatia A).
-_REDACOES = [
-    {"id": 1, "tema": "Minhas férias dos sonhos", "prazo": "2026-06-20", "status": "pendente"},
-    {"id": 2, "tema": "Um herói brasileiro", "prazo": "2026-06-10", "status": "analisada"},
-    {"id": 3, "tema": "Se eu pudesse mudar o mundo", "prazo": None, "status": "rascunho"},
-]
-
-@router.get(
-    "/redacoes",
-    response_model=RedacoesOut,
-    summary="Lista de redações (MOCK estático na fatia A)",
+@router.post(
+    "/redacoes/{atribuicao_id}/enviar",
+    response_model=EnviarRedacaoOut,
+    summary="Envia o texto da redação (OCR, se manuscrita, já rodou no app)",
 )
-async def listar_redacoes():
-    return {"mock": True, "itens": _REDACOES}
-
-
-# --- Análise da redação (MOCK) ---------------------------------------------
-# Contrato em docs/arquitetura.md (pipeline §2). Esta rota devolve a view-model
-# que a tela do aluno (telas §8.1) consome: anotações + palavras novas + texto.
-#
-# As âncoras são declaradas como (trecho, ocorrência) e RESOLVIDAS em offsets a
-# cada request — é o próprio passo do contrato "o backend resolve, não confia no
-# offset cru do LLM". Âncora não-resolvível é descartada (a anotação vira nota),
-# nunca quebra a tela. Aqui isso torna os offsets do mock corretos de fato.
-
-
-class Ancora(BaseModel):
-    inicio: int
-    fim: int
-    trecho: str
-    ocorrencia: int
-
-
-class Anotacao(BaseModel):
-    id: str
-    dimensao: str
-    subtipo: str | None = None
-    titulo: str
-    comentario: str
-    sugestoes: list[str] = []
-    ancoras: list[Ancora] = []  # vazia = holística → tela renderiza como nota
-
-
-class Analise(BaseModel):
-    versao: int
-    dimensoes: list[str]
-    pontos_fortes: list[str]
-    anotacoes: list[Anotacao]
-
-
-class PalavraNova(BaseModel):
-    palavra: str
-    gatilho: str
-    anotacao_id: str
-
-
-class AnaliseOut(BaseModel):
-    mock: bool
-    redacao_id: int
-    status: str
-    texto_extraido: str
-    analise: Analise | None
-    palavras_novas: list[PalavraNova]
-
-
-# Texto "transcrito" da redação 2 ("Um herói brasileiro"), com erros plantados
-# em três dimensões marcáveis (vocabulário, acentuação, pontuação).
-_TEXTO_HEROI = (
-    "Meu heroi brasileiro é Santos Dumont. Ele foi um inventor muito "
-    "inteligente e muito corajoso, que sonhava em voar pelo céu.\n\n"
-    "Santos Dumont criou o 14-Bis, um avião muito legal para a época. Muita "
-    "gente duvidava do seu sonho mas ele não desistiu.\n\nEu acho que ele é um "
-    "exemplo para todos nós, porque mostrou que tambem podemos realizar nossos "
-    "sonhos."
-)
-
-# Anotações como (trecho, ocorrência); o resolver preenche inicio/fim.
-_ANOTACOES_HEROI: list[dict] = [
-    {
-        "id": "an_1",
-        "dimensao": "vocabulario",
-        "subtipo": "superutilizada",
-        "titulo": "“muito” apareceu 3 vezes",
-        "comentario": "Repetir a mesma palavra deixa o texto cansado. "
-        "Experimente variar com uma destas:",
-        "sugestoes": ["bastante", "extremamente", "imensamente"],
-        "marcas": [("muito", 1), ("muito", 2), ("muito", 3)],
-    },
-    {
-        "id": "an_2",
-        "dimensao": "acentuacao",
-        "titulo": "Faltou um acento",
-        "comentario": "“Heroi” leva acento agudo no “o”.",
-        "sugestoes": ["herói"],
-        "marcas": [("heroi", 1)],
-    },
-    {
-        "id": "an_3",
-        "dimensao": "vocabulario",
-        "subtipo": "fraca",
-        "titulo": "“legal” é uma palavra coringa",
-        "comentario": "Ela serve para tudo — e por isso diz pouco. Uma palavra "
-        "mais precisa deixa a frase mais forte:",
-        "sugestoes": ["inovador", "impressionante"],
-        "marcas": [("legal", 1)],
-    },
-    {
-        "id": "an_4",
-        "dimensao": "pontuacao",
-        "titulo": "Vírgula antes de “mas”",
-        "comentario": "Quando o “mas” liga duas ideias, costuma vir depois de "
-        "uma vírgula: “...do seu sonho, mas ele não desistiu.”",
-        "sugestoes": ["sonho, mas"],
-        "marcas": [("mas", 1)],
-    },
-    {
-        "id": "an_5",
-        "dimensao": "acentuacao",
-        "titulo": "Faltou um acento",
-        "comentario": "“Tambem” leva acento agudo no “e”.",
-        "sugestoes": ["também"],
-        "marcas": [("tambem", 1)],
-    },
-    {
-        "id": "an_6",
-        "dimensao": "coesao_estrutura",
-        "titulo": "Começo, meio e fim — muito bem!",
-        "comentario": "Seu texto apresenta o herói, conta o que ele fez e fecha "
-        "com a sua opinião. Para ficar ainda mais forte, experimente ligar os "
-        "parágrafos com palavras de transição, como “por isso” ou “além disso”.",
-        "sugestoes": [],
-        "marcas": [],  # holística: sem grifo
-    },
-]
-
-_PONTOS_FORTES_HEROI = [
-    "Você contou uma história com começo, meio e fim",
-    "Usou um exemplo de verdade — o 14-Bis!",
-    "Terminou defendendo a sua opinião",
-]
-
-_PALAVRAS_NOVAS_HEROI = [
-    {"palavra": "bastante", "gatilho": "muito", "anotacao_id": "an_1"},
-    {"palavra": "inovador", "gatilho": "legal", "anotacao_id": "an_3"},
-]
-
-
-def _resolver_ancoras(texto: str, marcas: list[tuple[str, int]]) -> list[Ancora]:
-    """(trecho, n-ésima ocorrência) → offsets [inicio, fim) em code points.
-
-    Espelha o passo de resolução do contrato: o backend localiza o trecho no
-    texto em vez de confiar em offset cru do modelo. Marca não encontrada é
-    descartada (a anotação perde a âncora e vira holística).
-    """
-    ancoras: list[Ancora] = []
-    for trecho, ocorrencia in marcas:
-        pos, achados = -1, 0
-        while achados < ocorrencia:
-            pos = texto.find(trecho, pos + 1)
-            if pos == -1:
-                break
-            achados += 1
-        if pos != -1:
-            ancoras.append(
-                Ancora(inicio=pos, fim=pos + len(trecho), trecho=trecho, ocorrencia=ocorrencia)
-            )
-    return ancoras
-
-
-def _montar_analise_heroi() -> Analise:
-    anotacoes = [
-        Anotacao(
-            id=a["id"],
-            dimensao=a["dimensao"],
-            subtipo=a.get("subtipo"),
-            titulo=a["titulo"],
-            comentario=a["comentario"],
-            sugestoes=a["sugestoes"],
-            ancoras=_resolver_ancoras(_TEXTO_HEROI, a["marcas"]),
-        )
-        for a in _ANOTACOES_HEROI
-    ]
-    # dimensões efetivamente avaliadas nesta amostra (na ordem do produto 4.2)
-    dimensoes = ["vocabulario", "acentuacao", "pontuacao", "coesao_estrutura"]
-    return Analise(
-        versao=1,
-        dimensoes=dimensoes,
-        pontos_fortes=_PONTOS_FORTES_HEROI,
-        anotacoes=anotacoes,
+async def enviar_redacao(
+    atribuicao_id: int,
+    corpo: EnviarRedacaoIn,
+    usuario: Annotated[UsuarioAutenticado, Depends(require_papel("aluno"))],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+    analisador: Annotated[Analisador, Depends(get_analisador)],
+):
+    return await service.enviar_redacao(
+        conn,
+        usuario_id=usuario.id,
+        atribuicao_id=atribuicao_id,
+        formato=corpo.formato,
+        texto_extraido=corpo.texto_extraido,
+        analisador=analisador,
     )
 
 
 @router.get(
     "/redacoes/{redacao_id}/analise",
     response_model=AnaliseOut,
-    summary="Análise da redação (MOCK estático na fatia A)",
+    summary="Análise da redação (anotações + palavras novas)",
 )
-async def analise_redacao(redacao_id: int):
-    item = next((r for r in _REDACOES if r["id"] == redacao_id), None)
-    if item is None:
-        raise ApiError(404, "redacao_nao_encontrada", "Redação não encontrada.")
+async def analise_redacao(
+    redacao_id: int,
+    usuario: Annotated[UsuarioAutenticado, Depends(require_papel("aluno"))],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    return await service.obter_analise(conn, usuario_id=usuario.id, redacao_id=redacao_id)
 
-    # Só a redação 2 ("Um herói brasileiro") está analisada no mock; as demais
-    # devolvem a análise vazia — a tela mostra o estado "em análise".
-    if item["status"] == "analisada":
-        return AnaliseOut(
-            mock=True,
-            redacao_id=redacao_id,
-            status="analisada",
-            texto_extraido=_TEXTO_HEROI,
-            analise=_montar_analise_heroi(),
-            palavras_novas=[PalavraNova(**p) for p in _PALAVRAS_NOVAS_HEROI],
-        )
-    return AnaliseOut(
-        mock=True,
-        redacao_id=redacao_id,
-        status=item["status"],
-        texto_extraido="",
-        analise=None,
-        palavras_novas=[],
-    )
+
+class TemaExtraIn(BaseModel):
+    perfil_usuario_id: int
+
+
+@router.post(
+    "/redacoes/tema-extra",
+    response_model=TemaExtraOut,
+    summary="Responsável pede um tema extra agora (R-RD-4: máx. 2/mês/perfil)",
+)
+async def pedir_tema_extra(
+    corpo: TemaExtraIn,
+    usuario: Annotated[UsuarioAutenticado, Depends(require_papel("responsavel"))],
+    conn: Annotated[AsyncConnection, Depends(get_conn)],
+):
+    conta = await identidade_repo.buscar_conta_por_responsavel(conn, usuario.id)
+    if conta is None:
+        raise ApiError(404, "conta_nao_encontrada", "Conta não encontrada.")
+    pertence = await identidade_repo.buscar_perfil_na_conta(conn, conta.id, corpo.perfil_usuario_id)
+    if pertence is None:
+        raise ApiError(404, "perfil_nao_encontrado", "Perfil não pertence a esta conta.")
+    return await service.pedir_tema_extra(conn, corpo.perfil_usuario_id)
