@@ -67,6 +67,36 @@ de qualquer envio real de criança passar pela triagem de risco (R-RD-7) —
 
 ---
 
+## ▶️ Próximos passos (ordem sugerida)
+
+**Trabalho de app pendente — backend das duas features já está pronto:**
+
+1. **Redação real (Fase 4, app)** — `app/lib/features/redacao/redacao_screen.dart`
+   hoje é 100% `Redacao.sample()` local; trocar por `GET /v1/redacoes` +
+   `POST /v1/redacoes/{id}/enviar` + `GET /v1/redacoes/{id}/analise`
+   (contratos em `backend/app/redacao/schemas.py`). Escrita manuscrita
+   precisa de OCR **on-device** (ML Kit) — o backend só recebe
+   `texto_extraido` pronto, nunca a foto; digitada não precisa de OCR
+   nenhum. Ver pendências em `design/notas-implementacao.md` § "Fase 4".
+2. **Área do Responsável (Fase 5, app)** — `app/lib/features/responsavel/`
+   não existe ainda. Portão PIN primeiro (`POST /v1/conta/pin/verificar` —
+   só depois de 204 é que a tela pode navegar pro resumo, R-RS-1; hoje nada
+   força essa ordem, é o app quem precisa impor), depois a tela de resumo
+   semanal (`GET /v1/responsavel/perfis/{id}/resumo`) e os atalhos pra
+   assinatura/perfis/exclusão (rotas já existentes, reaproveitar). Ver
+   `docs/plano_b2c.md` §08 e `design/notas-implementacao.md` § "Fase 5".
+
+**Antes de expor pra qualquer criança de verdade:** validar
+`AnalisadorClaude` contra a API real (`ANTHROPIC_API_KEY`) — nunca rodou
+nesta sessão, e a parte mais crítica de acertar (triagem de risco R-RD-7)
+não foi verificada ao vivo.
+
+**Sem código pendente, mas fora do escopo de app/backend:** catálogo de
+temas (18 de 120), retenção/opt-out contratual do provedor de LLM
+(R-RD-8/R-RD-9), fila assíncrona real pro pipeline de análise.
+
+---
+
 ## Estado anterior (24/08, pivô B2C — Fases 1–3 de `docs/plano_b2c.md` feitas)
 
 **Pivô B2C em andamento.** Produto saiu de venda por escola pra assinatura
@@ -239,7 +269,11 @@ Residuais (não bloqueiam, registrados para não se perderem):
 
 ---
 
-## ▶️ Próximos passos (ordem sugerida)
+## Próximos passos — histórico (pré-pivô B2C, 13/07)
+
+> Obsoleto: turma+nome/PIN e a "fatia C do professor" descrevem o produto
+> B2B, cujo código saiu do repo na Fase 6 (25/08) — ver "▶️ Próximos passos"
+> no topo do arquivo para o que vale hoje.
 
 **~~1. Trio de segurança pré-piloto~~ ✅ feito (13/07)** — ver "Estado anterior".
 
@@ -324,7 +358,7 @@ trilha, report (mock), redação (mock), **professor (mock)**. Testes:
 
 ---
 
-## Superfície do Professor (web) — telas A–D completas
+## Superfície do Professor (web) — telas A–D completas [histórico — código removido na Fase 6, 25/08]
 
 Decisão e plano completos em `design/notas-implementacao.md`
 (seção "🧑‍🏫 Professor (web)"). Resumo:
