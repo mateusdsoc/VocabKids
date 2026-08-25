@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.api.deps import get_conn
-from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
+from app.assinatura.entitlement import exigir_acesso
+from app.identidade.auth import UsuarioAutenticado, get_usuario_atual, require_papel
 from app.sessao import service
 from app.sessao.schemas import (
     ProximoOut,
@@ -15,7 +16,9 @@ from app.sessao.schemas import (
     SessaoOut,
 )
 
-router = APIRouter(tags=["sessao"])
+# Gameplay é escopo de criança (R-ID-3, docs/plano_b2c.md): um token de
+# responsável não abre sessão de jogo, mesmo que esteja autenticado.
+router = APIRouter(tags=["sessao"], dependencies=[Depends(require_papel("aluno"))])
 
 
 @router.post(
@@ -25,7 +28,7 @@ router = APIRouter(tags=["sessao"])
     summary="Monta e abre uma sessão (fila de slots, entrega em lote)",
 )
 async def abrir_sessao(
-    usuario: Annotated[UsuarioAutenticado, Depends(get_usuario_atual)],
+    usuario: Annotated[UsuarioAutenticado, Depends(exigir_acesso)],
     conn: Annotated[AsyncConnection, Depends(get_conn)],
 ):
     return await service.montar_sessao(conn, usuario.id)

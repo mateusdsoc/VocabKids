@@ -60,16 +60,19 @@ async def rate_limit(request: Request, call_next):
     """Freio de abuso por janela de 60s (fora da transação de banco: request
     bloqueado nem abre conexão).
 
-    Chaves: o login (`/acesso/turma`) conta por IP com limite próprio — é a
-    porta de brute-force de código de turma e de criação de contas. Rotas
-    autenticadas contam por token (não por IP: uma turma inteira compartilha o
-    NAT da escola). O resto conta por IP.
+    Chaves: login e cadastro (`/sessao`, `/conta`) contam por IP com limite
+    próprio — é a porta de brute-force de senha e de criação de contas em
+    massa (B2C, docs/plano_b2c.md Fase 1). Rotas autenticadas contam por
+    token. O resto conta por IP.
     """
     if not settings.rate_limit_habilitado or request.method == "OPTIONS":
         return await call_next(request)
 
     autorizacao = request.headers.get("authorization")
-    if request.url.path.endswith("/acesso/turma"):
+    eh_login_ou_cadastro = request.method == "POST" and (
+        request.url.path.endswith("/sessao") or request.url.path.endswith("/conta")
+    )
+    if eh_login_ou_cadastro:
         chave = f"login:{_ip_cliente(request)}"
         limite = settings.rl_login_por_minuto
     elif autorizacao:
@@ -103,7 +106,7 @@ if settings.cors_origins_list:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
-        allow_methods=["GET", "POST", "PUT"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
         max_age=3600,  # cacheia o preflight no browser — menos ida-e-volta
     )

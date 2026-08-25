@@ -16,7 +16,7 @@ import 'widgets/passport_background.dart';
 import 'widgets/stat_tile.dart';
 
 /// **Perfil do aluno** — a tela "quem sou eu": identidade (avatar, nome, papel,
-/// escola, turma) + progresso em cartões-estatística, com um atalho para o
+/// faixa etária, ano escolar) + progresso em cartões-estatística, com um atalho para o
 /// **Passaporte** (a coleção) no topo e a entrada de **Configurações** ao pé.
 ///
 /// Perfil e Passaporte são telas distintas (produto §3.10): o Perfil é o espaço
@@ -30,7 +30,8 @@ class PerfilScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final me = this.me ?? ref.watch(authControllerProvider).value ?? sampleMe;
+    final me =
+        this.me ?? ref.watch(authControllerProvider).value?.meOuNull ?? sampleMe;
     final p = me.progresso;
 
     final overlay = Theme.of(context).brightness == Brightness.dark
@@ -249,10 +250,14 @@ class _PassaporteAtalho extends StatelessWidget {
 /// Viajante-amostra para preview/demo (mesmo padrão de `sample` das outras telas).
 final Me sampleMe = Me(
   usuarioId: 1,
-  nome: 'Manu Oliveira',
+  nome: 'Manu',
   papel: 'aluno',
-  escola: Escola(id: 1, nome: 'EM Cecília Meireles'),
-  turma: Turma(id: 1, nome: 'Turma 7A', anoEscolar: 7),
+  perfil: PerfilCrianca(
+    usuarioId: 1,
+    apelido: 'Manu',
+    faixaEtaria: '9-10',
+    anoEscolar: 5,
+  ),
   progresso: Progresso(
     xpTotal: 3120,
     noAtualId: 4,

@@ -19,6 +19,8 @@ class PassportField extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.autofocus = false,
+    this.obscureText = false,
+    this.keyboardType,
   });
 
   final TextEditingController controller;
@@ -30,6 +32,8 @@ class PassportField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+  final bool obscureText;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +60,8 @@ class PassportField extends StatelessWidget {
           controller: controller,
           validator: validator,
           autofocus: autofocus,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           textInputAction: textInputAction,
           onFieldSubmitted: onSubmitted,

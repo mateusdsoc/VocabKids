@@ -26,14 +26,30 @@ async def ler_progresso(conn: AsyncConnection, usuario_id: int) -> Row | None:
     return (await conn.execute(stmt)).first()
 
 
+async def ler_faixa_etaria(conn: AsyncConnection, usuario_id: int) -> str | None:
+    """Faixa etária da criança (B2C — docs/plano_b2c.md Fase 2, R-FX-1).
+
+    `None` para quem não tem `perfil_crianca` (aluno B2B congelado, ligado por
+    turma) — quem chama trata isso como "sem teto por faixa"."""
+    pc = schema.perfil_crianca
+    stmt = select(pc.c.faixa_etaria).where(pc.c.usuario_id == usuario_id)
+    return (await conn.execute(stmt)).scalar_one_or_none()
+
+
 async def selecionar_palavras_novas(
-    conn: AsyncConnection, usuario_id: int, nivel_alvo: int, limite: int
+    conn: AsyncConnection,
+    usuario_id: int,
+    nivel_alvo: int,
+    limite: int,
+    nivel_maximo: int,
 ) -> list[Row]:
     """Palavras do banco base ainda não atribuídas ao aluno, mais próximas do nível.
 
     Primário é o `nivel_dificuldade_atual` (ordem dentro do nível tem pouco impacto,
     seção 3.5); se faltam palavras no nível exato, alarga para os vizinhos por
-    distância — robusto a lacunas de conteúdo.
+    distância — robusto a lacunas de conteúdo. `nivel_maximo` é o teto da faixa
+    etária (R-FX-1): nunca oferece palavra acima dele, mesmo que o vizinho mais
+    próximo esteja lá.
     """
     p, ap = schema.palavra, schema.aluno_palavra
     ja_atribuida = (
@@ -51,7 +67,11 @@ async def selecionar_palavras_novas(
             p.c.audio_url,
             p.c.nivel_dificuldade,
         )
-        .where(p.c.origem == "banco_base", ~ja_atribuida)
+        .where(
+            p.c.origem == "banco_base",
+            ~ja_atribuida,
+            p.c.nivel_dificuldade <= nivel_maximo,
+        )
         .order_by(distancia, p.c.id)
         .limit(limite)
     )

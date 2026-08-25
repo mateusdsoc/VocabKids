@@ -32,14 +32,33 @@ async def test_jornada_completa_do_apresentavel(client):
     await seed_trilha()
     gabarito = await _gabarito()
 
-    # 1. Acesso por código de turma.
+    # 1. Cadastro do responsável + perfil de criança + entrada (B2C).
+    cadastro = (
+        await client.post(
+            "/v1/conta",
+            json={
+                "nome": "Mãe da Joana",
+                "email": "mae-joana@teste.com",
+                "senha": "senha-forte-123",
+                "aceite_termos": True,
+                "consentimento_lgpd": True,
+            },
+        )
+    ).json()
+    h_responsavel = {"Authorization": f"Bearer {cadastro['token']}"}
+    perfil = (
+        await client.post(
+            "/v1/conta/perfis",
+            json={"apelido": "Joana", "ano_nascimento": 2015},
+            headers=h_responsavel,
+        )
+    ).json()
     acesso = (
         await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": "DEMO7A", "nome": "Joana"}
+            f"/v1/perfis/{perfil['usuario_id']}/entrar", headers=h_responsavel
         )
     ).json()
     h = {"Authorization": f"Bearer {acesso['token']}"}
-    assert acesso["novo"] is True
 
     # 2. Diagnóstico (respondendo sempre certo → nível alto).
     diag = (await client.post("/v1/onboarding/diagnostico", headers=h, json={})).json()
@@ -104,11 +123,11 @@ async def test_jornada_completa_do_apresentavel(client):
     trilha = (await client.get("/v1/trilha", headers=h)).json()
     assert trilha["xp_total"] == xp_acumulado
     assert trilha["no_atual"] is not None
-    assert len(trilha["paises"]) == 3
+    assert len(trilha["paises"]) == 2  # MVP: Brasil + França (docs/plano_b2c.md)
 
-    # 8. Passaporte com os 28 itens (silhuetas).
+    # 8. Passaporte com os 11 itens do MVP (silhuetas).
     passaporte = (await client.get("/v1/passaporte", headers=h)).json()
-    assert passaporte["total"] == 28
+    assert passaporte["total"] == 11
 
     # 9. Telas mockadas da fatia A respondem.
     redacoes = (await client.get("/v1/redacoes", headers=h)).json()

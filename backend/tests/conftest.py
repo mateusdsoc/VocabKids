@@ -16,6 +16,8 @@ os.environ["JWT_SECRET"] = "segredo-de-teste-nao-usar-fora-da-suite"
 os.environ["RATE_LIMIT_HABILITADO"] = "false"
 # CORS ligado com uma origem de teste (o middleware só é montado se houver origem).
 os.environ["CORS_ORIGINS"] = "http://cors-permitido.test"
+# Webhook da assinatura (B2C Fase 3): segredo fixo de teste.
+os.environ["REVENUECAT_WEBHOOK_SECRET"] = "segredo-webhook-de-teste"
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
@@ -60,18 +62,42 @@ async def client():
 
 
 @pytest_asyncio.fixture
-async def aluno(client):
-    """Semeia a turma de demo, entra como aluno e devolve headers + usuario_id."""
-    from app.seed import seed
-
-    s = await seed()
+async def responsavel(client):
+    """Cria uma conta de responsável B2C e devolve headers + usuario_id."""
     r = await client.post(
-        "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
+        "/v1/conta",
+        json={
+            "nome": "Responsável Teste",
+            "email": "responsavel@teste.com",
+            "senha": "senha-forte-123",
+            "aceite_termos": True,
+            "consentimento_lgpd": True,
+        },
     )
     b = r.json()
     return {
         "headers": {"Authorization": f"Bearer {b['token']}"},
-        "usuario_id": b["usuario_id"],
+        "token": b["token"],
+    }
+
+
+@pytest_asyncio.fixture
+async def aluno(client, responsavel):
+    """Cria um perfil de criança na conta de teste, entra como ela e devolve
+    headers + usuario_id (B2C — docs/plano_b2c.md Fase 1)."""
+    r = await client.post(
+        "/v1/conta/perfis",
+        json={"apelido": "Ana", "ano_nascimento": 2016},
+        headers=responsavel["headers"],
+    )
+    perfil = r.json()
+    r = await client.post(
+        f"/v1/perfis/{perfil['usuario_id']}/entrar", headers=responsavel["headers"]
+    )
+    b = r.json()
+    return {
+        "headers": {"Authorization": f"Bearer {b['token']}"},
+        "usuario_id": perfil["usuario_id"],
     }
 
 

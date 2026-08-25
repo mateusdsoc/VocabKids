@@ -63,6 +63,10 @@ usuario = Table(
     Column("email", Text, nullable=True),  # aluno sem e-mail é válido
     Column("auth_provider", Text, nullable=True),  # nulo até a janela do 1º cliente
     Column("auth_subject", Text, nullable=True),
+    # Credencial do responsável (B2C). Aluno/criança nunca tem senha — entra
+    # por seleção de perfil dentro da conta do responsável (ver `conta` e
+    # `perfil_crianca`, seção 1b). Nulo para quem usa só Sign in with Apple.
+    Column("senha_hash", Text, nullable=True),
     _created_at(),
     UniqueConstraint("auth_provider", "auth_subject", name="auth_identity"),
 )
@@ -102,8 +106,12 @@ associacao = Table(
     Column("escola_id", BigInteger, ForeignKey("escola.id", ondelete="CASCADE"), nullable=True),  # null p/ admin
     Column("papel", Text, nullable=False),
     _created_at(),
+    # 'responsavel' = conta B2C (pai/mãe); sem escola_id. Professor/coordenador
+    # seguem existindo (fatia B2B congelada, não removida — docs/plano_b2c.md
+    # Fase 6).
     CheckConstraint(
-        "papel IN ('aluno','professor','coordenador','admin')", name="papel_valido"
+        "papel IN ('aluno','responsavel','professor','coordenador','admin')",
+        name="papel_valido",
     ),
 )
 
@@ -112,6 +120,90 @@ associacao_turma = Table(
     metadata,
     Column("associacao_id", BigInteger, ForeignKey("associacao.id", ondelete="CASCADE"), primary_key=True),
     Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), primary_key=True),
+    _created_at(),
+)
+
+
+# ─────────────────── 1b. Identidade familiar — B2C (docs/plano_b2c.md Fase 1) ───────────────────
+
+conta = Table(
+    "conta",
+    metadata,
+    _id(),
+    Column(
+        "responsavel_usuario_id",
+        BigInteger,
+        ForeignKey("usuario.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    ),
+    # Consentimento parental específico (LGPD art. 14 §1) — distinto do aceite
+    # genérico dos termos. Nulo = ainda não consentiu (bloqueia criar perfil).
+    Column("consentimento_lgpd_em", DateTime(timezone=True), nullable=True),
+    Column("consentimento_versao", Text, nullable=True),
+    Column("pin_hash", Text, nullable=True),  # portão da Área do Responsável
+    _created_at(),
+)
+
+perfil_crianca = Table(
+    "perfil_crianca",
+    metadata,
+    Column(
+        "usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column("conta_id", BigInteger, ForeignKey("conta.id", ondelete="CASCADE"), nullable=False),
+    Column("apelido", Text, nullable=False),  # NUNCA nome completo (minimização, LGPD art. 6º III)
+    Column("ano_nascimento", Integer, nullable=False),  # ano, não data — menos dado
+    Column("faixa_etaria", Text, nullable=False),
+    Column("ano_escolar", Integer, nullable=True),  # opcional, informado pelo responsável
+    Column("avatar_ref", Text, nullable=True),
+    _created_at(),
+    CheckConstraint("faixa_etaria IN ('7-8','9-10','11-12')", name="faixa_valida"),
+    CheckConstraint(
+        "ano_escolar IS NULL OR ano_escolar BETWEEN 1 AND 9", name="ano_escolar_range_b2c"
+    ),
+)
+
+
+# ─────────────────── 1c. Assinatura — B2C (docs/plano_b2c.md Fase 3) ───────────────────
+# A assinatura é da CONTA (R-AS-3), não do perfil — vale para as crianças todas.
+
+assinatura = Table(
+    "assinatura",
+    metadata,
+    _id(),
+    Column("conta_id", BigInteger, ForeignKey("conta.id", ondelete="CASCADE"), nullable=False),
+    Column("loja", Text, nullable=False),  # 'apple' | 'google'
+    Column("produto_id", Text, nullable=False),
+    Column("transacao_original_id", Text, nullable=False, unique=True),
+    Column("status", Text, nullable=False),
+    Column("expira_em", DateTime(timezone=True), nullable=True),
+    Column("em_trial", Boolean, nullable=False, server_default="false"),
+    Column("ambiente", Text, nullable=False),  # 'sandbox' | 'production'
+    Column(
+        "atualizada_em", DateTime(timezone=True), nullable=False, server_default=func.now()
+    ),
+    _created_at(),
+    CheckConstraint(
+        "status IN ('ativa','em_periodo_de_graca','expirada','cancelada','reembolsada')",
+        name="status_valido",
+    ),
+    CheckConstraint("loja IN ('apple','google')", name="loja_valida"),
+    CheckConstraint("ambiente IN ('sandbox','production')", name="ambiente_valido"),
+)
+
+# Log cru do webhook da loja — idempotência (R-AS-6) e auditoria. Uma linha por
+# evento recebido; `assinatura_dedup` é o identificador do evento na origem
+# (RevenueCat manda `event.id`), então reentrega não duplica processamento.
+evento_loja = Table(
+    "evento_loja",
+    metadata,
+    _id(),
+    Column("loja", Text, nullable=False),
+    Column("tipo", Text, nullable=False),
+    Column("payload", JSONB, nullable=False),
+    Column("assinatura_dedup", Text, nullable=False, unique=True),
+    Column("processado_em", DateTime(timezone=True), nullable=True),
     _created_at(),
 )
 

@@ -19,7 +19,7 @@ class IdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final turma = me.turma;
+    final perfil = me.perfil;
     return SurfaceCard(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -58,17 +58,17 @@ class IdentityCard extends StatelessWidget {
           const Perforation(),
           const SizedBox(height: 15),
           _DataField(
-            icon: AppIcons.school,
-            label: 'ESCOLA',
-            value: me.escola?.nome ?? '—',
+            icon: AppIcons.cake,
+            label: 'FAIXA ETÁRIA',
+            value: perfil == null ? '—' : '${perfil.faixaEtaria} anos',
           ),
           const SizedBox(height: 13),
           _DataField(
             icon: AppIcons.pin,
-            label: 'TURMA',
-            value: turma == null
+            label: 'ANO ESCOLAR',
+            value: perfil?.anoEscolar == null
                 ? '—'
-                : '${turma.nome} · ${turma.anoEscolar}º ano',
+                : '${perfil!.anoEscolar}º ano',
           ),
           const SizedBox(height: 18),
           Row(

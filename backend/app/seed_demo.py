@@ -1,47 +1,54 @@
-"""Seed de apresentação — alunos "vitrine" na turma DEMO7A.
+"""Seed de apresentação — perfis "vitrine" numa conta B2C dedicada.
 
-Problema que resolve: numa demo de 5–10 min com o backend real, um aluno novo
+Problema que resolve: numa demo de 5–10 min com o backend real, um perfil novo
 não cruza XP suficiente para mostrar cartão postal, carimbo, selo ou o Modo
-Conquista. Este seed fabrica alunos com progresso avançado usando a **própria
+Conquista. Este seed fabrica perfis com progresso avançado usando a **própria
 lógica de produção** (`trilha.service.processar_recompensas`): definimos o XP
 alvo e as recompensas saem das mesmas regras do jogo — nada de estado inventado
 que possa divergir quando as regras mudarem.
 
+B2C (docs/plano_b2c.md Fase 1): os perfis vivem numa conta de responsável
+"vitrine" (`EMAIL_CONTA_DEMO`/`SENHA_CONTA_DEMO`), não mais numa turma —
+gameplay não tem escopo de escola no B2C.
+
 Idempotente e **restaurador**: re-rodar devolve cada persona ao estado alvo
-(apaga progresso/coleção/sessões dos alunos vitrine e refaz). Rode antes de
+(apaga progresso/coleção/sessões dos perfis vitrine e refaz). Rode antes de
 cada apresentação para "rearmar a vitrine" — inclusive o reveal pendente do
 Modo Conquista, que dispara ao vivo quando o Passaporte é aberto.
 
 Pré-requisitos (mesma ordem do CLAUDE.md):
 
-    python -m app.seed              # turma DEMO7A
     python -m app.seed_vocabulario  # banco base de palavras
     python -m app.seed_trilha       # trilha + colecionáveis
     python -m app.seed_demo         # este
 
 Roteiro sugerido (5–10 min):
- 1. Entrar com um nome NOVO em DEMO7A → onboarding + diagnóstico + uma sessão
-    ao vivo (o loop real: XP, combo, erro suavizado).
- 2. Sair e entrar como "Ana Viajante" → Home com meta parcial da semana,
-    Trilha com o Brasil concluído e a França em andamento, Passaporte com
-    cartões/carimbo/selos — e o Modo Conquista dispara na hora (há um cartão
-    ganho e ainda não revelado).
+ 1. Logar com a conta vitrine, criar um perfil NOVO → onboarding + diagnóstico
+    + uma sessão ao vivo (o loop real: XP, combo, erro suavizado).
+ 2. Voltar à seleção de perfis e entrar como "Ana Viajante" → Home com meta
+    parcial da semana, Trilha com o Brasil concluído e a França em andamento,
+    Passaporte com cartões/carimbo/selos — e o Modo Conquista dispara na hora
+    (há um cartão ganho e ainda não revelado).
  3. "Beto Explorador" mostra o meio da jornada (2 destinos do Brasil).
 """
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app import schema
 from app.db import engine
-from app.identidade import repository as identidade_repo
 from app.progressao.semana import inicio_da_semana
-from app.seed import CODIGO_TURMA
 from app.trilha import repository as trilha_repo
 from app.trilha.service import MARCOS_DOMINADAS, NOS_POR_DESTINO, processar_recompensas
+
+# Conta B2C "vitrine" — dona das personas de demo (docs/plano_b2c.md Fase 1).
+# Não depende de turma: gameplay não tem escopo de escola em B2C.
+EMAIL_CONTA_DEMO = "vitrine@vocabkids.demo"
+SENHA_CONTA_DEMO = "vitrine-demo-2026"
+NOME_RESPONSAVEL_DEMO = "Responsável Vitrine"
 
 
 @dataclass(frozen=True)
@@ -57,12 +64,16 @@ class Persona:
     sessoes_total: int
 
 
-# Ana: Brasil inteiro (20 nós) + Paris e Mont-Saint-Michel (8 nós) → 5 cartões
-# BR + carimbo BR + 2 cartões FR + selos combo_10 e dominadas_25. O último
-# cartão (Mont-Saint-Michel) fica NÃO revelado — é o Modo Conquista ao vivo.
+# MVP (docs/plano_b2c.md "Escopo do MVP"): catálogo de 4 destinos / 16 nós —
+# Brasil inteiro (Rio, Foz, Amazônia) + Paris (França), sem Japão.
+#
+# Ana: Brasil inteiro (12 nós) + 2 dos 4 nós de Paris → 3 cartões BR + carimbo
+# BR + selo combo_10. O carimbo do Brasil fica NÃO revelado — é o Modo
+# Conquista ao vivo. (Não dá pra fechar a França inteira e ainda ter um "nó
+# atual" em progresso — só há 1 destino nela no MVP.)
 # Beto: Rio + Foz (8 nós) → 2 cartões, sem carimbo/selos — o meio da jornada.
 PERSONAS = (
-    Persona("Ana Viajante", 28, 2600, 26, 3, 4, 12, 6, 31),
+    Persona("Ana Viajante", 14, 2000, 20, 3, 4, 12, 6, 31),
     Persona("Beto Explorador", 8, 1800, 12, 2, 4, 6, 3, 13),
 )
 
@@ -71,14 +82,98 @@ def _falha(msg: str) -> SystemExit:
     return SystemExit(f"seed_demo: {msg}")
 
 
-async def _garantir_aluno(conn, persona: Persona) -> int:
-    turma = await identidade_repo.buscar_turma_por_codigo(conn, CODIGO_TURMA)
-    if turma is None:
-        raise _falha(f"turma {CODIGO_TURMA} não existe — rode: uv run python -m app.seed")
-    aluno = await identidade_repo.buscar_aluno_na_turma(conn, turma.id, persona.nome)
-    if aluno is not None:
-        return aluno.id
-    return await identidade_repo.criar_aluno(conn, turma.escola_id, turma.id, persona.nome)
+async def _garantir_conta_demo(conn) -> int:
+    """Conta do responsável "vitrine", dona dos perfis de demo (idempotente).
+    Tem senha real (`SENHA_CONTA_DEMO`) para logar pelo app na apresentação —
+    escolhe o perfil na tela de seleção depois do login."""
+    from app.identidade.schemas import CONSENTIMENTO_VERSAO_ATUAL
+    from app.identidade.service import _hash_senha
+
+    c, u = schema.conta, schema.usuario
+    conta_id = (
+        await conn.execute(
+            select(c.c.id)
+            .select_from(c.join(u, u.c.id == c.c.responsavel_usuario_id))
+            .where(u.c.email == EMAIL_CONTA_DEMO)
+        )
+    ).scalar_one_or_none()
+    if conta_id is not None:
+        return conta_id
+
+    usuario_id = (
+        await conn.execute(
+            insert(u)
+            .values(
+                nome=NOME_RESPONSAVEL_DEMO,
+                email=EMAIL_CONTA_DEMO,
+                senha_hash=_hash_senha(SENHA_CONTA_DEMO),
+            )
+            .returning(u.c.id)
+        )
+    ).scalar_one()
+    await conn.execute(
+        insert(schema.associacao).values(usuario_id=usuario_id, papel="responsavel")
+    )
+    conta_id = (
+        await conn.execute(
+            insert(c)
+            .values(
+                responsavel_usuario_id=usuario_id,
+                consentimento_lgpd_em=func.now(),
+                consentimento_versao=CONSENTIMENTO_VERSAO_ATUAL,
+            )
+            .returning(c.c.id)
+        )
+    ).scalar_one()
+    # Vitrine assina — as personas mostram progresso além do free tier
+    # (docs/plano_b2c.md Fase 3, R-AS-2), o que só faz sentido para assinante.
+    await conn.execute(
+        insert(schema.assinatura).values(
+            conta_id=conta_id,
+            loja="apple",
+            produto_id="vocabkids_mensal_demo",
+            transacao_original_id=f"vitrine-demo-{conta_id}",
+            status="ativa",
+            ambiente="sandbox",
+        )
+    )
+    return conta_id
+
+
+async def _garantir_aluno(conn, conta_id: int, persona: Persona) -> int:
+    from app.progressao.faixa import faixa_de
+
+    pc = schema.perfil_crianca
+    usuario_id = (
+        await conn.execute(
+            select(pc.c.usuario_id).where(
+                pc.c.conta_id == conta_id, pc.c.apelido == persona.nome
+            )
+        )
+    ).scalar_one_or_none()
+    if usuario_id is not None:
+        return usuario_id
+
+    usuario_id = (
+        await conn.execute(
+            insert(schema.usuario).values(nome=persona.nome).returning(schema.usuario.c.id)
+        )
+    ).scalar_one()
+    await conn.execute(
+        insert(schema.associacao).values(usuario_id=usuario_id, papel="aluno")
+    )
+    await conn.execute(insert(schema.aluno_progresso).values(usuario_id=usuario_id))
+    ano_nascimento = 2015  # vitrine: idade não é o ponto, só precisa satisfazer o schema
+    await conn.execute(
+        insert(pc).values(
+            usuario_id=usuario_id,
+            conta_id=conta_id,
+            apelido=persona.nome,
+            ano_nascimento=ano_nascimento,
+            faixa_etaria=faixa_de(ano_nascimento, datetime.now(timezone.utc).year),
+        )
+    )
+    return usuario_id
 
 
 async def _resetar(conn, usuario_id: int) -> None:
@@ -219,8 +314,9 @@ async def seed_demo() -> dict:
     agora = datetime.now(timezone.utc)
     resultado: dict[str, dict] = {}
     async with engine.begin() as conn:
+        conta_id = await _garantir_conta_demo(conn)
         for persona in PERSONAS:
-            usuario_id = await _garantir_aluno(conn, persona)
+            usuario_id = await _garantir_aluno(conn, conta_id, persona)
             await _resetar(conn, usuario_id)
 
             xp_total = await _xp_alvo(conn, persona)
@@ -270,7 +366,7 @@ async def seed_demo() -> dict:
 
 if __name__ == "__main__":
     resumo = asyncio.run(seed_demo())
-    print("seed demo ok — turma", CODIGO_TURMA)
+    print("seed demo ok — conta vitrine:", EMAIL_CONTA_DEMO, "/", SENHA_CONTA_DEMO)
     for nome, dados in resumo.items():
         print(
             f"  {nome}: xp={dados['xp_total']}, "
@@ -278,6 +374,7 @@ if __name__ == "__main__":
             f"(reveal pendente: {dados['reveal_pendente']}), "
             f"{dados['dominadas_na_semana']} dominadas nesta semana"
         )
-    print("Para apresentar: entre em DEMO7A com um nome novo (onboarding + sessão)")
-    print("e depois como 'Ana Viajante' (trilha avançada + Modo Conquista ao vivo).")
+    print(f"Para apresentar: logue com {EMAIL_CONTA_DEMO} / {SENHA_CONTA_DEMO},")
+    print("crie um perfil novo (onboarding + sessão ao vivo) e depois escolha")
+    print("'Ana Viajante' na seleção de perfis (trilha avançada + Modo Conquista).")
     print("Re-rode este seed antes de cada apresentação para rearmar a vitrine.")

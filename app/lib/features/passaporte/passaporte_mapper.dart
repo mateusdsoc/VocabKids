@@ -95,15 +95,12 @@ abstract final class PassaporteMapper {
   static Capa _capa(Me me, Trilha trilha) {
     final destinos = trilha.destinosEmOrdem;
     final nivel = destinos.fold<int>(0, (s, d) => s + d.nosConcluidos) + 1;
-    final turma = me.turma;
     return Capa(
       nome: me.nome,
       nivel: nivel,
       paisAtual: trilha.noAtual?.paisNome ?? trilha.paises.lastOrNull?.nome ?? '',
       xp: trilha.xpTotal,
       palavras: me.progresso.palavrasDominadas,
-      escola: me.escola?.nome ?? '',
-      turma: turma == null ? '' : '${turma.nome} · ${turma.anoEscolar}º ano',
     );
   }
 

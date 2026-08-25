@@ -138,10 +138,48 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
         child: SafeArea(
           child: estado.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => _erroAbertura(context),
+            error: (err, _) => err is ApiException && err.precisaAssinatura
+                ? _precisaAssinatura(context)
+                : _erroAbertura(context),
             data: (s) => _sessao(context, s),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Passou do 1º destino sem assinatura (402, docs/plano_b2c.md Fase 3):
+  /// **sem botão de comprar aqui**. Guideline 5.1.4 da Apple + R-RS-1 — compra
+  /// só acontece com um adulto na tela (paywall vive na Área do Responsável,
+  /// atrás do seletor de perfil), nunca em meio ao jogo da criança.
+  Widget _precisaAssinatura(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(AppIcons.passaporte, size: 40, color: c.accentStrong),
+          const SizedBox(height: 14),
+          Text('Sua viagem grátis chegou ao fim!',
+              textAlign: TextAlign.center,
+              style: AppType.fredoka(size: 22, color: c.ink)),
+          const SizedBox(height: 8),
+          Text(
+            'Peça pra um adulto continuar sua assinatura pra você seguir '
+            'viajando pelo mapa.',
+            textAlign: TextAlign.center,
+            style: AppType.nunito(size: 15, weight: FontWeight.w600, color: c.muted),
+          ),
+          const SizedBox(height: 20),
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: Text('Voltar',
+                style: AppType.nunito(
+                    size: 15, weight: FontWeight.w700, color: c.muted)),
+          ),
+        ],
       ),
     );
   }

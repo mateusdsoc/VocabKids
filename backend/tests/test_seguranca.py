@@ -46,11 +46,11 @@ def rate_limit_ligado(monkeypatch):
 @pytest.mark.asyncio
 async def test_login_estoura_limite_por_ip(client, rate_limit_ligado, monkeypatch):
     monkeypatch.setattr(settings, "rl_login_por_minuto", 3)
-    corpo = {"codigo_turma": "NAOEXISTE", "nome": "Bot"}
+    corpo = {"email": "naoexiste@teste.com", "senha": "qualquer"}
     for _ in range(3):
-        r = await client.post("/v1/acesso/turma", json=corpo)
-        assert r.status_code == 404  # passa pelo limitador, falha no domínio
-    r = await client.post("/v1/acesso/turma", json=corpo)
+        r = await client.post("/v1/sessao", json=corpo)
+        assert r.status_code == 401  # passa pelo limitador, falha no domínio
+    r = await client.post("/v1/sessao", json=corpo)
     assert r.status_code == 429
     assert r.json()["error"]["code"] == "limite_excedido"
     assert r.headers["retry-after"] == "60"
@@ -60,22 +60,44 @@ async def test_login_estoura_limite_por_ip(client, rate_limit_ligado, monkeypatc
 async def test_autenticado_conta_por_token_nao_por_ip(
     client, rate_limit_ligado, monkeypatch, aluno
 ):
-    """Dois tokens no mesmo IP têm orçamentos separados (NAT de escola)."""
+    """Dois tokens no mesmo IP têm orçamentos separados (NAT compartilhado)."""
+    # Prepara o segundo token (conta totalmente nova) ANTES de apertar o
+    # limite — senão a própria criação de conta/perfil já gastaria o
+    # orçamento apertado do teste, e o teste checaria a coisa errada.
+    outro_responsavel = (
+        await client.post(
+            "/v1/conta",
+            json={
+                "nome": "Outro Responsável",
+                "email": "outro-ip@teste.com",
+                "senha": "senha-forte-123",
+                "aceite_termos": True,
+                "consentimento_lgpd": True,
+            },
+        )
+    ).json()
+    outro_headers = {"Authorization": f"Bearer {outro_responsavel['token']}"}
+    perfil2 = (
+        await client.post(
+            "/v1/conta/perfis",
+            json={"apelido": "Bia", "ano_nascimento": 2015},
+            headers=outro_headers,
+        )
+    ).json()
+    b = (
+        await client.post(
+            f"/v1/perfis/{perfil2['usuario_id']}/entrar", headers=outro_headers
+        )
+    ).json()
+    h2 = {"Authorization": f"Bearer {b['token']}"}
+
     monkeypatch.setattr(settings, "rl_autenticado_por_minuto", 2)
     h1 = aluno["headers"]
     for _ in range(2):
         assert (await client.get("/v1/me", headers=h1)).status_code == 200
     assert (await client.get("/v1/me", headers=h1)).status_code == 429
-    # Outro token (outro aluno) segue atendido.
-    from app.seed import seed
 
-    s = await seed()
-    b = (
-        await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Bia"}
-        )
-    ).json()
-    h2 = {"Authorization": f"Bearer {b['token']}"}
+    # h2 nunca fez uma chamada autenticada antes — orçamento próprio, intacto.
     assert (await client.get("/v1/me", headers=h2)).status_code == 200
 
 

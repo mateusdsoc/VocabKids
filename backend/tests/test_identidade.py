@@ -1,11 +1,19 @@
-"""Fatia vertical do identidade: acesso por código de turma + /me + erros."""
+"""Fatia vertical do identidade B2C: conta do responsável, perfis de criança,
+`/me` e erros (docs/plano_b2c.md Fase 1)."""
 import time
 
 import jwt
 import pytest
 
 from app.config import settings
-from app.seed import seed
+
+CADASTRO = {
+    "nome": "Responsável Teste",
+    "email": "responsavel@teste.com",
+    "senha": "senha-forte-123",
+    "aceite_termos": True,
+    "consentimento_lgpd": True,
+}
 
 
 @pytest.mark.asyncio
@@ -16,62 +24,139 @@ async def test_health(client):
 
 
 @pytest.mark.asyncio
-async def test_acesso_cria_e_reusa_aluno(client):
-    s = await seed()
-
-    r1 = await client.post(
-        "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
-    )
-    assert r1.status_code == 200, r1.text
-    b1 = r1.json()
-    assert b1["novo"] is True
-    assert b1["turma"]["ano_escolar"] == 7
-    # Token é um JWT assinado, com dono, papel e expiração.
-    claims = jwt.decode(b1["token"], settings.jwt_secret, algorithms=["HS256"])
-    assert claims["sub"] == str(b1["usuario_id"])
-    assert claims["papel"] == "aluno"
+async def test_cadastro_responsavel(client):
+    r = await client.post("/v1/conta", json=CADASTRO)
+    assert r.status_code == 200, r.text
+    token = r.json()["token"]
+    claims = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    assert claims["papel"] == "responsavel"
     assert claims["exp"] > time.time()
 
-    # Mesmo nome (case-insensitive) reusa o mesmo aluno — não duplica.
-    r2 = await client.post(
-        "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "ana"}
-    )
-    b2 = r2.json()
-    assert b2["novo"] is False
-    assert b2["usuario_id"] == b1["usuario_id"]
+
+@pytest.mark.asyncio
+async def test_cadastro_exige_consentimento_lgpd(client):
+    r = await client.post("/v1/conta", json={**CADASTRO, "consentimento_lgpd": False})
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "consentimento_obrigatorio"
 
 
 @pytest.mark.asyncio
-async def test_acesso_codigo_invalido(client):
+async def test_cadastro_email_duplicado(client):
+    r1 = await client.post("/v1/conta", json=CADASTRO)
+    assert r1.status_code == 200
+    r2 = await client.post("/v1/conta", json=CADASTRO)
+    assert r2.status_code == 409
+    assert r2.json()["error"]["code"] == "email_em_uso"
+
+
+@pytest.mark.asyncio
+async def test_login(client):
+    await client.post("/v1/conta", json=CADASTRO)
     r = await client.post(
-        "/v1/acesso/turma", json={"codigo_turma": "NAOEXISTE", "nome": "Ana"}
+        "/v1/sessao", json={"email": CADASTRO["email"], "senha": CADASTRO["senha"]}
     )
-    assert r.status_code == 404
-    assert r.json()["error"]["code"] == "turma_nao_encontrada"
+    assert r.status_code == 200, r.text
+    assert "token" in r.json()
 
 
 @pytest.mark.asyncio
-async def test_me_fluxo_completo(client):
-    s = await seed()
-    acesso = (
+async def test_login_senha_errada(client):
+    await client.post("/v1/conta", json=CADASTRO)
+    r = await client.post(
+        "/v1/sessao", json={"email": CADASTRO["email"], "senha": "errada"}
+    )
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "credenciais_invalidas"
+
+
+@pytest.mark.asyncio
+async def test_criar_e_listar_perfis(client, responsavel):
+    r = await client.post(
+        "/v1/conta/perfis",
+        json={"apelido": "Ana", "ano_nascimento": 2016},
+        headers=responsavel["headers"],
+    )
+    assert r.status_code == 200, r.text
+    perfil = r.json()
+    assert perfil["apelido"] == "Ana"
+    assert perfil["faixa_etaria"] in ("7-8", "9-10", "11-12")
+
+    r = await client.get("/v1/conta/perfis", headers=responsavel["headers"])
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_limite_de_perfis_por_conta(client, responsavel):
+    for ano in (2013, 2015, 2017):
+        r = await client.post(
+            "/v1/conta/perfis",
+            json={"apelido": f"Criança {ano}", "ano_nascimento": ano},
+            headers=responsavel["headers"],
+        )
+        assert r.status_code == 200
+
+    r = await client.post(
+        "/v1/conta/perfis",
+        json={"apelido": "Quarta criança", "ano_nascimento": 2018},
+        headers=responsavel["headers"],
+    )
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "limite_de_perfis"
+
+
+@pytest.mark.asyncio
+async def test_entrar_como_crianca_de_outra_conta_e_404(client, responsavel):
+    outro = (
         await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
+            "/v1/conta",
+            json={**CADASTRO, "email": "outro@teste.com"},
+        )
+    ).json()
+    outro_headers = {"Authorization": f"Bearer {outro['token']}"}
+    perfil_do_outro = (
+        await client.post(
+            "/v1/conta/perfis",
+            json={"apelido": "Beto", "ano_nascimento": 2015},
+            headers=outro_headers,
         )
     ).json()
 
-    r = await client.get(
-        "/v1/me", headers={"Authorization": f"Bearer {acesso['token']}"}
+    r = await client.post(
+        f"/v1/perfis/{perfil_do_outro['usuario_id']}/entrar",
+        headers=responsavel["headers"],
     )
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "perfil_nao_encontrado"
+
+
+@pytest.mark.asyncio
+async def test_responsavel_nao_acessa_rotas_de_gameplay(client, responsavel):
+    r = await client.get("/v1/trilha", headers=responsavel["headers"])
+    assert r.status_code == 403
+    assert r.json()["error"]["code"] == "sem_permissao"
+
+
+@pytest.mark.asyncio
+async def test_crianca_nao_acessa_rotas_do_responsavel(client, aluno):
+    r = await client.get("/v1/conta/perfis", headers=aluno["headers"])
+    assert r.status_code == 403
+    assert r.json()["error"]["code"] == "sem_permissao"
+
+
+@pytest.mark.asyncio
+async def test_me_fluxo_completo(client, aluno):
+    r = await client.get("/v1/me", headers=aluno["headers"])
     assert r.status_code == 200, r.text
     me = r.json()
-    assert me["usuario_id"] == acesso["usuario_id"]
+    assert me["usuario_id"] == aluno["usuario_id"]
     assert me["papel"] == "aluno"
-    assert me["turma"]["id"] == acesso["turma"]["id"]
-    assert me["escola"]["nome"] == "Escola Demonstração"
+    assert me["perfil"]["apelido"] == "Ana"
     assert me["progresso"]["xp_total"] == 0
     assert me["progresso"]["nivel_dificuldade_atual"] == 1
-    # Meta da semana: aluno novo, nada dominado; alvo = default do 7º ano.
-    assert me["meta_semanal"] == {"atual": 0, "alvo": 5}
+    # Meta da semana: perfil novo, nada dominado; alvo = default da faixa.
+    assert me["meta_semanal"]["atual"] == 0
+    assert me["meta_semanal"]["alvo"] > 0
 
 
 @pytest.mark.asyncio
@@ -83,7 +168,6 @@ async def test_me_sem_token(client):
 
 @pytest.mark.asyncio
 async def test_me_token_invalido(client):
-    # Formato antigo (prov_) e lixo qualquer: ambos caem na validação do JWT.
     for token in ("prov_999999", "nao-e-um-jwt"):
         r = await client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 401
@@ -91,16 +175,12 @@ async def test_me_token_invalido(client):
 
 
 @pytest.mark.asyncio
-async def test_me_token_adulterado(client):
-    s = await seed()
-    acesso = (
-        await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
-        )
-    ).json()
+async def test_me_token_adulterado(client, aluno):
     # Reassina o token com outro segredo (forja de `sub`) — a assinatura denuncia.
     claims = jwt.decode(
-        acesso["token"], settings.jwt_secret, algorithms=["HS256"]
+        aluno["headers"]["Authorization"].removeprefix("Bearer "),
+        settings.jwt_secret,
+        algorithms=["HS256"],
     )
     claims["sub"] = str(int(claims["sub"]) + 1)
     forjado = jwt.encode(
@@ -112,17 +192,11 @@ async def test_me_token_adulterado(client):
 
 
 @pytest.mark.asyncio
-async def test_me_token_expirado(client):
-    s = await seed()
-    acesso = (
-        await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
-        )
-    ).json()
+async def test_me_token_expirado(client, aluno):
     agora = int(time.time())
     expirado = jwt.encode(
         {
-            "sub": str(acesso["usuario_id"]),
+            "sub": str(aluno["usuario_id"]),
             "papel": "aluno",
             "iat": agora - 7200,
             "exp": agora - 3600,
@@ -136,16 +210,10 @@ async def test_me_token_expirado(client):
 
 
 @pytest.mark.asyncio
-async def test_me_token_sem_assinatura_rejeitado(client):
+async def test_me_token_sem_assinatura_rejeitado(client, aluno):
     """`alg: none` nunca passa — o algoritmo é fixado no servidor."""
-    s = await seed()
-    acesso = (
-        await client.post(
-            "/v1/acesso/turma", json={"codigo_turma": s["codigo_turma"], "nome": "Ana"}
-        )
-    ).json()
     sem_assinatura = jwt.encode(
-        {"sub": str(acesso["usuario_id"]), "exp": int(time.time()) + 3600},
+        {"sub": str(aluno["usuario_id"]), "exp": int(time.time()) + 3600},
         None,
         algorithm="none",
     )
@@ -157,8 +225,34 @@ async def test_me_token_sem_assinatura_rejeitado(client):
 
 @pytest.mark.asyncio
 async def test_validacao_usa_formato_padrao(client):
-    r = await client.post("/v1/acesso/turma", json={"nome": "Ana"})  # falta codigo_turma
+    r = await client.post("/v1/conta", json={"nome": "Ana"})  # falta email/senha/etc.
     assert r.status_code == 422
     body = r.json()
     assert body["error"]["code"] == "validation_error"
     assert "errors" in body["error"]["details"]
+
+
+@pytest.mark.asyncio
+async def test_excluir_conta_apaga_responsavel_e_filhos(client, responsavel, aluno):
+    r = await client.request(
+        "DELETE",
+        "/v1/conta",
+        json={"senha": CADASTRO["senha"]},
+        headers=responsavel["headers"],
+    )
+    assert r.status_code == 204
+
+    # A criança some junto — token dela deixa de resolver usuário.
+    r = await client.get("/v1/me", headers=aluno["headers"])
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_excluir_conta_exige_senha_correta(client, responsavel):
+    r = await client.request(
+        "DELETE",
+        "/v1/conta",
+        json={"senha": "senha-errada"},
+        headers=responsavel["headers"],
+    )
+    assert r.status_code == 401

@@ -556,6 +556,53 @@ async def test_adaptacao_desce_nivel_com_acuracia_baixa(client, aluno):
 
 
 @pytest.mark.asyncio
+async def test_adaptacao_respeita_teto_da_faixa_etaria(client, aluno):
+    """R-FX-1 (docs/plano_b2c.md Fase 2): o perfil do fixture `aluno` nasce em
+    2016 → faixa 9-10 → teto de nível 7 (`progressao/faixa.nivel_maximo`). No
+    teto, mesmo com acurácia alta, a adaptação não sobe — a faixa etária trava
+    antes do teto global (10)."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    sid = (await client.post("/v1/sessoes", headers=h)).json()["sessao_id"]
+
+    await _definir_nivel(aluno["usuario_id"], 7)
+    await _semear_respostas_no_nivel(aluno["usuario_id"], nivel=7, acertos=10, total=10)
+
+    b = (await client.post(f"/v1/sessoes/{sid}/fim", headers=h)).json()
+    assert b["nivel_anterior"] == 7
+    assert b["nivel_mudou"] is False
+    assert b["nivel_atual"] == 7
+
+
+@pytest.mark.asyncio
+async def test_sessao_novas_nunca_passam_do_teto_da_faixa(client, aluno):
+    """R-FX-1: mesmo com o aluno adaptado perto do teto da faixa (9-10 → 7) e o
+    banco tendo palavras de nível 8+, a seleção de palavras novas nunca oferece
+    uma acima do teto."""
+    await seed_vocabulario()
+    h = aluno["headers"]
+    await _definir_nivel(aluno["usuario_id"], 7)
+
+    sessao = (await client.post("/v1/sessoes", headers=h)).json()
+    async with engine.begin() as conn:
+        niveis = (
+            await conn.execute(
+                select(schema.palavra.c.nivel_dificuldade).where(
+                    schema.palavra.c.id.in_(
+                        [
+                            s["palavra"]["id"]
+                            for s in sessao["slots"]
+                            if s["tipo"] == "card"
+                        ]
+                    )
+                )
+            )
+        ).scalars().all()
+    assert niveis  # a sessão introduziu ao menos uma palavra nova
+    assert all(n <= 7 for n in niveis)
+
+
+@pytest.mark.asyncio
 async def test_adaptacao_nao_move_com_janela_incompleta(client, aluno):
     await seed_vocabulario()
     h = aluno["headers"]

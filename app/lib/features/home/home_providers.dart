@@ -19,7 +19,7 @@ final trilhaRepositoryProvider = Provider<TrilhaRepository>(
 final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
   if (AppConfig.demo) return HomeData.sample();
 
-  final me = ref.watch(authControllerProvider).value;
+  final me = ref.watch(authControllerProvider).value?.meOuNull;
   if (me == null) {
     throw StateError('Home requer um aluno autenticado.');
   }

@@ -1,14 +1,19 @@
 """Seed da trilha + colecionáveis (fatia A) — catálogo, não dado de aluno.
 
-Conteúdo fiel a `docs/referencia_arte.md`: 3 países, 20 destinos (5 BR / 7 FR /
-8 JP), 80 nós (4 por destino) e 28 colecionáveis (20 cartões-postais + 3 carimbos
-+ 5 selos). Idempotente (não duplica). Uso:
+**MVP B2C** (decisão do dono, 24/08/2026 — `docs/plano_b2c.md`, "Escopo do
+MVP"): só os 4 destinos com arte já pronta (`docs/referencia_arte.md`) — Rio,
+Foz do Iguaçu e Amazônia (Brasil) + Paris (França). 2 países, 4 destinos, 16
+nós (4 por destino) e 11 colecionáveis (4 cartões-postais + 2 carimbos + 5
+selos). Japão e o restante de Brasil/França ficam para pós-MVP — o catálogo
+completo (3 países / 20 destinos / 80 nós / 28 peças) está registrado em
+`docs/referencia_arte.md` e pode voltar aqui sem mudar schema nem lógica,
+só a lista `PAISES` abaixo. Idempotente (não duplica). Uso:
 
     python -m app.seed_trilha
 
-Sobre `asset_ref`: é só uma **referência** (a arte é renderizada pelo app Flutter).
-As imagens ainda não existem; os caminhos abaixo são placeholders e podem ser
-preenchidos quando as 28 peças forem geradas — sem mexer no schema nem na lógica.
+Sobre `asset_ref`: é só uma **referência** (a arte é renderizada pelo app
+Flutter) — os 4 destinos do MVP já têm asset real; o restante do catálogo
+(quando voltar) usa placeholders até a arte ser gerada.
 
 Sobre `trilha_no.xp_limiar`: guardamos o **XP total acumulado** para concluir o nó
 (incremento de ~4.500 por nó, conforme arquitetura). Assim "nó atual" e "concluído"
@@ -35,8 +40,6 @@ PAISES = [
             ("Rio de Janeiro — Cristo Redentor", "cartao/rio.png"),
             ("Foz do Iguaçu — Cataratas", "cartao/foz_iguacu.png"),
             ("Amazônia — Encontro das Águas", "cartao/amazonia.png"),
-            ("Fernando de Noronha", "cartao/noronha.png"),
-            ("Lençóis Maranhenses", "cartao/lencois.png"),
         ],
     },
     {
@@ -44,26 +47,6 @@ PAISES = [
         "carimbo": "carimbo/franca.png",
         "destinos": [
             ("Paris — Torre Eiffel", "cartao/paris.png"),
-            ("Mont-Saint-Michel", "cartao/mont_saint_michel.png"),
-            ("Provença — campos de lavanda", "cartao/provenca.png"),
-            ("Vale do Loire — Château de Chambord", "cartao/loire.png"),
-            ("Costa Azul — Nice/Riviera", "cartao/costa_azul.png"),
-            ("Alpes — Mont Blanc", "cartao/mont_blanc.png"),
-            ("Versalhes — palácio e jardins", "cartao/versalhes.png"),
-        ],
-    },
-    {
-        "nome": "Japão",
-        "carimbo": "carimbo/japao.png",
-        "destinos": [
-            ("Tóquio — skyline moderno", "cartao/toquio.png"),
-            ("Monte Fuji", "cartao/fuji.png"),
-            ("Kyoto — Fushimi Inari", "cartao/fushimi_inari.png"),
-            ("Kyoto — Kinkaku-ji (Pavilhão Dourado)", "cartao/kinkakuji.png"),
-            ("Nara — parque e cervos", "cartao/nara.png"),
-            ("Hiroshima — Itsukushima (torii flutuante)", "cartao/itsukushima.png"),
-            ("Shirakawa-go — vila histórica", "cartao/shirakawago.png"),
-            ("Osaka — castelo", "cartao/osaka.png"),
         ],
     },
 ]

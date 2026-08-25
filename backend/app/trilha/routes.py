@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.api.deps import get_conn
-from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
+from app.identidade.auth import UsuarioAutenticado, get_usuario_atual, require_papel
 from app.sessao import repository as sessao_repo
 from app.trilha import service
 from app.trilha.schemas import PassaporteOut, ReveladoOut, TrilhaOut
 
-router = APIRouter(tags=["trilha"])
+# Gameplay é escopo de criança (R-ID-3, docs/plano_b2c.md).
+router = APIRouter(tags=["trilha"], dependencies=[Depends(require_papel("aluno"))])
 
 
 @router.get("/trilha", response_model=TrilhaOut, summary="Mapa: nó atual, destinos, 'você está aqui'")

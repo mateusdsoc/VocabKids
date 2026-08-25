@@ -1,6 +1,6 @@
 """Trilha: mapa, passaporte e o loop de recompensa (cartão/carimbo/selo)."""
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import insert, select, update
 
 from app import schema
 from app.db import engine
@@ -25,6 +25,30 @@ async def _set_progresso(usuario_id, **valores):
             update(schema.aluno_progresso)
             .where(schema.aluno_progresso.c.usuario_id == usuario_id)
             .values(**valores)
+        )
+
+
+async def _ativar_assinatura(usuario_id):
+    """Testes que passam do free tier (docs/plano_b2c.md Fase 3, R-AS-2)
+    precisam de uma assinatura ativa na conta do perfil, senão `POST
+    /v1/sessoes` cai no gate (402) antes de chegar na regra de trilha."""
+    async with engine.begin() as conn:
+        conta_id = (
+            await conn.execute(
+                select(schema.perfil_crianca.c.conta_id).where(
+                    schema.perfil_crianca.c.usuario_id == usuario_id
+                )
+            )
+        ).scalar_one()
+        await conn.execute(
+            insert(schema.assinatura).values(
+                conta_id=conta_id,
+                loja="apple",
+                produto_id="vocabkids_mensal_teste",
+                transacao_original_id=f"teste-{usuario_id}",
+                status="ativa",
+                ambiente="sandbox",
+            )
         )
 
 
@@ -56,7 +80,7 @@ async def test_mapa_aluno_novo(client, aluno):
     await seed_trilha()
     m = (await client.get("/v1/trilha", headers=aluno["headers"])).json()
     assert m["xp_total"] == 0
-    assert len(m["paises"]) == 3
+    assert len(m["paises"]) == 2  # MVP: Brasil + França (docs/plano_b2c.md)
     assert m["no_atual"]["no_ordem"] == 1
     assert m["no_atual"]["pais_nome"] == "Brasil"
     assert "Rio" in m["no_atual"]["destino_nome"]
@@ -67,7 +91,7 @@ async def test_mapa_aluno_novo(client, aluno):
 async def test_passaporte_aluno_novo(client, aluno):
     await seed_trilha()
     p = (await client.get("/v1/passaporte", headers=aluno["headers"])).json()
-    assert p["total"] == 28
+    assert p["total"] == 11  # MVP: 4 cartões + 2 carimbos + 5 selos
     assert p["conquistados"] == 0
     assert all(not i["conquistado"] for i in p["itens"])
     assert all(not i["revelado"] for i in p["itens"])
@@ -130,8 +154,10 @@ async def test_fechar_destino_concede_cartao(client, aluno):
 async def test_fechar_pais_concede_cartao_e_carimbo(client, aluno):
     await seed_trilha()
     await seed_vocabulario()
-    # XP logo abaixo do último nó do Brasil (20º nó = 90000).
-    await _set_progresso(aluno["usuario_id"], xp_total=89900)
+    # XP logo abaixo do último nó do Brasil no MVP (3 destinos × 4 = 12º nó = 54000)
+    # — passa do free tier, então precisa de assinatura ativa pra abrir sessão.
+    await _set_progresso(aluno["usuario_id"], xp_total=53900)
+    await _ativar_assinatura(aluno["usuario_id"])
 
     r = (await _responder_questoes_n1(client, aluno["headers"], 1))[0]
     tipos = {c["tipo"] for c in r["recompensas"]}

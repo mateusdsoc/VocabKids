@@ -6,7 +6,55 @@
 
 ---
 
-## Estado atual (13/07, noite)
+## Estado atual (24/08, pivô B2C — Fases 1–3 de `docs/plano_b2c.md` feitas)
+
+**Pivô B2C em andamento.** Produto saiu de venda por escola pra assinatura
+direto pra família — decisão e racional completos em
+`design/notas-implementacao.md` § "Pivô B2C" e `docs/plano_b2c.md` (a fonte
+da verdade do produto agora; os docs antigos ficaram com nota de pré-pivô no
+topo, não foram reescritos por inteiro).
+
+**Feito nesta rodada:**
+1. **Fase 1 — Identidade familiar.** Conta do responsável + até 3 perfis de
+   criança, sem senha própria pra criança. `POST /v1/conta`, `POST
+   /v1/sessao` (login), `GET/POST /v1/conta/perfis`, `POST
+   /v1/perfis/{id}/entrar`, `DELETE /v1/conta`. `/v1/acesso/turma` saiu da
+   API pública (professor congelado segue com o próprio caminho). App:
+   `SessaoState` selado guia o `_Gate` em `main.dart`.
+2. **Fase 2 — Recalibração por faixa etária.** `progressao/faixa.py`
+   substitui `ano_escolar` como eixo de calibração (nível inicial, meta
+   semanal, nível máximo). Adaptação e seleção de palavras nunca passam do
+   teto da faixa; orçamento de perguntas do diagnóstico também por faixa.
+3. **Corte da trilha pro MVP.** `seed_trilha.py`: 2 países/4 destinos/16 nós
+   (Rio, Foz, Amazônia, Paris) — só o que já tem arte pronta. Catálogo
+   completo (3/20/80) documentado pra voltar depois, sem mexer em schema.
+4. **Fase 3 — Assinatura (Apple IAP via RevenueCat).** `POST /v1/sessoes`
+   gateado (livre até o 1º destino, depois exige assinatura ativa da
+   *conta*). Webhook `POST /v1/assinatura/webhook` idempotente. App:
+   `purchases_flutter` + paywall — **só alcançável pelo responsável**, nunca
+   pela criança em meio ao jogo (decisão tomada nesta sessão, não estava no
+   plano original: Apple 5.1.4 exige adulto na tela antes de qualquer
+   compra).
+
+**Verificado:** 147 testes de backend + 42 do app, `flutter analyze` limpo, e
+o fluxo inteiro (cadastro → perfil → onboarding → diagnóstico → paywall →
+webhook → sessão liberada) rodado ao vivo no **simulador iOS** — foi lá,
+não em teste automatizado, que apareceu o único bug real da sessão: telas
+empilhadas (`Navigator.push`) não se desempilhavam sozinhas quando o `_Gate`
+trocava o estado por baixo. Corrigido.
+
+**Pendente, explícito:**
+- Fases 4–6 do plano B2C (redação real com IA, Área do Responsável,
+  congelamento formal do professor) não começaram.
+- Conta RevenueCat/Apple Developer real — sem ela, o paywall funciona
+  estruturalmente mas mostra "configuração pendente" (`AppConfig.revenueCatApiKey`).
+- `docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md` e os
+  briefs não foram reescritos por inteiro pro B2C (só ganharam nota de
+  pré-pivô no topo) — onde contradizem `docs/plano_b2c.md`, vale o plano.
+
+---
+
+## Estado anterior (13/07, noite)
 
 **📚 Seed de vocabulário expandido FEITO** — 8 → **37 palavras** curadas,
 distribuídas nos níveis 1–10 (3–4 por nível; antes faltavam por completo os

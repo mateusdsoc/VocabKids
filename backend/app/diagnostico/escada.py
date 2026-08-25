@@ -9,31 +9,44 @@
        2 acertos → ceiling = candidato;  senão → ceiling = candidato − 1
     placement CONSERVADOR: nivel_dificuldade_atual = max(1, ceiling − 1)
 
-Para no bracket+confirmação ou ao esgotar o orçamento de 15 questões. As 2 demos
-(acerto/erro) que antecedem o diagnóstico são da UI (3.5), não daqui.
+Para no bracket+confirmação ou ao esgotar o orçamento de perguntas — que varia
+por faixa etária (B2C, docs/plano_b2c.md Fase 2, §5.1: 7-8 anos aguenta menos
+perguntas seguidas que 11-12). As 2 demos (acerto/erro) que antecedem o
+diagnóstico são da UI (3.5), não daqui.
 
 Funções puras (sem banco). A escolha das questões e a persistência ficam no
 serviço; aqui só decidimos o próximo nível / quando terminou.
 """
 from app.diagnostico.schemas import EstadoDiagnostico
+from app.progressao import faixa as faixa_mod
 
-MAX_PERGUNTAS = 15
+MAX_PERGUNTAS = 15  # teto do orçamento (faixa 11-12) — default de cliente antigo
 CONFIRMA_NECESSARIAS = 2
 PASSO_GROSSO = 2
 NIVEL_MIN = 1
 NIVEL_MAX = 10
-ANO_PADRAO = 7
+FAIXA_PADRAO = "11-12"
+
+MAX_PERGUNTAS_POR_FAIXA = {"7-8": 10, "9-10": 12, "11-12": 15}
 
 
-def nivel_inicial(ano_escolar: int | None) -> int:
-    """Default por ano da turma (ex.: 7º → 3)."""
-    ano = ano_escolar or ANO_PADRAO
-    return max(NIVEL_MIN, min(NIVEL_MAX, ano - 4))
+def nivel_inicial(faixa_etaria: str | None) -> int:
+    """Default por faixa etária da criança (B2C — substitui o corte por
+    `ano_escolar` da turma, docs/plano_b2c.md Fase 2)."""
+    faixa_valida = faixa_etaria or FAIXA_PADRAO
+    return max(NIVEL_MIN, min(NIVEL_MAX, faixa_mod.nivel_inicial(faixa_valida)))
 
 
-def iniciar(ano_escolar: int | None) -> EstadoDiagnostico:
+def max_perguntas_da_faixa(faixa_etaria: str | None) -> int:
+    return MAX_PERGUNTAS_POR_FAIXA.get(faixa_etaria or FAIXA_PADRAO, MAX_PERGUNTAS)
+
+
+def iniciar(faixa_etaria: str | None) -> EstadoDiagnostico:
     return EstadoDiagnostico(
-        fase="grossa", nivel=nivel_inicial(ano_escolar), passo=PASSO_GROSSO
+        fase="grossa",
+        nivel=nivel_inicial(faixa_etaria),
+        passo=PASSO_GROSSO,
+        max_perguntas=max_perguntas_da_faixa(faixa_etaria),
     )
 
 
@@ -52,13 +65,13 @@ def _confirmar(estado: EstadoDiagnostico, base: dict, candidato: int):
             "confirma_feitas": 0,
         }
     )
-    if e.perguntas >= MAX_PERGUNTAS:
+    if e.perguntas >= e.max_perguntas:
         return None, _placement(candidato)  # sem orçamento para confirmar; aceita
     return e, None
 
 
 def _continuar_ou_orcamento(e: EstadoDiagnostico, ultimo_passou: int | None):
-    if e.perguntas >= MAX_PERGUNTAS:
+    if e.perguntas >= e.max_perguntas:
         ceiling = ultimo_passou if ultimo_passou is not None else NIVEL_MIN
         return None, _placement(ceiling)
     return e, None
@@ -114,7 +127,7 @@ def avancar(estado: EstadoDiagnostico, acertou: bool) -> tuple[EstadoDiagnostico
     e = estado.model_copy(
         update={**base, "confirma_feitas": feitas, "confirma_acertos": acertos}
     )
-    if perguntas >= MAX_PERGUNTAS:
+    if perguntas >= estado.max_perguntas:
         ceiling = candidato if acertos >= 1 else candidato - 1
         return None, _placement(ceiling)
     return e, None

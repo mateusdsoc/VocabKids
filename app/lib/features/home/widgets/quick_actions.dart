@@ -35,7 +35,7 @@ class QuickActions extends StatelessWidget {
             iconColor: c.primary,
             iconBg: Color.alphaBlend(c.primary.withValues(alpha: 0.14), c.paper),
             title: 'Eventos',
-            subtitle: 'ranking da turma',
+            subtitle: 'novidades da viagem',
             onTap: onEventos,
           ),
         ),

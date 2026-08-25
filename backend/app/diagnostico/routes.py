@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.api.deps import get_conn
 from app.diagnostico import service
 from app.diagnostico.schemas import DiagnosticoIn, DiagnosticoOut
-from app.identidade.auth import UsuarioAutenticado, get_usuario_atual
+from app.identidade.auth import UsuarioAutenticado, get_usuario_atual, require_papel
 
-router = APIRouter(tags=["diagnostico"])
+# Gameplay é escopo de criança (R-ID-3, docs/plano_b2c.md).
+router = APIRouter(tags=["diagnostico"], dependencies=[Depends(require_papel("aluno"))])
 
 
 @router.post(

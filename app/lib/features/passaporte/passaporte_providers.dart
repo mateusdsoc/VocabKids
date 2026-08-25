@@ -40,7 +40,7 @@ final passaporteProvider =
     );
   }
 
-  final me = ref.watch(authControllerProvider).value;
+  final me = ref.watch(authControllerProvider).value?.meOuNull;
   if (me == null) {
     throw StateError('Passaporte requer um aluno autenticado.');
   }

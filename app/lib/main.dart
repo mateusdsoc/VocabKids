@@ -8,7 +8,9 @@ import 'core/theme/app_theme.dart';
 import 'features/configuracoes/preferencias_controller.dart';
 import 'features/home/home_screen.dart';
 import 'features/identidade/auth_controller.dart';
+import 'features/identidade/criar_crianca_screen.dart';
 import 'features/identidade/entrada_screen.dart';
+import 'features/identidade/seletor_perfil_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 void main() {
@@ -44,9 +46,10 @@ class VocabKidsApp extends ConsumerWidget {
   }
 }
 
-/// Roteamento por estado de autenticação (cliente fino):
-/// carregando → splash; deslogado → entrada; aluno recém-criado →
-/// onboarding (com o diagnóstico real); logado → Home.
+/// Roteamento por estado de sessão (cliente fino, B2C — docs/plano_b2c.md
+/// Fase 1): carregando → splash; deslogado → entrada; token de responsável
+/// sem perfil escolhido → seletor de perfil (ou criar o 1º); perfil recém-
+/// criado → onboarding (com o diagnóstico real); perfil ativo → Home.
 class _Gate extends ConsumerWidget {
   const _Gate();
 
@@ -63,11 +66,15 @@ class _Gate extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => const EntradaScreen(),
-      data: (me) => me == null
-          ? const EntradaScreen()
-          : onboarding
-              ? OnboardingScreen(nome: me.nome)
-              : const HomeScreen(),
+      data: (estado) => switch (estado) {
+        Deslogado() => const EntradaScreen(),
+        AguardandoPerfil(perfis: final perfis) => perfis.isEmpty
+            ? const CriarCriancaScreen()
+            : SeletorPerfilScreen(perfis: perfis),
+        Autenticado(me: final me) => onboarding
+            ? OnboardingScreen(nome: me.perfil?.apelido ?? me.nome)
+            : const HomeScreen(),
+      },
     );
   }
 }

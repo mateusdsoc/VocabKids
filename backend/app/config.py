@@ -27,9 +27,20 @@ class Settings(BaseSettings):
     # Rate limiting (janela fixa de 60s, em memória — vale por processo; se a
     # API escalar horizontalmente, mover o estado para Redis).
     rate_limit_habilitado: bool = True
-    rl_login_por_minuto: int = 20  # /acesso/turma por IP (turma inteira atrás de um NAT)
+    # B2C (docs/plano_b2c.md Fase 1): /sessao é login com senha, não mais
+    # /acesso/turma (turma inteira atrás de um NAT). Cai para um teto que
+    # freia brute-force sem incomodar erro de digitação legítimo.
+    rl_login_por_minuto: int = 5
     rl_anonimo_por_minuto: int = 60  # demais rotas sem token, por IP
-    rl_autenticado_por_minuto: int = 240  # por token — não pune a turma pelo IP compartilhado
+    rl_autenticado_por_minuto: int = 240  # por token
+
+    # Assinatura (B2C, docs/plano_b2c.md Fase 3). O backend não fala StoreKit
+    # nem valida recibo da Apple diretamente — o RevenueCat faz isso e manda um
+    # webhook normalizado; autenticamos o webhook por um segredo compartilhado
+    # (header Authorization, configurado também no painel do RevenueCat).
+    # Sem default de propósito: webhook sem segredo configurado é rejeitado,
+    # nunca aceito "por engano".
+    revenuecat_webhook_secret: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

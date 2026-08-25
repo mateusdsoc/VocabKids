@@ -32,4 +32,15 @@ class AppConfig {
         'light' => ThemeMode.light,
         _ => ThemeMode.system,
       };
+
+  /// API key pública do RevenueCat (App Store), via
+  /// `--dart-define=REVENUECAT_API_KEY=appl_...`.
+  ///
+  /// ⚠️ PLACEHOLDER: sem uma key real, `Purchases.configure` nunca é chamado
+  /// (ver `AssinaturaRepository.inicializar`) — a tela de paywall carrega mas
+  /// não lista ofertas nem completa compra. Trocar assim que a conta
+  /// RevenueCat existir (docs/plano_b2c.md Fase 3, §12): App Store Connect →
+  /// RevenueCat → aqui, nessa ordem.
+  static const String revenueCatApiKey =
+      String.fromEnvironment('REVENUECAT_API_KEY');
 }

@@ -36,3 +36,21 @@ def test_respeita_limites():
 def test_sem_amostra_nao_move():
     novo, mudou = regras.decidir(acuracia=None, amostra=0, nivel_atual=3, pode_mover=True)
     assert not mudou and novo == 3
+
+
+def test_nivel_max_trava_a_subida_dentro_da_faixa():
+    """R-FX-1 (docs/plano_b2c.md Fase 2): a adaptação nunca sobe além do teto
+    da faixa etária, mesmo com sinal forte e nível abaixo do máximo global."""
+    novo, mudou = regras.decidir(
+        acuracia=0.95, amostra=10, nivel_atual=4, pode_mover=True, nivel_max=4
+    )
+    assert not mudou and novo == 4
+
+
+def test_nivel_max_nao_afeta_descida():
+    """O teto da faixa é só um limite de cima — a descida (recuperar placement
+    alto demais) segue livre até o piso global."""
+    novo, mudou = regras.decidir(
+        acuracia=0.40, amostra=10, nivel_atual=3, pode_mover=True, nivel_max=4
+    )
+    assert mudou and novo == 2

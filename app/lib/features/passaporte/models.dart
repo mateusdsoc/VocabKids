@@ -97,8 +97,6 @@ class Capa {
     required this.paisAtual,
     required this.xp,
     required this.palavras,
-    required this.escola,
-    required this.turma,
   });
 
   final String nome;
@@ -106,8 +104,6 @@ class Capa {
   final String paisAtual;
   final int xp;
   final int palavras;
-  final String escola;
-  final String turma;
 
   String get inicial => nome.trim().isEmpty ? '?' : nome.trim()[0].toUpperCase();
 }
@@ -229,13 +225,11 @@ class Passaporte {
   /// em andamento, Japão por começar) para exercitar conquistado + bloqueado.
   static const Passaporte sample = Passaporte(
     capa: Capa(
-      nome: 'Manu Oliveira',
+      nome: 'Manu',
       nivel: 3,
       paisAtual: 'França',
       xp: 3120,
       palavras: 48,
-      escola: 'EM Cecília Meireles',
-      turma: 'Turma 7A · 7º ano',
     ),
     paises: [
       PaisColecao(

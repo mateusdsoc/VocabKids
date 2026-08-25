@@ -54,6 +54,12 @@ dependencies:
   # Token de sessão (JWT) no keychain/keystore do dispositivo — nunca em
   # SharedPreferences (legível em backup/root). Usado só por core/token_store.dart.
   flutter_secure_storage: 10.3.1
+  # Assinatura B2C via Apple/Google IAP (docs/plano_b2c.md Fase 3) — RevenueCat
+  # resolve StoreKit, recibo, período de graça e restauração; o backend só
+  # recebe o webhook normalizado. Precisa da API key real do RevenueCat em
+  # core/config.dart antes de rodar contra uma loja de verdade (placeholder
+  # até lá — ver AppConfig.revenueCatApiKey).
+  purchases_flutter: 10.9.1
 
 dev_dependencies:
   flutter_test:

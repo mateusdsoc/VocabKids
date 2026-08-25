@@ -43,6 +43,11 @@ class ApiException implements Exception {
         details: {'cause': cause.toString()},
       );
 
+  /// 402 do gate de assinatura (B2C, docs/plano_b2c.md Fase 3): passou do
+  /// free tier sem assinatura ativa — quem pega isso deve abrir o paywall,
+  /// não mostrar um erro genérico de rede.
+  bool get precisaAssinatura => statusCode == 402 && code == 'assinatura_necessaria';
+
   @override
   String toString() => 'ApiException($statusCode, $code): $message';
 }

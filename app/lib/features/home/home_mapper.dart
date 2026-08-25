@@ -14,8 +14,9 @@ import 'home_data.dart';
 /// que é puramente de apresentação. Campos ainda não expostos pela API estão
 /// marcados com `TODO(backend)`.
 abstract final class HomeMapper {
-  /// Fallback da meta quando o `/me` vier sem `meta_semanal` (aluno sem turma
-  /// — não acontece no fluxo normal). Zero sobre o default do produto.
+  /// Fallback da meta quando o `/me` vier sem `meta_semanal` — não acontece
+  /// no fluxo normal (todo perfil de criança B2C tem faixa etária e, com
+  /// ela, meta). Zero sobre o default do produto.
   static const _metaSemanalFallback = WeeklyGoal(current: 0, target: 5);
 
   static HomeData from({required Me me, required Trilha trilha}) {

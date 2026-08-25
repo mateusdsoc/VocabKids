@@ -16,11 +16,11 @@ def _embaralhar(opcoes: list[str]) -> list[str]:
     return copia
 
 
-def _resposta_final(perguntas: int, nivel: int) -> dict:
+def _resposta_final(perguntas: int, max_perguntas: int, nivel: int) -> dict:
     return {
         "concluido": True,
         "perguntas": perguntas,
-        "max_perguntas": escada.MAX_PERGUNTAS,
+        "max_perguntas": max_perguntas,
         "questao": None,
         "estado": None,
         "nivel_dificuldade_atual": nivel,
@@ -35,7 +35,7 @@ async def _proxima(conn: AsyncConnection, usuario_id: int, estado: EstadoDiagnos
         ceiling = estado.ultimo_passou if estado.ultimo_passou is not None else escada.NIVEL_MIN
         nivel = max(escada.NIVEL_MIN, ceiling - 1)
         await repo.definir_nivel(conn, usuario_id, nivel)
-        return _resposta_final(estado.perguntas, nivel)
+        return _resposta_final(estado.perguntas, estado.max_perguntas, nivel)
 
     estado = estado.model_copy(
         update={"questao_atual": questao.id, "usadas": estado.usadas + [questao.id]}
@@ -43,7 +43,7 @@ async def _proxima(conn: AsyncConnection, usuario_id: int, estado: EstadoDiagnos
     return {
         "concluido": False,
         "perguntas": estado.perguntas,
-        "max_perguntas": escada.MAX_PERGUNTAS,
+        "max_perguntas": estado.max_perguntas,
         "questao": {
             "questao_id": questao.id,
             "enunciado": questao.enunciado,
@@ -55,10 +55,10 @@ async def _proxima(conn: AsyncConnection, usuario_id: int, estado: EstadoDiagnos
 
 
 async def passo(conn: AsyncConnection, usuario_id: int, entrada: DiagnosticoIn) -> dict:
-    # Início: sem estado → monta a escada a partir do ano da turma.
+    # Início: sem estado → monta a escada a partir da faixa etária da criança.
     if entrada.estado is None:
-        ano = await repo.ler_ano_escolar(conn, usuario_id)
-        return await _proxima(conn, usuario_id, escada.iniciar(ano))
+        faixa_etaria = await repo.ler_faixa_etaria(conn, usuario_id)
+        return await _proxima(conn, usuario_id, escada.iniciar(faixa_etaria))
 
     # Avanço: precisa da resposta à questão apresentada.
     estado = entrada.estado
@@ -75,5 +75,5 @@ async def passo(conn: AsyncConnection, usuario_id: int, entrada: DiagnosticoIn) 
     novo_estado, nivel_final = escada.avancar(estado, acertou)
     if nivel_final is not None:
         await repo.definir_nivel(conn, usuario_id, nivel_final)
-        return _resposta_final(estado.perguntas + 1, nivel_final)
+        return _resposta_final(estado.perguntas + 1, estado.max_perguntas, nivel_final)
     return await _proxima(conn, usuario_id, novo_estado)

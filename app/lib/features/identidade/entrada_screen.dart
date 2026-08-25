@@ -11,17 +11,18 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/surface_card.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'auth_controller.dart';
+import 'cadastro_screen.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/passport_background.dart';
 import 'widgets/passport_field.dart';
 import 'widgets/perforation.dart';
 
-/// Tela de entrada por código de turma — o **embarque** da jornada.
+/// Tela de entrada — o **embarque** da jornada.
 ///
-/// O fluxo de dados (acesso por turma) é o mesmo de sempre; o que mudou é a
-/// roupa: agora é um *passe de embarque* dentro da metáfora de viagem do app
-/// (carimbo da marca, bilhete picotado, "Embarcar"), nos tokens de [AppColors]
-/// — claro "Azul Brilhante", escuro "Capa do Passaporte".
+/// B2C (docs/plano_b2c.md Fase 1): login do responsável por e-mail/senha, não
+/// mais código de turma. A roupa continua a mesma (carimbo da marca, bilhete
+/// picotado, "Embarcar"), nos tokens de [AppColors] — claro "Azul Brilhante",
+/// escuro "Capa do Passaporte".
 class EntradaScreen extends ConsumerStatefulWidget {
   const EntradaScreen({super.key});
 
@@ -30,14 +31,16 @@ class EntradaScreen extends ConsumerStatefulWidget {
 }
 
 class _EntradaScreenState extends ConsumerState<EntradaScreen> {
-  final _codigo = TextEditingController();
-  final _nome = TextEditingController();
+  final _email = TextEditingController();
+  final _senha = TextEditingController();
+  final _nomeDemo = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _codigo.dispose();
-    _nome.dispose();
+    _email.dispose();
+    _senha.dispose();
+    _nomeDemo.dispose();
     super.dispose();
   }
 
@@ -48,15 +51,20 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
     if (AppConfig.demo) {
       Navigator.of(context).push(
         adaptivePageRoute(
-          builder: (_) => OnboardingScreen(nome: _nome.text.trim()),
+          builder: (_) => OnboardingScreen(nome: _nomeDemo.text.trim()),
         ),
       );
       return;
     }
-    await ref.read(authControllerProvider.notifier).entrar(
-          codigoTurma: _codigo.text.trim(),
-          nome: _nome.text.trim(),
-        );
+    await ref
+        .read(authControllerProvider.notifier)
+        .login(email: _email.text.trim(), senha: _senha.text);
+  }
+
+  void _irParaCadastro() {
+    Navigator.of(context).push(
+      adaptivePageRoute(builder: (_) => const CadastroScreen()),
+    );
   }
 
   @override
@@ -65,7 +73,7 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
     final auth = ref.watch(authControllerProvider);
     final carregando = auth.isLoading;
 
-    // Erro de acesso (código inexistente, sem conexão, etc.) — âmbar gentil.
+    // Erro de login (credenciais erradas, sem conexão, etc.) — âmbar gentil.
     ref.listen(authControllerProvider, (_, next) {
       if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context)
@@ -74,7 +82,7 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
             SnackBar(
               backgroundColor: c.warn,
               content: Text(
-                'Não consegui embarcar. Confira o código e a conexão.',
+                'Não consegui embarcar. Confira o e-mail, a senha e a conexão.',
                 style: AppType.nunito(
                     size: 13.5, weight: FontWeight.w800, color: Colors.white),
               ),
@@ -104,18 +112,37 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
                       children: [
                         const BrandMark(),
                         const SizedBox(height: 26),
-                        _BoardingCard(codigo: _codigo, nome: _nome, onSubmit: _entrar),
+                        _BoardingCard(
+                          email: _email,
+                          senha: _senha,
+                          nomeDemo: _nomeDemo,
+                          onSubmit: _entrar,
+                        ),
                         const SizedBox(height: 18),
                         _BoardingButton(loading: carregando, onTap: _entrar),
                         const SizedBox(height: 14),
-                        Text(
-                          'Peça o código da turma ao seu professor.',
-                          textAlign: TextAlign.center,
-                          style: AppType.nunito(
-                              size: 12.5,
-                              weight: FontWeight.w700,
-                              color: c.muted),
-                        ),
+                        if (!AppConfig.demo)
+                          Center(
+                            child: TextButton(
+                              onPressed: _irParaCadastro,
+                              child: Text(
+                                'Primeira vez aqui? Criar conta',
+                                style: AppType.nunito(
+                                    size: 13,
+                                    weight: FontWeight.w800,
+                                    color: c.primary),
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            'Modo demonstração — sem backend.',
+                            textAlign: TextAlign.center,
+                            style: AppType.nunito(
+                                size: 12.5,
+                                weight: FontWeight.w700,
+                                color: c.muted),
+                          ),
                       ],
                     ),
                   ),
@@ -129,16 +156,18 @@ class _EntradaScreenState extends ConsumerState<EntradaScreen> {
   }
 }
 
-/// O "passe de embarque": cabeçalho picotado + os dois campos.
+/// O "passe de embarque": cabeçalho picotado + os campos de acesso.
 class _BoardingCard extends StatelessWidget {
   const _BoardingCard({
-    required this.codigo,
-    required this.nome,
+    required this.email,
+    required this.senha,
+    required this.nomeDemo,
     required this.onSubmit,
   });
 
-  final TextEditingController codigo;
-  final TextEditingController nome;
+  final TextEditingController email;
+  final TextEditingController senha;
+  final TextEditingController nomeDemo;
   final VoidCallback onSubmit;
 
   @override
@@ -164,28 +193,44 @@ class _BoardingCard extends StatelessWidget {
           const SizedBox(height: 14),
           const Perforation(),
           const SizedBox(height: 16),
-          PassportField(
-            controller: codigo,
-            label: 'Código da turma',
-            icon: AppIcons.ticket,
-            hint: 'ex.: DEMO7A',
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.next,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe o código' : null,
-          ),
-          const SizedBox(height: 16),
-          PassportField(
-            controller: nome,
-            label: 'Seu apelido',
-            icon: AppIcons.signature,
-            hint: 'Como quer ser chamado?',
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.go,
-            onSubmitted: (_) => onSubmit(),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Escolha um apelido' : null,
-          ),
+          if (AppConfig.demo)
+            PassportField(
+              controller: nomeDemo,
+              label: 'Seu apelido',
+              icon: AppIcons.signature,
+              hint: 'Como quer ser chamado?',
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.go,
+              autofocus: true,
+              onSubmitted: (_) => onSubmit(),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Escolha um apelido' : null,
+            )
+          else ...[
+            PassportField(
+              controller: email,
+              label: 'E-mail',
+              icon: AppIcons.email,
+              hint: 'voce@email.com',
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: (v) => (v == null || !v.contains('@'))
+                  ? 'Informe um e-mail válido'
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            PassportField(
+              controller: senha,
+              label: 'Senha',
+              icon: AppIcons.lock,
+              hint: '••••••••',
+              obscureText: true,
+              textInputAction: TextInputAction.go,
+              onSubmitted: (_) => onSubmit(),
+              validator: (v) =>
+                  (v == null || v.length < 8) ? 'Mínimo de 8 caracteres' : null,
+            ),
+          ],
         ],
       ),
     );

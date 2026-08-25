@@ -10,11 +10,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.api.deps import get_conn
-from app.identidade.auth import get_usuario_atual
+from app.identidade.auth import require_papel
 from app.vocabulario import service
 from app.vocabulario.schemas import PalavraListaOut, PalavraOut
 
-router = APIRouter(tags=["vocabulario"], dependencies=[Depends(get_usuario_atual)])
+# Gameplay é escopo de criança (R-ID-3, docs/plano_b2c.md).
+router = APIRouter(tags=["vocabulario"], dependencies=[Depends(require_papel("aluno"))])
 
 
 @router.get("/palavras", response_model=PalavraListaOut, summary="Lista paginada do banco de palavras")

@@ -10,8 +10,12 @@ Me _me() => Me.fromJson({
       'usuario_id': 1,
       'nome': 'Ana',
       'papel': 'aluno',
-      'escola': {'id': 1, 'nome': 'EM Cecília Meireles'},
-      'turma': {'id': 1, 'nome': 'Turma 7A', 'ano_escolar': 7},
+      'perfil': {
+        'usuario_id': 1,
+        'apelido': 'Ana',
+        'faixa_etaria': '9-10',
+        'ano_escolar': 5,
+      },
       'progresso': {
         'xp_total': 19000,
         'no_atual_id': 5,
@@ -105,7 +109,6 @@ void main() {
       expect(p.capa.nome, 'Ana');
       expect(p.capa.nivel, 5); // 4 nós concluídos + 1
       expect(p.capa.paisAtual, 'Brasil');
-      expect(p.capa.turma, 'Turma 7A · 7º ano');
 
       final brasil = p.paises.single;
       expect(brasil.pais, Pais.brasil);

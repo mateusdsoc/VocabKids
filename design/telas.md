@@ -1,5 +1,13 @@
 # Telas do app — especificação de conteúdo e comportamento
 
+> ⚠️ **Pré-pivô B2B.** A seção 1 (Entrada por código de turma) foi
+> **substituída na prática** pelo fluxo B2C implementado em
+> `features/identidade/` (cadastro do responsável, seletor de perfil, criar
+> criança) — ver `docs/plano_b2c.md` Fase 1. As telas novas (cadastro,
+> seletor, paywall) ainda não têm um contrato formal neste documento; até lá,
+> o código é a referência. §2–7 (onboarding, Home, Sessão, Resumo, Trilha,
+> Passaporte) seguem valendo tal como estão.
+>
 > **Para que serve:** brief preciso de **o que existe em cada tela**, a
 > hierarquia, as ações, os estados e de onde vêm os dados. É o input para gerar
 > mockups de UI (claude design / Artifacts / etc.) com precisão, e o contrato

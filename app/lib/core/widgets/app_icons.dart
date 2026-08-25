@@ -44,6 +44,10 @@ abstract final class AppIcons {
   static const school = Icons.school_outlined;
   static const back = Icons.chevron_left_rounded;
   static const palavras = Icons.menu_book_outlined; // palavras dominadas
+  static const email = Icons.mail_outline_rounded;
+  static const cake = Icons.cake_outlined; // ano de nascimento (perfil de criança)
+  static const familia = Icons.family_restroom_rounded; // conta do responsável
+  static const delete = Icons.delete_outline_rounded;
 
   // --- Perfil / Configurações ---
   static const ajustes = Icons.settings_rounded; // engrenagem = configurações

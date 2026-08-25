@@ -22,6 +22,11 @@ class EstadoDiagnostico(BaseModel):
     perguntas: int = 0
     usadas: list[int] = []
     questao_atual: int | None = None
+    # Orçamento de perguntas por faixa etária (B2C, docs/plano_b2c.md Fase 2,
+    # §5.1) — 7-8 anos aguenta menos perguntas seguidas que 11-12. Carregado
+    # pelo cliente como o resto do estado; default = teto antigo (15), só usado
+    # se um estado sem o campo chegar de um cliente desatualizado.
+    max_perguntas: int = 15
 
 
 class QuestaoDiagnostico(BaseModel):

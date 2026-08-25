@@ -31,11 +31,11 @@ void main() {
     // Resolve o build() async do AuthController (token == null → deslogado).
     await tester.pumpAndSettle();
 
-    // Tela de embarque (passe de embarque): marca, os dois campos e o CTA.
+    // Tela de embarque (passe de embarque): marca, login e o CTA (B2C).
     expect(find.text('VocabKids'), findsOneWidget);
     expect(find.text('PASSE DE EMBARQUE'), findsOneWidget);
-    expect(find.text('CÓDIGO DA TURMA'), findsOneWidget);
-    expect(find.text('SEU APELIDO'), findsOneWidget);
+    expect(find.text('E-MAIL'), findsOneWidget);
+    expect(find.text('SENHA'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.text('Embarcar'), findsOneWidget);
   });

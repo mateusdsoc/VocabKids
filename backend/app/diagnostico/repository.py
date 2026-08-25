@@ -11,19 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app import schema
 
 
-async def ler_ano_escolar(conn: AsyncConnection, usuario_id: int) -> int | None:
-    u, a = schema.usuario, schema.associacao
-    at, t = schema.associacao_turma, schema.turma
-    stmt = (
-        select(t.c.ano_escolar)
-        .select_from(
-            u.join(a, a.c.usuario_id == u.c.id)
-            .join(at, at.c.associacao_id == a.c.id)
-            .join(t, t.c.id == at.c.turma_id)
-        )
-        .where(u.c.id == usuario_id, a.c.papel == "aluno")
-        .limit(1)
-    )
+async def ler_faixa_etaria(conn: AsyncConnection, usuario_id: int) -> str | None:
+    """Faixa etária da criança (B2C — substitui `ler_ano_escolar`/turma,
+    docs/plano_b2c.md Fase 2)."""
+    pc = schema.perfil_crianca
+    stmt = select(pc.c.faixa_etaria).where(pc.c.usuario_id == usuario_id)
     return (await conn.execute(stmt)).scalar_one_or_none()
 
 

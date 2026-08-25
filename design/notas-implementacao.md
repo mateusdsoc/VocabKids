@@ -698,3 +698,78 @@ atualizada para o estado atual (11 destinos ilustrados).
 - [ ] Backend servir `asset_ref` por destino na `/v1/trilha` e aposentar o
       matching por substring do nome (`TODO(backend)` em `home_mapper.dart`
       — renomear destino no seed hoje derruba a arte em silêncio).
+
+---
+
+## 🔄 Pivô B2C — de venda por escola pra assinatura direto pra família (24/08)
+
+**Decisão revisada** — a mais profunda do projeto até aqui. Rotatividade B2B
+baixa (nenhuma escola fechada) levou o dono a decidir tentar B2C: assinatura
+mensal/anual via Apple IAP, venda direto pra família (7–12 anos), sem
+professor no meio. Análise completa, regras de negócio e o plano de execução
+fase a fase estão em **`docs/plano_b2c.md`** (documento novo — é ele que
+passa a ser a fonte da verdade do produto daqui pra frente, não este arquivo
+nem `docs/rascunho_product.md`/`docs/arquitetura.md`, que continuam
+descrevendo o produto B2B pré-pivô e não foram reescritos por inteiro: o custo
+de reescrever ~2000 linhas de prosa B2B não se pagava frente a ter
+`docs/plano_b2c.md` como spec B2C paralela e completa. `CLAUDE.md` foi
+atualizado para apontar pra ela).
+
+**O que muda de raiz:** identidade por turma/código → conta do responsável +
+até 3 perfis de criança, sem senha própria pra criança; faixa etária
+(7-8/9-10/11-12) substitui `ano_escolar` como eixo de calibração; assinatura
+via RevenueCat/Apple IAP com free tier até o 1º destino; professor
+**congelado, não deletado** (`app/professor/` seguem no repo, funcionando,
+fora do caminho crítico). MVP de conteúdo: 100 palavras (não 600+) e trilha
+reduzida a 2 países/4 destinos/16 nós — só os destinos com arte já pronta
+(Rio, Foz do Iguaçu, Amazônia, Paris); o catálogo completo (3 países/20/80)
+volta depois, sem mudar schema nem lógica.
+
+**Executado nesta sessão (Fases 1–3 de `docs/plano_b2c.md`):**
+
+- **Fase 1 — Identidade familiar.** Tabelas `conta`/`perfil_crianca`; domínio
+  `identidade` reescrito (`POST /v1/conta`, `POST /v1/sessao`, `GET/POST
+  /v1/conta/perfis`, `POST /v1/perfis/{id}/entrar`, `DELETE /v1/conta`); token
+  de responsável e de criança nunca coexistem, e cada um só abre as rotas do
+  próprio escopo (`require_papel`). App: `SessaoState` selado
+  (`Deslogado`/`AguardandoPerfil`/`Autenticado`), telas de cadastro/seletor de
+  perfil/criar criança. **Bug real achado só no simulador iOS** (não em
+  testes automatizados nem via curl): telas empilhadas via `Navigator.push`
+  não se desempilhavam sozinhas quando o `_Gate` trocava o estado por baixo —
+  corrigido com auto-pop condicional.
+- **Fase 2 — Recalibração por faixa etária.** `progressao/faixa.py` (nível
+  inicial, meta semanal, nível máximo, tudo por faixa). R-FX-1: a adaptação e
+  a seleção de palavras novas nunca passam do teto da faixa. R-FX-2: banco
+  esgotado dentro da faixa completa com revisão em vez de encolher a sessão.
+  Orçamento de perguntas do diagnóstico também por faixa (10/12/15).
+- **Fase 3 — Assinatura (Apple IAP via RevenueCat).** Tabelas
+  `assinatura`/`evento_loja`; domínio `assinatura` (entitlement puro +
+  webhook idempotente por `event.id`); `POST /v1/sessoes` gateado (livre até
+  18.000 XP — lido do catálogo semeado, não hardcoded — depois exige
+  assinatura ativa da conta, nunca do perfil). App: `purchases_flutter`,
+  paywall **só alcançável pelo responsável** (Seletor de Perfil), nunca pela
+  criança em meio ao jogo — ela só vê "peça pra um adulto continuar" (Apple
+  5.1.4 + R-RS-1, decisão de produto tomada nesta sessão, não estava
+  detalhada no plano original).
+
+**Também no meio do caminho:** `seed_trilha.py` cortado pro catálogo do MVP;
+`seed_demo.py` reescrito pra conta B2C com assinatura ativa (as personas
+"vitrine" mostram progresso além do free tier, então precisam ser
+assinantes); `seed.py` (turma/professor) preservado intocado.
+
+**Verificação:** 147 testes de backend, 42 do app, `flutter analyze` limpo, e
+o fluxo completo (cadastro → criar perfil → onboarding → diagnóstico →
+paywall → webhook → sessão liberada) rodado ao vivo no simulador iOS e via
+curl contra o backend real — não só nos testes automatizados.
+
+**Pendências explícitas, fora do escopo desta sessão:**
+- `docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md` e os
+  briefs **não foram reescritos por inteiro** pro B2C (só ganharam uma nota
+  no topo apontando pra `docs/plano_b2c.md` — ver `CLAUDE.md` "Mapa dos
+  documentos"). Se algo nesses arquivos contradisser `docs/plano_b2c.md`,
+  vale o plano B2C.
+- Fases 4–6 do plano (redação real com IA, Área do Responsável, congelamento
+  formal do professor) não começaram.
+- RevenueCat/Apple Developer: sem conta/API key/product IDs reais — paywall
+  funciona estruturalmente mas mostra "configuração pendente" até o dono
+  configurar (`AppConfig.revenueCatApiKey`).

@@ -34,7 +34,7 @@ class ConfiguracoesScreen extends ConsumerWidget {
     final prefs = ref.watch(preferenciasControllerProvider).value ??
         const Preferencias();
     final ctrl = ref.read(preferenciasControllerProvider.notifier);
-    final turma = me.turma;
+    final perfil = me.perfil;
 
     final overlay = Theme.of(context).brightness == Brightness.dark
         ? SystemUiOverlayStyle.light
@@ -108,13 +108,11 @@ class ConfiguracoesScreen extends ConsumerWidget {
                         label: 'CONTA',
                         children: [
                           SettingTile(
-                            icon: AppIcons.ticket,
-                            title: 'Turma',
+                            icon: AppIcons.cake,
+                            title: 'Faixa etária',
                             accent: c.accentStrong,
                             trailing: Text(
-                              turma == null
-                                  ? '—'
-                                  : '${turma.nome} · ${turma.anoEscolar}º',
+                              perfil == null ? '—' : '${perfil.faixaEtaria} anos',
                               style: AppType.nunito(
                                   size: 13,
                                   weight: FontWeight.w800,
@@ -123,7 +121,7 @@ class ConfiguracoesScreen extends ConsumerWidget {
                           ),
                           SettingTile(
                             icon: AppIcons.signout,
-                            title: 'Sair da conta',
+                            title: 'Trocar de perfil / sair',
                             accent: c.warn,
                             trailing: Icon(AppIcons.chevron,
                                 size: 20, color: c.muted),

@@ -17,9 +17,21 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.adaptacao import regras as adaptacao
 from app.errors import ApiError
+from app.progressao import faixa as faixa_regras
 from app.progressao import xp as xp_regras
 from app.sessao import repository as repo
 from app.trilha import service as trilha
+
+# Sem perfil de criança (aluno B2B congelado, ligado por turma — sem faixa
+# etária): nenhum teto além do máximo global do banco (docs/plano_b2c.md Fase 2).
+_NIVEL_MAXIMO_SEM_FAIXA = 10
+
+
+async def _nivel_maximo_do_aluno(conn: AsyncConnection, usuario_id: int) -> int:
+    faixa_etaria = await repo.ler_faixa_etaria(conn, usuario_id)
+    if faixa_etaria is None:
+        return _NIVEL_MAXIMO_SEM_FAIXA
+    return faixa_regras.nivel_maximo(faixa_etaria)
 
 # Nível em que o aluno está "trabalhando" por estado (descoberta colapsa no N1:
 # acertar o N1 já leva a nivel_2, sem evento separado de "card visto").
@@ -50,6 +62,7 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
         raise ApiError(409, "perfil_incompleto", "Aluno sem registro de progresso.")
     nivel = progresso.nivel_dificuldade_atual
     sessoes_total = progresso.sessoes_total
+    nivel_maximo = await _nivel_maximo_do_aluno(conn, usuario_id)
 
     # 1. Revisão: quanto dá para preencher define quantas palavras novas extras
     #    entram (aluno recém-diagnosticado tem pouca revisão → sessão "mais nova").
@@ -58,10 +71,24 @@ async def montar_sessao(conn: AsyncConnection, usuario_id: int) -> dict:
     )
     slots_revisao_estimados = sum(2 if c.n4_vencido else 1 for c in candidatas)
 
-    # 2. Palavras novas: 2 base + o suficiente para cobrir a lacuna até o alvo.
+    # 2. Palavras novas: 2 base + o suficiente para cobrir a lacuna até o alvo,
+    #    nunca acima do teto da faixa etária (R-FX-1, docs/plano_b2c.md Fase 2).
     faltam = max(0, TARGET_QUESTOES - slots_revisao_estimados)
     qtd_novas = max(NOVAS_BASE, math.ceil(faltam / QUESTOES_POR_NOVA))
-    novas = await repo.selecionar_palavras_novas(conn, usuario_id, nivel, qtd_novas)
+    novas = await repo.selecionar_palavras_novas(
+        conn, usuario_id, nivel, qtd_novas, nivel_maximo
+    )
+
+    # R-FX-2: o banco da faixa esgotou (menos palavras novas do que planejado)
+    # → completa com mais revisão em vez de travar a sessão curta.
+    deficit_novas = qtd_novas - len(novas)
+    if deficit_novas > 0:
+        candidatas = await repo.selecionar_revisao_candidatas(
+            conn,
+            usuario_id,
+            sessoes_total,
+            REVISAO_ALVO + math.ceil(deficit_novas * QUESTOES_POR_NOVA / 1.5),
+        )
 
     # 3. Uma query para as questões de todas as palavras envolvidas.
     novas_ids = [p.id for p in novas]
@@ -424,11 +451,13 @@ async def finalizar(conn: AsyncConnection, usuario_id: int, sessao_id: int) -> d
         progresso.nivel_mudou_em_sessao is None
         or (sessoes_total - progresso.nivel_mudou_em_sessao) > adaptacao.COOLDOWN_SESSOES
     )
+    nivel_maximo = await _nivel_maximo_do_aluno(conn, usuario_id)
     novo_nivel, mudou = adaptacao.decidir(
         acuracia=acuracia,
         amostra=amostra,
         nivel_atual=nivel_anterior,
         pode_mover=pode_mover,
+        nivel_max=nivel_maximo,
     )
     if mudou:
         await repo.atualizar_nivel(conn, usuario_id, novo_nivel, sessoes_total)

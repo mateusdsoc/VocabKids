@@ -16,11 +16,38 @@ from app.identidade.auth import criar_token
 
 
 async def _entrar(client, nome: str) -> dict:
-    r = await client.post(
-        "/v1/acesso/turma", json={"codigo_turma": "DEMO7A", "nome": nome}
-    )
-    assert r.status_code == 200, r.text
-    return r.json()
+    """Cria um aluno de turma direto no banco (B2B congelado, docs/plano_b2c.md
+    Fase 6): `POST /v1/acesso/turma` não existe mais na API pública — o B2C
+    entra por conta do responsável, não por código de turma. O domínio
+    `professor` segue funcionando; só a criação de aluno de teste virou SQL
+    direto em vez de bater numa rota que não serve mais tráfego real."""
+    async with engine.begin() as conn:
+        turma = (
+            await conn.execute(
+                select(schema.turma.c.id, schema.turma.c.escola_id).where(
+                    schema.turma.c.codigo_turma == "DEMO7A"
+                )
+            )
+        ).one()
+        usuario_id = (
+            await conn.execute(
+                insert(schema.usuario).values(nome=nome).returning(schema.usuario.c.id)
+            )
+        ).scalar_one()
+        associacao_id = (
+            await conn.execute(
+                insert(schema.associacao)
+                .values(usuario_id=usuario_id, escola_id=turma.escola_id, papel="aluno")
+                .returning(schema.associacao.c.id)
+            )
+        ).scalar_one()
+        await conn.execute(
+            insert(schema.associacao_turma).values(
+                associacao_id=associacao_id, turma_id=turma.id
+            )
+        )
+        await conn.execute(insert(schema.aluno_progresso).values(usuario_id=usuario_id))
+    return {"usuario_id": usuario_id, "token": criar_token(usuario_id, "aluno")}
 
 
 @pytest_asyncio.fixture
@@ -364,14 +391,11 @@ async def test_meta_persiste_e_reflete_no_painel_e_no_aluno(client, cenario):
     assert painel["meta_semanal"] == 8
     assert all(a["meta_semana"] == 8 for a in painel["alunos"])
 
-    # A Home do aluno lê o mesmo alvo (e o mesmo corte de semana).
-    me = (
-        await client.get(
-            "/v1/me",
-            headers={"Authorization": f"Bearer {cenario['ana']['token']}"},
-        )
-    ).json()
-    assert me["meta_semanal"] == {"atual": 2, "alvo": 8}
+    # B2C (docs/plano_b2c.md Fase 1): `GET /v1/me` agora é escopo de perfil de
+    # criança (`perfil_crianca`/faixa etária) — não lê mais meta de turma. O
+    # cross-check "Home do aluno == painel do professor" que existia aqui era
+    # específico do modelo B2B e foi retirado com o pivô; o painel acima já
+    # cobre a meta do lado do professor.
 
     # Upsert: reconfigurar sobrescreve, não duplica.
     await client.put("/v1/professor/turmas/1/meta", headers=h, json={"meta_semanal": 9})
