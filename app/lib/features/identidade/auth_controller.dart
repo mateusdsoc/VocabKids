@@ -5,9 +5,8 @@ import '../../core/api_providers.dart';
 import 'models.dart';
 import 'repository.dart';
 
-// Providers de infra agora vivem em `core/api_providers.dart` (compartilhados com
-// a superfície do professor). Re-exportados aqui para não quebrar quem já os
-// importava da identidade.
+// Providers de infra agora vivem em `core/api_providers.dart`. Re-exportados
+// aqui para não quebrar quem já os importava da identidade.
 export '../../core/api_providers.dart' show tokenStoreProvider, apiClientProvider;
 
 final identidadeRepositoryProvider = Provider<IdentidadeRepository>(

@@ -1,9 +1,4 @@
-"""Repositório do domínio redação B2C — acesso ao Postgres (SQLAlchemy Core).
-
-Reaproveita `redacao_atribuicao`/`redacao`/`redacao_analise`/`redacao_palavra`
-com o perfil escopado por `usuario_id` (não por `turma_id` — isso é o mundo do
-professor congelado, em `app/professor/repository.py`, sem cruzar aqui).
-"""
+"""Repositório do domínio redação B2C — acesso ao Postgres (SQLAlchemy Core)."""
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
@@ -73,8 +68,7 @@ async def criar_atribuicao(
 
 
 async def listar_atribuicoes(conn: AsyncConnection, usuario_id: int) -> list[Row]:
-    """Atribuições do perfil + status do envio dele, se houver (mesmo padrão de
-    `professor.repository.redacoes_do_aluno`, escopado por usuário em vez de turma)."""
+    """Atribuições do perfil + status do envio dele, se houver."""
     ra, r = schema.redacao_atribuicao, schema.redacao
     stmt = (
         select(

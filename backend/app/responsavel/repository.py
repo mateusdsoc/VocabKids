@@ -1,9 +1,4 @@
-"""Repositório do domínio responsável (Fase 5, `docs/plano_b2c.md` §08).
-
-Mesma pergunta do painel do professor (`app/professor/repository.py`), outra
-pessoa — escopo por `conta_id`/`usuario_id` em vez de `turma_id`. Sem cruzar
-com o domínio congelado; consultas próprias, mesmo padrão de SQLAlchemy Core.
-"""
+"""Repositório do domínio responsável (Fase 5, `docs/plano_b2c.md` §08)."""
 from datetime import datetime
 
 from sqlalchemy import func, select

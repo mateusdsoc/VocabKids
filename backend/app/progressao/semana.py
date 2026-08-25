@@ -2,8 +2,7 @@
 
 A "semana" da meta (§3.5) começa na **segunda-feira à meia-noite** no fuso das
 escolas (America/Sao_Paulo — produto BR). Todo agregado "nesta semana" (meta
-do aluno na Home, KPIs do painel do professor) usa este corte, para aluno e
-professor lerem o mesmo número.
+do aluno na Home, resumo semanal do responsável) usa este corte.
 """
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo

@@ -6,7 +6,19 @@
 
 ---
 
-## Estado atual (25/08 — Fases 4 e 5 do B2C, backend, parciais)
+## Estado atual (25/08 — Fases 4, 5 e 6 do B2C)
+
+**Professor/B2B deletado, não só congelado** — `docs/plano_b2c.md` §09
+(revisado na hora: o plano original mandava congelar; o dono decidiu deletar
+de verdade). Saiu backend (`app/professor/`, `app/seed.py`,
+`test_professor.py`), schema (`turma`/`escola`/`associacao_turma`/
+`turma_config`/`sinal_turma`, `associacao.escola_id`) e app Flutter
+(`features/professor/`, `main_professor.dart`, os 2 testes que verificavam o
+isolamento R1/R2). Foi a primeira vez nesta sessão que o Flutter local do
+dono ficou acessível pro agente (worktree, não o container cloud) — deu pra
+rodar `flutter analyze`/`flutter test` de verdade, não só registrar
+pendência. Detalhe completo em `design/notas-implementacao.md` § "Fase 6"
+(25/08/2026).
 
 **Redação real substituiu o mock** (`backend/app/redacao/`) —
 `docs/plano_b2c.md` §07, detalhe completo e todas as pendências em
@@ -14,9 +26,10 @@
 faixa, triagem de risco + análise pedagógica numa chamada ao Claude,
 atribuição de tema automática (a cada 15 dias, best-effort) e sob demanda
 (máx. 2/mês, pedida pelo responsável). Schema: `tema_catalogo` nova;
-`redacao_atribuicao`/`redacao` agora servem B2C e o professor congelado ao
-mesmo tempo (`turma_id` XOR `usuario_id`) — decisão revisada registrada nas
-notas, porque o desenho original do plano quebraria o professor.
+`redacao_atribuicao` chegou a coexistir com o professor congelado
+(`turma_id` XOR `usuario_id`) — mas isso durou só até a Fase 6, no mesmo dia:
+com o professor deletado, a tabela voltou ao desenho original do plano (só
+`usuario_id`).
 
 **Área do Responsável, backend só** (`backend/app/responsavel/`) —
 `docs/plano_b2c.md` §08, notas em § "Fase 5" (25/08/2026). Portão PIN
@@ -28,12 +41,14 @@ nomeados, R-RD-6). De quebra, achado e corrigido um rate limit frouxo demais
 no PIN (caía no teto genérico de 240/min — um PIN de 4 dígitos seria
 força-bruteável em ~42min; movido pro teto de login, 5/min).
 
-169 testes de backend (22 novos entre as duas fases), todos verdes. **App
-Flutter não tocado em nenhuma das duas** — conferido antes de mexer no
-contrato: `redacao_screen.dart` hoje é 100% `Redacao.sample()` local, nunca
-chamou `/v1/redacoes` de verdade, então não houve breaking change; a Área do
+**Estado final da sessão:** 155 testes de backend, 26 de app, `flutter
+analyze` limpo — todos verdes. Redação/Área do Responsável: app Flutter não
+tocado (só o backend) — conferido antes de mexer no contrato:
+`redacao_screen.dart` hoje é 100% `Redacao.sample()` local, nunca chamou
+`/v1/redacoes` de verdade, então não houve breaking change; a Área do
 Responsável não tem nenhuma tela ainda (`app/lib/features/responsavel/` não
-existe).
+existe). Professor: app e backend deletados juntos, sem defasagem entre os
+dois lados.
 
 **Pendente, explícito (backend roda, mas não está pronto pra produção):**
 sem fila assíncrona (chamada ao Claude é síncrona no request), sem cron real
@@ -44,11 +59,10 @@ sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de propósito �
 precisa da mesma revisão humana que o plano exige pro vocabulário base),
 sem telas Flutter pra redação real nem pra Área do Responsável (portão PIN
 incluso — o backend valida, mas ninguém ainda impõe passar por ele antes de
-ver o resumo),
-catálogo de temas com 18 de 120 previstos, e retenção/opt-out contratual do
-provedor de LLM (R-RD-8/R-RD-9) não endereçados. Ambas as fases foram
-commitadas nesta sessão (backend); revisão do dono ainda recomendada antes de
-qualquer envio real de criança passar pela triagem de risco (R-RD-7) —
+ver o resumo), catálogo de temas com 18 de 120 previstos, e retenção/opt-out
+contratual do provedor de LLM (R-RD-8/R-RD-9) não endereçados. Todas as três
+fases foram commitadas nesta sessão; revisão do dono ainda recomendada antes
+de qualquer envio real de criança passar pela triagem de risco (R-RD-7) —
 `AnalisadorClaude` nunca rodou contra a API de verdade.
 
 ---

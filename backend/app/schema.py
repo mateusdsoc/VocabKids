@@ -78,49 +78,14 @@ Index(
     postgresql_where=usuario.c.email.isnot(None),
 )
 
-escola = Table(
-    "escola",
-    metadata,
-    _id(),
-    Column("nome", Text, nullable=False),
-    _created_at(),
-)
-
-turma = Table(
-    "turma",
-    metadata,
-    _id(),
-    Column("escola_id", BigInteger, ForeignKey("escola.id", ondelete="CASCADE"), nullable=False),
-    Column("nome", Text, nullable=False),
-    Column("ano_escolar", Integer, nullable=False),
-    Column("codigo_turma", Text, nullable=False, unique=True),  # acesso provisório
-    _created_at(),
-    CheckConstraint("ano_escolar BETWEEN 6 AND 9", name="ano_escolar_range"),
-)
-
 associacao = Table(
     "associacao",
     metadata,
     _id(),
     Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False),
-    Column("escola_id", BigInteger, ForeignKey("escola.id", ondelete="CASCADE"), nullable=True),  # null p/ admin
     Column("papel", Text, nullable=False),
     _created_at(),
-    # 'responsavel' = conta B2C (pai/mãe); sem escola_id. Professor/coordenador
-    # seguem existindo (fatia B2B congelada, não removida — docs/plano_b2c.md
-    # Fase 6).
-    CheckConstraint(
-        "papel IN ('aluno','responsavel','professor','coordenador','admin')",
-        name="papel_valido",
-    ),
-)
-
-associacao_turma = Table(
-    "associacao_turma",
-    metadata,
-    Column("associacao_id", BigInteger, ForeignKey("associacao.id", ondelete="CASCADE"), primary_key=True),
-    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), primary_key=True),
-    _created_at(),
+    CheckConstraint("papel IN ('aluno','responsavel')", name="papel_valido"),
 )
 
 
@@ -269,7 +234,7 @@ report_questao = Table(
 )
 
 
-# ─────────────────── 3. Estado de aprendizado — isolado por escola (A) ───────────────────
+# ─────────────────────────── 3. Estado de aprendizado (A) ───────────────────────────
 
 aluno_palavra = Table(
     "aluno_palavra",
@@ -288,9 +253,7 @@ aluno_palavra = Table(
         "estado IN ('descoberta','nivel_1','nivel_2','nivel_3','nivel_4','dominada')",
         name="estado_valido",
     ),
-    CheckConstraint(
-        "origem IN ('pessoal_redacao','sinal_turma','banco_base')", name="origem_valida"
-    ),
+    CheckConstraint("origem IN ('pessoal_redacao','banco_base')", name="origem_valida"),
     UniqueConstraint("usuario_id", "palavra_id", name="aluno_palavra_unica"),
 )
 
@@ -392,18 +355,7 @@ colecionavel = Table(
 )
 
 
-# ─────────────── 6. Redações — B2C real (Fase 4); B2B por turma congelado ───────────────
-#
-# `redacao_atribuicao` serve os dois mundos ao mesmo tempo, sem reescrever o
-# professor congelado (CLAUDE.md "professor congelado, não deletado"): B2B
-# preenche `turma_id`/`professor_associacao_id` (como sempre fez —
-# `professor/repository.py` não mudou uma linha), B2C preenche `usuario_id`
-# (o perfil da criança) + `origem` + `tema_catalogo_id`. Nunca os dois ao
-# mesmo tempo (`ck_redacao_atribuicao_turma_xor_usuario`). Isto é uma revisão
-# do desenho original de `docs/plano_b2c.md` §7.4, que descrevia REMOVER
-# `turma_id`/`professor_associacao_id` — inviável, porque isso quebraria
-# `criar_atribuicao`/`redacoes_do_aluno` do domínio congelado. Registrado em
-# `design/notas-implementacao.md` (Fase 4, 25/08).
+# ─────────────────── 6. Redações — B2C, por perfil (Fase 4) ───────────────────
 
 tema_catalogo = Table(
     "tema_catalogo",
@@ -425,20 +377,13 @@ redacao_atribuicao = Table(
     "redacao_atribuicao",
     metadata,
     _id(),
-    # B2B congelado (turma) — nullable pq B2C não usa turma.
-    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), nullable=True),
-    Column("professor_associacao_id", BigInteger, ForeignKey("associacao.id", ondelete="SET NULL"), nullable=True),
-    # B2C (Fase 4) — nullable pq B2B não usa perfil direto.
-    Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=True),
-    Column("origem", Text, nullable=True),  # 'automatica' | 'sob_demanda' — só B2C (R-RD-1/R-RD-4)
+    Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False),
+    Column("origem", Text, nullable=False),  # 'automatica' | 'sob_demanda' (R-RD-1/R-RD-4)
     Column("tema_catalogo_id", BigInteger, ForeignKey("tema_catalogo.id", ondelete="SET NULL"), nullable=True),
     Column("tema", Text, nullable=False),
     Column("prazo", Date, nullable=True),
     _created_at(),
-    CheckConstraint(
-        "(turma_id IS NOT NULL) <> (usuario_id IS NOT NULL)", name="turma_xor_usuario"
-    ),
-    CheckConstraint("origem IS NULL OR origem IN ('automatica','sob_demanda')", name="origem_valida"),
+    CheckConstraint("origem IN ('automatica','sob_demanda')", name="origem_valida"),
 )
 
 redacao = Table(
@@ -485,31 +430,6 @@ redacao_palavra = Table(
     Column("virou_atribuicao", Boolean, nullable=False, server_default="false"),
     _created_at(),
     CheckConstraint("tipo IN ('fraca','superutilizada')", name="tipo_valido"),
-)
-
-sinal_turma = Table(
-    "sinal_turma",
-    metadata,
-    _id(),
-    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), nullable=False),
-    Column("palavra_id", BigInteger, ForeignKey("palavra.id", ondelete="CASCADE"), nullable=False),
-    Column("periodo", Text, nullable=False),
-    Column("pct", Numeric(5, 2), nullable=False),
-    Column("computado_em", DateTime(timezone=True), nullable=False, server_default=func.now()),
-    _created_at(),
-    UniqueConstraint("turma_id", "palavra_id", "periodo", name="sinal_turma_unico"),
-)
-
-
-# ─────────────────── 7. Configuração de turma — isolado (C; default em A) ───────────────────
-
-turma_config = Table(
-    "turma_config",
-    metadata,
-    Column("turma_id", BigInteger, ForeignKey("turma.id", ondelete="CASCADE"), primary_key=True),
-    Column("meta_semanal", Integer, nullable=True),  # palavras dominadas/semana
-    Column("preset_rigor", JSONB, nullable=True),
-    _created_at(),
 )
 
 

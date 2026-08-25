@@ -910,3 +910,63 @@ trabalho de app ou decisão do dono):
   nova** — reaproveita `GET /v1/assinatura`, `GET/POST /v1/conta/perfis`,
   `DELETE /v1/conta`, que já existiam. Fica registrado que isto foi decisão
   deliberada (evitar duplicar contrato), não esquecimento.
+
+## 🗑️ Fase 6 — Professor removido (decisão revisada 25/08, mesma sessão)
+
+`docs/plano_b2c.md` §09 original mandava **congelar** o professor/B2B (código
+parado no repo, fora da API pública, deletar de verdade só depois de 3 meses
+de B2C validado). Ao propor executar esse passo, encontrei uma contradição
+real entre o próprio texto do plano — passo 1 ("remover `professor_router` da
+API pública") quebraria os 8 testes de `test_professor.py`, que fazem
+requisição HTTP de verdade contra `/v1/professor/*`, contradizendo o passo 3
+do mesmo parágrafo ("manter os testes do professor rodando"). Levei a
+contradição pro dono em vez de escolher um lado sozinho; a resposta foi
+**deletar tudo**, não só resolver a contradição.
+
+**Executado nesta sessão** — primeira vez que este ambiente (worktree local
+do dono, não o container cloud) teve acesso a Flutter, então deu pra tocar
+os dois lados:
+
+- **Backend removido:** `backend/app/professor/` inteiro (rotas, serviço,
+  repositório, schemas), `backend/app/seed.py` (só existia pra semear
+  escola/turma/professor), `tests/test_professor.py`, as fixtures
+  `professor`/`coordenador` de `tests/conftest.py` (e o `await seed()` morto
+  em `test_jornada.py`, que não usava o retorno). De quebra, achado e
+  removido código morto que só o professor consumia:
+  `app/progressao/meta.py` inteiro (`meta_efetiva`/`META_DEFAULT_POR_ANO`) —
+  nada além dos próprios testes do módulo o chamava; a Home/`/v1/me` sempre
+  usaram `progressao/faixa.meta_semanal_default` diretamente.
+- **Schema removido** (migration `2353552372bd`, testada
+  upgrade→downgrade→upgrade sem drift): tabelas `turma`, `escola`,
+  `associacao_turma`, `turma_config`, `sinal_turma`; coluna
+  `associacao.escola_id`; `associacao.papel` restrito a
+  `'aluno'`/`'responsavel'` (tirou `'professor'`/`'coordenador'`/`'admin'`,
+  nenhum código usava esses valores fora do professor); `aluno_palavra.origem`
+  perde `'sinal_turma'`. **`redacao_atribuicao` volta ao desenho original do
+  plano** (só `usuario_id`+`origem`+`tema_catalogo_id`, sem `turma_id`) — a
+  decisão da Fase 4 de fazer a tabela coexistir com o professor
+  (`turma_id` XOR `usuario_id`) só existia por causa do professor; sem ele, a
+  coexistência não tem mais razão de ser. Registrado em `docs/plano_b2c.md`
+  §7.4.
+- **App Flutter removido:** `app/lib/features/professor/` (8 arquivos:
+  telas, DTOs, mapper, providers, shell), `app/lib/main_professor.dart`,
+  `app/test/professor_mapper_test.dart`,
+  `app/test/arquitetura_professor_test.dart` (o guard R1/R2 que garantia o
+  isolamento — sem professor pra isolar, o teste não tem mais o que
+  verificar). Dois comentários em `core/api_providers.dart` e
+  `features/identidade/auth_controller.dart` que explicavam a partilha de
+  providers com a superfície do professor foram ajustados.
+
+**Verificado:** 155 testes de backend passam (removidos os 12 de
+`test_professor.py` e os 2 de `meta_efetiva`; 1 novo cobrindo
+`meta_efetiva_b2c`), `flutter analyze` limpo, 26 testes de app passam
+(removidos os 2 do professor). Migration ida e volta sem drift (`alembic
+check`).
+
+**Não é pendência, é decisão registrada:** os documentos B2B pré-pivô
+(`docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md`,
+`design/brief-mockup-*.md`) agora descrevem código que **não existe mais no
+repo** (antes descreviam código congelado, ainda presente). Não foram
+reescritos — o custo de reescrever ~2000 linhas de prosa B2B segue não se
+pagando — mas `CLAUDE.md` "Mapa dos documentos" foi atualizado pra deixar
+isso explícito.

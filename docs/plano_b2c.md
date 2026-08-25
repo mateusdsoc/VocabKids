@@ -6,10 +6,11 @@
 > Detalhe em `design/notas-implementacao.md` § "Pivô B2C" (24/08/2026).
 > **Fases 4 e 5 parcialmente feitas, só backend** — redação real (rubrica,
 > triagem de risco + análise via Claude, atribuição automática/extra) e Área
-> do Responsável (PIN, resumo semanal com evolução por dimensão) — 169
-> testes de backend, com pendências explícitas de infra/conteúdo/app listadas
-> nas seções 07/08 e em `design/notas-implementacao.md` § "Fase 4"/"Fase 5"
-> (25/08/2026). Fase 6 (congelamento formal do professor) não começou.
+> do Responsável (PIN, resumo semanal com evolução por dimensão), com
+> pendências explícitas de infra/conteúdo/app listadas nas seções 07/08 e em
+> `design/notas-implementacao.md` § "Fase 4"/"Fase 5" (25/08/2026). **Fase 6
+> feita, revisada**: o professor/B2B foi **deletado** (não congelado como o
+> desenho original previa) — ver §09. 155 testes de backend, 26 do app.
 > **Criado em:** 24 de agosto de 2026.
 > **Escopo:** transformar o produto de "software de vocabulário para escolas"
 > (B2B, venda por escola, professor no centro) em "assinatura familiar mobile"
@@ -111,7 +112,7 @@ Não comece a Fase 1 sem estas respostas. Cada uma muda schema ou fluxo.
 | D8 | Frequência de redação | Semanal / quinzenal / sob demanda | **Quinzenal automática + "pedir tema agora"** (limitado, para não estourar custo de LLM). |
 | D9 | Categoria na App Store | Kids Category / Educação 4+ | **Educação, 4+**, com portão parental. Ver seção 8 — Kids Category proíbe SDK de terceiros e complica afiliados. Precisa de validação jurídica. |
 | D10 | Escrita manuscrita | Só digitada / foto+OCR / ambas | **Ambas.** Criança de 7–8 não digita redação. OCR **no dispositivo** (seção 9). |
-| D11 | Manter B2B vivo? | Deletar / congelar | **Congelar.** Ver Fase 6. |
+| D11 | Manter B2B vivo? | Deletar / congelar | ~~Congelar.~~ **Deletado** (revisado 25/08, Fase 6 — ver §09). |
 
 ---
 
@@ -513,18 +514,19 @@ envio (app)
 Os passos 3 e 4 **já estão especificados** em `docs/arquitetura.md` Bloco 2b —
 reaproveite o desenho, ele não depende de professor.
 
-### 7.4 Schema — migration `326aa898d291` (revisado 25/08 — implementado)
+### 7.4 Schema — migrations `326aa898d291` + `2353552372bd`
 
-O desenho original desta seção mandava **remover** `turma_id`/
-`professor_associacao_id` de `redacao_atribuicao`. Isso quebraria
-`app/professor/repository.py` (`criar_atribuicao`/`redacoes_do_aluno`), que o
-professor congelado ainda usa de verdade — CLAUDE.md exige congelar, não
-reescrever. Decisão revisada (registrada em
-`design/notas-implementacao.md`): as duas colunas ficam, mas viram
-**nullable**, e a tabela passa a servir os dois mundos ao mesmo tempo:
+> **Histórico da decisão (deixado aqui porque explica o formato final):** a
+> versão de 25/08 desta seção (feita durante a Fase 4) tornava `turma_id`/
+> `professor_associacao_id` nullable e fazia `redacao_atribuicao` servir B2C
+> e o professor congelado ao mesmo tempo, porque removê-las quebraria
+> `app/professor/repository.py`. Na Fase 6, no mesmo dia, o dono decidiu
+> deletar o professor em vez de congelar (§09) — o que elimina o motivo da
+> coexistência. A migration `2353552372bd` reverte `redacao_atribuicao` para
+> o desenho original abaixo, que é o estado atual do schema.
 
 ```python
-tema_catalogo = Table(   # NOVO — o catálogo curado
+tema_catalogo = Table(   # o catálogo curado
     "tema_catalogo", metadata, _id(),
     Column("faixa_etaria", Text, nullable=False),
     Column("titulo", Text, nullable=False),
@@ -534,19 +536,18 @@ tema_catalogo = Table(   # NOVO — o catálogo curado
     _created_at(),
 )
 
-# redacao_atribuicao:
-#   turma_id                nullable=True   (era False — só B2B usa)
-#   professor_associacao_id nullable=True   (sem mudança)
-#   usuario_id               NOVO, nullable=True  — a criança (só B2C usa)
-#   origem                   NOVO, nullable=True  — 'automatica'|'sob_demanda'
-#   tema_catalogo_id          NOVO, nullable=True
-#   CHECK (turma_id IS NOT NULL) <> (usuario_id IS NOT NULL)  -- nunca os dois
+redacao_atribuicao = Table(
+    "redacao_atribuicao", metadata, _id(),
+    Column("usuario_id", BigInteger, ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False),
+    Column("origem", Text, nullable=False),  # 'automatica' | 'sob_demanda'
+    Column("tema_catalogo_id", BigInteger, ForeignKey("tema_catalogo.id", ondelete="SET NULL"), nullable=True),
+    Column("tema", Text, nullable=False),
+    Column("prazo", Date, nullable=True),
+    _created_at(),
+)
 
 # redacao: + risco_sinalizado (bool), + risco_motivo (text) — R-RD-7
 #          status ganha 'revisao_humana'
-
-# sinal_turma, turma_config seguem existindo — são do professor congelado,
-# não fazem parte do caminho B2C, mas continuam servindo quem já os usa.
 ```
 
 ### 7.5 Segurança de conteúdo (obrigatório, não opcional)
@@ -616,27 +617,42 @@ R-RS-3  Nada de comparação com outras crianças. Sem ranking, sem percentil.
 
 ---
 
-## 09 - FASE 6 — Congelar o professor (por último, não por primeiro)
+## 09 - FASE 6 — Professor removido (revisado 25/08: deletado, não congelado)
 
-Graças a R1/R2 (`test/arquitetura_professor_test.dart`), o professor já é
-removível com uma tesoura. Mas **não delete agora**:
+> **Feito (25/08).** O plano original desta seção propunha **congelar**
+> (rotas fora da API pública, código mantido, deletar de verdade só depois de
+> 3 meses de B2C validado). O dono revisou a decisão nesta sessão: **deletar
+> agora** — sem escola no pipeline hoje, manter ~900 linhas de backend + a
+> árvore `features/professor/` do app rodando (ainda que fora do caminho
+> crítico) é custo de manutenção sem uso; `git log` preserva o código se a
+> frente B2B reabrir. Decisão e detalhe completo em
+> `design/notas-implementacao.md` § "Fase 6" (25/08/2026).
 
-- Ele já não entra no APK/IPA do aluno (tree-shaking garantido pelo guard).
-- Custa zero se você parar de mexer.
-- Preserva a opção B2B se uma escola aparecer.
+Graças a R1/R2 (o guard `test/arquitetura_professor_test.dart`, também
+removido), o professor já era removível com uma tesoura — nada fora de
+`features/professor/` importava a árvore, e nada fora de `app/professor/`
+importava o domínio no backend, então a remoção não teve efeito cascata.
 
-**Passo real:**
+**O que saiu:**
 
-1. Remover `professor_router` de [api/v1.py](backend/app/api/v1.py) — a
-   superfície some da API pública sem apagar código.
-2. Marcar `backend/app/professor/` e `app/lib/features/professor/` como
-   congelados num cabeçalho de arquivo.
-3. Manter `tests/` do professor rodando (guarda contra regressão do schema).
-4. Deletar de verdade **só depois** de 3 meses de B2C validado — commit único,
-   reversível por git.
+- Backend: `backend/app/professor/` inteiro, `backend/app/seed.py` (só
+  semeava escola/turma/professor), `tests/test_professor.py`, as fixtures
+  `professor`/`coordenador` de `tests/conftest.py`, e o código morto que só
+  o professor usava (`app/progressao/meta.py` — `meta_efetiva`/
+  `META_DEFAULT_POR_ANO`).
+- Schema: tabelas `turma`, `escola`, `associacao_turma`, `turma_config`,
+  `sinal_turma`; colunas `associacao.escola_id`,
+  `redacao_atribuicao.turma_id`/`professor_associacao_id` (a tabela volta ao
+  desenho original desta seção — não precisa mais coexistir com o B2B, ver
+  §7.4); `associacao.papel` restrito a `'aluno'`/`'responsavel'`;
+  `aluno_palavra.origem` perde o valor `'sinal_turma'`.
+- App Flutter: `app/lib/features/professor/`, `app/lib/main_professor.dart`,
+  `app/test/professor_mapper_test.dart`,
+  `app/test/arquitetura_professor_test.dart`.
 
-⚠️ O que **precisa** sair agora: `sinal_turma`, `turma_config` e as rotas de
-professor no pipeline de redação (Fase 4), porque bloqueiam o novo modelo.
+**Verificado:** 155 testes de backend (menos os 8 do professor removido),
+`flutter analyze` limpo, 26 testes de app (menos os 2 do professor
+removido). Migration testada upgrade→downgrade→upgrade sem drift.
 
 ---
 

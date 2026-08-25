@@ -49,7 +49,6 @@ def test_pontuar_continua_o_combo_da_sessao():
 
 from datetime import datetime, timezone
 
-from app.progressao.meta import META_DEFAULT, meta_efetiva
 from app.progressao.semana import FUSO_ESCOLA, inicio_da_semana
 
 
@@ -70,13 +69,4 @@ def test_inicio_da_semana_converte_fusos():
     )
 
 
-def test_meta_efetiva_config_vence_default():
-    assert meta_efetiva(12, 7) == 12
-
-
-def test_meta_efetiva_default_por_ano():
-    assert meta_efetiva(None, 6) == 4
-    assert meta_efetiva(None, 7) == 5
-    assert meta_efetiva(None, 8) == 6
-    assert meta_efetiva(None, 9) == 7
-    assert meta_efetiva(None, None) == META_DEFAULT
+# Meta semanal por faixa: coberta em test_progressao_faixa.py.

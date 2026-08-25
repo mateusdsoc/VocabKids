@@ -1,9 +1,7 @@
 """Contratos de entrada/saída (Pydantic) do domínio identidade.
 
 B2C (docs/plano_b2c.md Fase 1): entrada por `codigo_turma` deu lugar a conta
-do responsável (e-mail/senha) + perfis de criança. `turma`/`escola` saíram
-destes contratos — quem ainda precisa deles é o domínio `professor` (fatia
-B2B congelada), que tem os próprios schemas.
+do responsável (e-mail/senha) + perfis de criança.
 """
 from datetime import datetime, timezone
 

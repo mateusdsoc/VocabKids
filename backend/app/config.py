@@ -16,12 +16,13 @@ class Settings(BaseSettings):
     # Auth JWT (HS256). Sem default de propósito: um segredo vazio derruba a
     # emissão/validação de token com erro claro (gere com `openssl rand -hex 32`).
     jwt_secret: str = ""
-    # TTL da sessão. Longo de propósito: aluno não tem senha (reentra pelo
-    # código de turma) e o token vive em secure storage no dispositivo.
+    # TTL da sessão. Longo de propósito: a criança não tem senha própria
+    # (entra por seleção de perfil) e o token vive em secure storage no
+    # dispositivo.
     jwt_ttl_horas: int = 720  # 30 dias
 
-    # CORS: origens explícitas separadas por vírgula (nunca "*" — o site do
-    # professor entra aqui quando for publicado). Vazio = CORS desligado.
+    # CORS: origens explícitas separadas por vírgula (nunca "*"). Vazio =
+    # CORS desligado — hoje só o app mobile consome a API.
     cors_origins: str = ""
 
     # Rate limiting (janela fixa de 60s, em memória — vale por processo; se a

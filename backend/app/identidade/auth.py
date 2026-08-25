@@ -33,7 +33,7 @@ _ALGORITMO = "HS256"
 class UsuarioAutenticado:
     id: int
     nome: str
-    papel: str | None  # 'aluno' | 'professor' | 'coordenador' | 'admin'
+    papel: str | None  # 'aluno' | 'responsavel'
 
 
 def _segredo() -> str:

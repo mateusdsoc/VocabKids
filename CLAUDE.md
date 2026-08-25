@@ -15,10 +15,12 @@ referência comentada. **Cliente fino, servidor autoritativo**: o cliente nunca
 calcula pontuação nem recebe a resposta correta antecipada, e nunca decide
 sozinho se a assinatura está ativa (`docs/plano_b2c.md` R-AS-1).
 
-O **professor/B2B está congelado, não deletado** (`docs/plano_b2c.md` Fase 6):
-o backend (`app/professor/`) e o site (`app/lib/features/professor/`)
-continuam no repo e funcionando, mas fora do caminho crítico do produto atual
-— não espere novidade ali a menos que o dono reabra essa frente.
+O **professor/B2B foi removido** (`docs/plano_b2c.md` Fase 6, revisado
+25/08/2026 — o plano original previa congelar, o dono decidiu deletar de
+verdade): backend (`app/professor/`), site (`app/lib/features/professor/`,
+`main_professor.dart`) e as tabelas `turma`/`escola`/`associacao_turma`/
+`turma_config`/`sinal_turma` saíram do repo. `git log` tem o código se algum
+dia reabrir essa frente — não é onde investir esforço agora.
 
 > **Ambiente:** o backend é construído e testado na cloud (Python + Postgres
 > disponíveis). O app **Flutter** é autorado no repositório e rodado na máquina
@@ -56,7 +58,6 @@ uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — ide
 uv run python -m app.seed_trilha       # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
 uv run python -m app.seed_temas        # catálogo de temas de redação (18 de 120 — ver docs/plano_b2c.md §10.4)
 uv run python -m app.seed_demo         # conta+perfis "vitrine" (com assinatura ativa) p/ demo — reset a cada rodada
-uv run python -m app.seed              # só se for mexer no professor/B2B congelado — turma DEMO7A + professora
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
 
 # Migrations — o schema vive em app/schema.py; o Alembic autogera a partir dele
@@ -64,18 +65,14 @@ uv run alembic revision --autogenerate -m "descrição"
 uv run alembic upgrade head
 ```
 
-### App (`app/`) — Flutter, dois entrypoints
+### App (`app/`) — Flutter
 
 ```bash
 cd app
-flutter analyze && flutter test        # inclui o guard de arquitetura R1/R2
+flutter analyze && flutter test
 
-# Aluno (mobile)
+# Aluno (mobile, único entrypoint)
 flutter run -t lib/main.dart
-
-# Professor (web) — entrypoint separado
-flutter run -d chrome -t lib/main_professor.dart --dart-define=DEMO=true
-flutter build web -t lib/main_professor.dart
 
 # dart-defines (ver lib/core/config.dart):
 #   API_BASE_URL=...        base da API sem /v1 (default http://10.0.2.2:8000)
@@ -99,21 +96,16 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   de XP/combo, semana letiva, meta por faixa etária e faixa→parâmetros —
   `progressao/faixa.py`), `adaptacao` (regra pura de nível, respeita o teto da
   faixa), `redacao` (real desde a Fase 4 — rubrica pura por faixa, triagem de
-  risco + análise via Claude, `redacao_atribuicao` compartilhada com o
-  professor congelado por `turma_id` XOR `usuario_id`, ver §7.4 de
-  `docs/plano_b2c.md`), `responsavel` (real desde a Fase 5 — PIN da Área do
-  Responsável em `conta.pin_hash`, resumo semanal por perfil: meta/minutos/
-  sessões, 5 palavras aprendidas, evolução da redação por dimensão),
-  `professor` (**congelado, B2B** — queries reais +
-  escopo por associação seguem funcionando, mas fora do produto atual) e o
-  **mock restante da fatia A**: `report` (vira real depois da Fase 5, se a
-  Área do Responsável precisar).
-- **Schema único** em `app/schema.py` (30 tabelas, SQLAlchemy Core) — fonte
+  risco + análise via Claude), `responsavel` (real desde a Fase 5 — PIN da
+  Área do Responsável em `conta.pin_hash`, resumo semanal por perfil:
+  meta/minutos/sessões, 5 palavras aprendidas, evolução da redação por
+  dimensão) e o **mock restante da fatia A**: `report` (sem fase B2C
+  prevista pra virar real). `professor` (B2B) foi removido — ver nota acima.
+- **Schema único** em `app/schema.py` (25 tabelas, SQLAlchemy Core) — fonte
   tanto das migrations quanto do `create_all` dos testes. PK `BIGINT
   IDENTITY`; enums via `VARCHAR + CHECK`. Migrations Alembic **lineares** (uma
-  cadeia única) — `turma`/`escola`/`associacao_turma`/`turma_config` e
-  `sinal_turma` seguem no schema (usados pelo professor congelado), mas fora
-  do caminho de identidade do B2C.
+  cadeia única). `associacao` guarda só `usuario_id`+`papel` ('aluno' |
+  'responsavel') — perdeu `escola_id` junto com o professor.
 - **Auth B2C**: cadastro por e-mail/senha do responsável (`POST /v1/conta`) →
   cria até 3 perfis de criança (`POST /v1/conta/perfis`, sem senha própria) →
   troca o token do responsável pelo de gameplay (`POST
@@ -121,9 +113,7 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   gameplay exigem papel `aluno`, rotas de conta exigem papel `responsavel`
   (`require_papel`, `app/identidade/auth.py`). Sessão em **JWT HS256 com
   expiração** (exige `JWT_SECRET` no ambiente, gere com `openssl rand -hex
-  32`; TTL via `JWT_TTL_HORAS`). O professor congelado mantém seu próprio
-  login-por-seed e escopo por associação (turma/escola), sem se misturar com
-  o fluxo do responsável. **Rate limiting** em memória
+  32`; TTL via `JWT_TTL_HORAS`). **Rate limiting** em memória
   (`app/seguranca/rate_limit.py`) e **CORS explícito** via `CORS_ORIGINS`
   (nunca `*`) em `app/main.py`. No app, o token vive em
   `flutter_secure_storage` (`core/token_store.dart`) — só **um** por vez (ver
@@ -146,12 +136,9 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 - `lib/core/`: `api_client.dart`, providers, `config.dart` (dart-defines),
   tema em `core/theme/` (tokens em `app_colors.dart`). `lib/features/<tela>/`
   por funcionalidade.
-- **Dois entrypoints**: `main.dart` (aluno, mobile) e `main_professor.dart`
-  (professor, web). Regras de isolamento, verificadas por
-  `test/arquitetura_professor_test.dart`:
-  - **R1:** nada fora de `features/professor/` (nem `main.dart`) importa
-    `features/professor/` — o tree-shaking tira o professor do APK/IPA;
-  - **R2:** `features/professor/` importa só `core/` e a própria subárvore.
+- **Um entrypoint**: `main.dart` (aluno, mobile). Havia um segundo
+  (`main_professor.dart`, web) até a remoção do professor/B2B — ver nota no
+  topo do arquivo.
 - Padrão de dados: DTOs espelham os schemas do backend; um `*Mapper` traduz
   para modelos de apresentação; providers Riverpod (GETs em `FutureProvider`,
   mutações em `AsyncNotifier`). `AppConfig.demo` serve dados `*.sample` sem
@@ -170,20 +157,21 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   diagnóstico do onboarding (orçamento de perguntas por faixa). Paywall
   (`features/assinatura/`) funciona estruturalmente mas precisa da API key
   real do RevenueCat (`AppConfig.revenueCatApiKey`) pra listar oferta de
-  verdade — sem ela mostra "configuração de pagamento pendente". O
-  **professor** (backend real, site em `DEMO`) está **congelado** — fora do
-  produto atual, não é onde investir esforço agora. Estado e próximos passos
-  em `HANDOFF.md` e `docs/plano_b2c.md`.
+  verdade — sem ela mostra "configuração de pagamento pendente". Redação real
+  (Fase 4) e Área do Responsável (Fase 5) têm backend pronto mas **nenhuma
+  tela Flutter ainda** (`redacao_screen.dart` segue em dado de amostra local;
+  `features/responsavel/` não existe) — é o próximo trabalho de app, não de
+  backend. Estado e próximos passos em `HANDOFF.md` e `docs/plano_b2c.md`.
 
 ## Mapa dos documentos
 
 | Documento | Papel |
 |---|---|
 | `docs/plano_b2c.md` | **Plano B2C — fonte da verdade atual**: fases, regras de negócio (R-ID/R-FX/R-AS/...), schema, ferramentas, checklist |
-| `docs/rascunho_product.md` | Produto **B2B original** (pré-pivô) — banco de vocabulário/XP/trilha/diagnóstico ainda valem; identidade, público e monetização, não (ver plano B2C) |
-| `docs/arquitetura.md` | Arquitetura **B2B original** (pré-pivô) — pipelines de redação e princípios gerais (cliente fino/servidor autoritativo) ainda valem; Bloco 1 (identidade por turma) e Bloco 3 (domínios), não |
-| `design/telas.md` | **Contrato** de conteúdo/comportamento de cada tela — telas B2B pré-pivô; as novas telas B2C (cadastro, seletor de perfil, paywall) ainda não têm contrato formal aqui |
-| `design/brief-mockup-*.md` | **Contrato** visual por tela (sistema travado) — mesma ressalva: pré-pivô |
+| `docs/rascunho_product.md` | Produto **B2B original** (pré-pivô, código removido na Fase 6) — banco de vocabulário/XP/trilha/diagnóstico ainda valem; identidade, público e monetização, não (ver plano B2C) |
+| `docs/arquitetura.md` | Arquitetura **B2B original** (pré-pivô, código removido na Fase 6) — pipelines de redação e princípios gerais (cliente fino/servidor autoritativo) ainda valem; Bloco 1 (identidade por turma) e Bloco 3 (domínios), não |
+| `design/telas.md` | **Contrato** de conteúdo/comportamento de cada tela — telas B2B pré-pivô (código removido); as novas telas B2C (cadastro, seletor de perfil, paywall) ainda não têm contrato formal aqui |
+| `design/brief-mockup-*.md` | **Contrato** visual por tela (sistema travado) — mesma ressalva: pré-pivô, código removido |
 | `design/notas-implementacao.md` | Registro vivo: feito, adiado, decisões revisadas |
 | `HANDOFF.md` | Estado de trabalho entre sessões (histórico) |
 
@@ -208,8 +196,8 @@ se declara travado e está errado é pior que nenhum documento.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo/velocidade.
 - Erro de resposta = vermelho suavizado (tint + borda/texto), nunca punitivo.
 - Combo é **por sessão** (zera ao abrir sessão). Meta é **semanal**, default
-  por faixa etária da criança (`progressao/faixa.py`) — não há mais professor
-  configurando (fatia B2B congelada).
+  por faixa etária da criança (`progressao/faixa.py`) — não há professor
+  configurando (o B2B foi removido).
 - Colecionáveis são puramente colecionáveis (sem bônus de gameplay);
   reveal nítido só no Passaporte; determinístico, sem loot box.
 - O cliente nunca calcula pontuação nem recebe a resposta correta antecipada.
