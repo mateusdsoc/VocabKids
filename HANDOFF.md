@@ -8,7 +8,7 @@
 
 ## Estado atual (25/08 — Fases 4, 5 e 6 do B2C)
 
-**Professor/B2B deletado, não só congelado** — `docs/plano_b2c.md` §09
+**Professor/B2B deletado, não só congelado** — `docs/produto/plano_b2c.md` §09
 (revisado na hora: o plano original mandava congelar; o dono decidiu deletar
 de verdade). Saiu backend (`app/professor/`, `app/seed.py`,
 `test_professor.py`), schema (`turma`/`escola`/`associacao_turma`/
@@ -21,7 +21,7 @@ pendência. Detalhe completo em `design/notas-implementacao.md` § "Fase 6"
 (25/08/2026).
 
 **Redação real substituiu o mock** (`backend/app/redacao/`) —
-`docs/plano_b2c.md` §07, detalhe completo e todas as pendências em
+`docs/produto/plano_b2c.md` §07, detalhe completo e todas as pendências em
 `design/notas-implementacao.md` § "Fase 4" (25/08/2026). Rubrica pura por
 faixa, triagem de risco + análise pedagógica numa chamada ao Claude,
 atribuição de tema automática (a cada 15 dias, best-effort) e sob demanda
@@ -32,7 +32,7 @@ com o professor deletado, a tabela voltou ao desenho original do plano (só
 `usuario_id`).
 
 **Área do Responsável, backend só** (`backend/app/responsavel/`) —
-`docs/plano_b2c.md` §08, notas em § "Fase 5" (25/08/2026). Portão PIN
+`docs/produto/plano_b2c.md` §08, notas em § "Fase 5" (25/08/2026). Portão PIN
 (`conta.pin_hash`, já existia no schema desde a Fase 1, nunca usado até
 agora) e resumo semanal por perfil (meta/minutos/sessões, 5 palavras
 aprendidas, evolução da redação por dimensão — exigiu um retrofit pequeno na
@@ -41,50 +41,69 @@ nomeados, R-RD-6). De quebra, achado e corrigido um rate limit frouxo demais
 no PIN (caía no teto genérico de 240/min — um PIN de 4 dígitos seria
 força-bruteável em ~42min; movido pro teto de login, 5/min).
 
-**Estado final da sessão:** 155 testes de backend, 26 de app, `flutter
-analyze` limpo — todos verdes. Redação/Área do Responsável: app Flutter não
-tocado (só o backend) — conferido antes de mexer no contrato:
-`redacao_screen.dart` hoje é 100% `Redacao.sample()` local, nunca chamou
-`/v1/redacoes` de verdade, então não houve breaking change; a Área do
-Responsável não tem nenhuma tela ainda (`app/lib/features/responsavel/` não
-existe). Professor: app e backend deletados juntos, sem defasagem entre os
-dois lados.
+**Estado final da sessão original (backend):** 155 testes de backend, 26 de
+app, `flutter analyze` limpo — todos verdes. Redação/Área do Responsável:
+app Flutter não tocado nesta rodada (só o backend); Professor: app e backend
+deletados juntos, sem defasagem entre os dois lados.
+
+> ✅ **Atualização (25/08, sessão seguinte):** as duas telas de app que
+> faltavam foram feitas — ver "▶️ Próximos passos" abaixo. `redacao_screen.dart`
+> e `app/lib/features/responsavel/` consomem o backend real de ponta a ponta
+> agora; os parágrafos acima descrevem o estado logo após a sessão de
+> backend, não o estado atual.
 
 **Pendente, explícito (backend roda, mas não está pronto pra produção):**
 sem fila assíncrona (chamada ao Claude é síncrona no request), sem cron real
-pra atribuição, `AnalisadorClaude` nunca chamou a API de verdade nesta sessão
-(sem `ANTHROPIC_API_KEY` no ambiente do agente — validar isso é o próximo
-passo óbvio), sem notificação ao responsável quando cai em revisão humana,
-sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de propósito —
-precisa da mesma revisão humana que o plano exige pro vocabulário base),
-sem telas Flutter pra redação real nem pra Área do Responsável (portão PIN
-incluso — o backend valida, mas ninguém ainda impõe passar por ele antes de
-ver o resumo), catálogo de temas com 18 de 120 previstos, e retenção/opt-out
-contratual do provedor de LLM (R-RD-8/R-RD-9) não endereçados. Todas as três
-fases foram commitadas nesta sessão; revisão do dono ainda recomendada antes
-de qualquer envio real de criança passar pela triagem de risco (R-RD-7) —
-`AnalisadorClaude` nunca rodou contra a API de verdade.
+pra atribuição, `AnalisadorClaude` nunca chamou a API de verdade em nenhuma
+sessão (sem `ANTHROPIC_API_KEY` no ambiente do agente — validar isso é o
+próximo passo óbvio), sem notificação ao responsável quando cai em revisão
+humana, sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de
+propósito — precisa da mesma revisão humana que o plano exige pro vocabulário
+base), catálogo de temas com 18 de 120 previstos, e retenção/opt-out
+contratual do provedor de LLM (R-RD-8/R-RD-9) não endereçados. Revisão do
+dono ainda recomendada antes de qualquer envio real de criança passar pela
+triagem de risco (R-RD-7) — `AnalisadorClaude` nunca rodou contra a API de
+verdade.
 
 ---
 
 ## ▶️ Próximos passos (ordem sugerida)
 
-**Trabalho de app pendente — backend das duas features já está pronto:**
+**~~1. Redação real (Fase 4, app)~~ ✅ feita (25/08, sessão seguinte)** —
+`app/lib/features/redacao/` consome `GET /v1/redacoes` + `POST
+/v1/redacoes/{id}/enviar` + `GET /v1/redacoes/{id}/analise` de verdade.
+**Só o caminho digitado** (decisão do dono): foto/manuscrita fica visível
+mas desabilitada ("em breve") até o app integrar OCR on-device (ML Kit) —
+ver "Antes de expor pra qualquer criança de verdade" abaixo, que segue
+pendente. `flutter analyze` limpo, `flutter test` 26/26, 4 desfechos
+verificados ao vivo no navegador (DEMO). Detalhe completo em
+`design/notas-implementacao.md` § "Fase 4, app".
 
-1. **Redação real (Fase 4, app)** — `app/lib/features/redacao/redacao_screen.dart`
-   hoje é 100% `Redacao.sample()` local; trocar por `GET /v1/redacoes` +
-   `POST /v1/redacoes/{id}/enviar` + `GET /v1/redacoes/{id}/analise`
-   (contratos em `backend/app/redacao/schemas.py`). Escrita manuscrita
-   precisa de OCR **on-device** (ML Kit) — o backend só recebe
-   `texto_extraido` pronto, nunca a foto; digitada não precisa de OCR
-   nenhum. Ver pendências em `design/notas-implementacao.md` § "Fase 4".
-2. **Área do Responsável (Fase 5, app)** — `app/lib/features/responsavel/`
-   não existe ainda. Portão PIN primeiro (`POST /v1/conta/pin/verificar` —
-   só depois de 204 é que a tela pode navegar pro resumo, R-RS-1; hoje nada
-   força essa ordem, é o app quem precisa impor), depois a tela de resumo
-   semanal (`GET /v1/responsavel/perfis/{id}/resumo`) e os atalhos pra
-   assinatura/perfis/exclusão (rotas já existentes, reaproveitar). Ver
-   `docs/plano_b2c.md` §08 e `design/notas-implementacao.md` § "Fase 5".
+**~~1. Área do Responsável (Fase 5, app)~~ ✅ feita (25/08, sessão seguinte)**
+— `app/lib/features/responsavel/` criado: portão PIN (`pin_gate_screen.dart`,
+com "criar PIN"/"esqueci o PIN"), home com filhos + atalhos
+(`responsavel_home_screen.dart`), resumo semanal por filho
+(`resumo_screen.dart`) e exclusão de conta (`excluir_conta_screen.dart`).
+**Achado importante:** como o `TokenStore` guarda só um token e não existe
+endpoint pra trocar o token de criança de volta pro de responsável, a Área do
+Responsável só é alcançável no Seletor de Perfil (mesmo lugar do Paywall) —
+não "dentro do jogo" como o texto original do plano sugeria. Um atalho em
+Configurações explica isso pro caso comum (app abrindo direto na Home da
+criança). `flutter analyze` limpo, `flutter test` 26/26, 4 telas verificadas
+ao vivo no navegador (DEMO). Detalhe completo em
+`design/notas-implementacao.md` § "Fase 5, app".
+
+**~~Verificação em Simulador iOS~~ ✅ feita (25/08, sessão seguinte)** —
+Home, Redação (lista, envio digitado, resultado analisado com texto grifado,
+resultado `erro_ingestao`) e o portão de PIN da Área do Responsável
+navegados ao vivo em renderização nativa (iPhone 17 Pro, iOS 26.5), tudo
+correto. Uma limitação da ferramenta de automação (não do app) impediu tocar
+botões que ficam sob o teclado de software quando um campo de texto está
+focado — o mesmo fluxo já tinha sido validado de ponta a ponta no navegador.
+Detalhe em `design/notas-implementacao.md` § "Verificação em Simulador iOS".
+
+**Trabalho de app pendente:** nenhum mapeado — Fases 4 e 5 do app estão
+feitas, com verificação visual em navegador e simulador iOS.
 
 **Antes de expor pra qualquer criança de verdade:** validar
 `AnalisadorClaude` contra a API real (`ANTHROPIC_API_KEY`) — nunca rodou
@@ -97,11 +116,11 @@ temas (18 de 120), retenção/opt-out contratual do provedor de LLM
 
 ---
 
-## Estado anterior (24/08, pivô B2C — Fases 1–3 de `docs/plano_b2c.md` feitas)
+## Estado anterior (24/08, pivô B2C — Fases 1–3 de `docs/produto/plano_b2c.md` feitas)
 
 **Pivô B2C em andamento.** Produto saiu de venda por escola pra assinatura
 direto pra família — decisão e racional completos em
-`design/notas-implementacao.md` § "Pivô B2C" e `docs/plano_b2c.md` (a fonte
+`design/notas-implementacao.md` § "Pivô B2C" e `docs/produto/plano_b2c.md` (a fonte
 da verdade do produto agora; os docs antigos ficaram com nota de pré-pivô no
 topo, não foram reescritos por inteiro).
 
@@ -139,9 +158,9 @@ trocava o estado por baixo. Corrigido.
   congelamento formal do professor) não começaram.
 - Conta RevenueCat/Apple Developer real — sem ela, o paywall funciona
   estruturalmente mas mostra "configuração pendente" (`AppConfig.revenueCatApiKey`).
-- `docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md` e os
+- `docs/legado-b2b/rascunho_product.md`, `docs/legado-b2b/arquitetura.md`, `design/telas.md` e os
   briefs não foram reescritos por inteiro pro B2C (só ganharam nota de
-  pré-pivô no topo) — onde contradizem `docs/plano_b2c.md`, vale o plano.
+  pré-pivô no topo) — onde contradizem `docs/produto/plano_b2c.md`, vale o plano.
 
 ---
 

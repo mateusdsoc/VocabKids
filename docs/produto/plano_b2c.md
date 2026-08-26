@@ -194,7 +194,7 @@ para cobrir infra, LLM e conteúdo. Faça a conta antes de fechar o percentual.
    OCR: NO DISPOSITIVO (ML Kit) — a foto nunca sai do aparelho.
 ```
 
-**Mudança arquitetural relevante frente a `docs/arquitetura.md`:** o Bloco 2b
+**Mudança arquitetural relevante frente a `docs/legado-b2b/arquitetura.md`:** o Bloco 2b
 previa OCR no Google Cloud Vision com a foto no R2. Para B2C isso é ruim em
 dois eixos — custo e LGPD (imagem de caderno de criança em bucket). Proposta:
 OCR **on-device**, sobe só o `texto_extraido`, e a foto é descartada.
@@ -451,6 +451,14 @@ mata a chance de reativação — e reativação é a métrica que sustenta B2C.
 > palavra→trilha (§7.3 passo 4), catálogo de temas com 18 dos 120 previstos
 > (§10.4), e R-RD-8/R-RD-9 (retenção/opt-out contratual do provedor) ainda
 > não endereçados — são trabalho legal/de conteúdo, não código.
+>
+> **Feito na sessão seguinte (25/08), app:**
+> `app/lib/features/redacao/redacao_screen.dart` e telas irmãs trocaram
+> `Redacao.sample()` local pelas 3 rotas reais acima. Só o caminho **digitado**
+> (`formato: 'digital'`) — a captura de foto fica visível mas desabilitada
+> ("em breve") até o app integrar OCR on-device (ML Kit), que segue de fora
+> deste ambiente. Detalhe em `design/notas-implementacao.md` § "Fase 4, app"
+> (25/08/2026).
 
 Hoje [redacao/routes.py](backend/app/redacao/routes.py) é real (Fase 4).
 
@@ -511,7 +519,7 @@ envio (app)
               5. NOTIFICAR    push "sua redação voltou!"
 ```
 
-Os passos 3 e 4 **já estão especificados** em `docs/arquitetura.md` Bloco 2b —
+Os passos 3 e 4 **já estão especificados** em `docs/legado-b2b/arquitetura.md` Bloco 2b —
 reaproveite o desenho, ele não depende de professor.
 
 ### 7.4 Schema — migrations `326aa898d291` + `2353552372bd`
@@ -587,17 +595,31 @@ de referência (escopo por conta em vez de por turma).
 > /v1/conta/perfis`, `DELETE /v1/conta`); a Área do Responsável só os
 > consome. 169 testes de backend (9 novos), incluindo um teto de rate limit
 > dedicado pro PIN (ver pendência abaixo). Detalhe e pendências completas em
-> `design/notas-implementacao.md` § "Fase 5" (25/08/2026) — resumo rápido:
-> **nenhuma tela Flutter foi criada** (`app/lib/features/responsavel/` não
-> existe ainda — isto é trabalho de app, fora deste ambiente); o portão PIN
-> em si é só o backend validando o segredo — quem faz valer R-RS-1 de
-> verdade ("antes de QUALQUER dado") é a tela do app só navegar pra cá depois
-> de `/conta/pin/verificar` responder 204, e isso ainda não existe pra
-> impor nada.
+> `design/notas-implementacao.md` § "Fase 5" (25/08/2026).
+>
+> **Feito na sessão seguinte (25/08), app:** `app/lib/features/responsavel/`
+> criado — portão PIN real (`pin_gate_screen.dart`, impõe R-RS-1 navegando pro
+> resumo só depois de `/conta/pin/verificar` responder 204), home com os
+> filhos + atalhos (`responsavel_home_screen.dart`), resumo semanal
+> (`resumo_screen.dart`) e exclusão de conta (`excluir_conta_screen.dart`).
+> **Decisão revisada (achado arquitetural, não de produto):** a linha abaixo
+> ("dentro do app da criança") sugere um atalho alcançável a qualquer momento
+> durante o jogo; na prática o `TokenStore` do app guarda um único token e não
+> existe endpoint pra trocar o token de criança de volta pro de responsável
+> (só `POST /perfis/{id}/entrar`, responsável→criança). Por isso a Área do
+> Responsável só é alcançável no **Seletor de Perfil** (`AguardandoPerfil`,
+> entre o login e a escolha do filho — mesmo lugar do Paywall), não de dentro
+> do jogo. Um atalho em Configurações ("sair e entrar de novo com o e-mail do
+> responsável") cobre o caso comum do app abrir direto na Home da criança. Se
+> isso incomodar na prática, a correção é um endpoint novo de troca reversa de
+> token — fora do escopo desta sessão. Detalhe em
+> `design/notas-implementacao.md` § "Fase 5, app" (25/08/2026).
 
 - ➕ `backend/app/responsavel/` (rotas/serviço/repositório).
-- ➕ `app/lib/features/responsavel/` — dentro do app da criança, atrás de
-  **portão parental** (PIN de 4 dígitos, `conta.pin_hash`).
+- ➕ `app/lib/features/responsavel/` — **alcançável no Seletor de Perfil**
+  (token do responsável ainda ativo), atrás de **portão parental** (PIN de 4
+  dígitos, `conta.pin_hash`) — não de dentro do jogo da criança, ver nota
+  acima.
 
 **Conteúdo da tela** (é o que renova a assinatura, então trate como produto,
 não como relatório):
@@ -811,8 +833,8 @@ errar isso custa ciclos de rejeição.
 
 | Documento | O que muda |
 |---|---|
-| `docs/rascunho_product.md` | Seções 01, 02 (público: pai/criança 7–12), 07 (professor sai), 08 (custo: LLM por assinante), nova seção de monetização |
-| `docs/arquitetura.md` | Bloco 1 (identidade familiar), Bloco 2b (OCR on-device, sem R2), Bloco 3 (domínios `assinatura`/`responsavel`/`afiliado`) |
+| `docs/legado-b2b/rascunho_product.md` | Seções 01, 02 (público: pai/criança 7–12), 07 (professor sai), 08 (custo: LLM por assinante), nova seção de monetização |
+| `docs/legado-b2b/arquitetura.md` | Bloco 1 (identidade familiar), Bloco 2b (OCR on-device, sem R2), Bloco 3 (domínios `assinatura`/`responsavel`/`afiliado`) |
 | `design/telas.md` | §1 Entrada reescrita; §8.2 Professor removida; ➕ Seletor de perfil, Paywall, Área do Responsável |
 | `design/brief-mockup-*.md` | Revisar os 4 briefs para a faixa 7–12; ➕ briefs de paywall e área do responsável |
 | `design/notas-implementacao.md` | **Registrar a decisão do pivô com data — obrigatório** |

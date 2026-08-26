@@ -1,11 +1,11 @@
 # Arquitetura Técnica — VocabBR Kids
 
 > ⚠️ **Pré-pivô B2B.** Produto pivotou pra B2C em 24/08/2026 —
-> `docs/plano_b2c.md` é a fonte da verdade atual (schema, domínios, API).
+> `docs/produto/plano_b2c.md` é a fonte da verdade atual (schema, domínios, API).
 > Bloco 1 (identidade por turma/escola) e as partes do Bloco 3 sobre domínios
 > B2B **não valem mais** pro caminho crítico do produto (o schema de
 > turma/escola continua existindo, mas serve só o professor congelado — ver
-> `docs/plano_b2c.md` Fase 6). Princípios gerais (cliente fino/servidor
+> `docs/produto/plano_b2c.md` Fase 6). Princípios gerais (cliente fino/servidor
 > autoritativo, XP/combo, trilha, diagnóstico, pipeline de redação do Bloco
 > 2b) continuam valendo e informam a Fase 4 do plano B2C.
 >

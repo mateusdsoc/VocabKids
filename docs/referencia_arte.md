@@ -1,13 +1,24 @@
 # Referência de Arte e Animação — VocabBR Kids
 
-> Catálogo das 28 peças de arte do MVP (cartões-postais, carimbos, selos) + briefing
-> do estilo visual e da animação de revelação do passaporte.
+> ⚠️ **Números revisados pelo MVP B2C (24/08/2026).** Este documento descreve
+> o **catálogo completo pós-MVP**: 3 países, 20 destinos, 28 peças (20
+> cartões-postais + 3 carimbos + 5 selos). O **MVP atual, de fato semeado**
+> (`docs/produto/plano_b2c.md` "Escopo do MVP") é menor: **2 países, 4
+> destinos** (Rio, Foz do Iguaçu, Amazônia, Paris) **e 11 colecionáveis** (4
+> cartões-postais + 2 carimbos + 5 selos) — os 4 destinos com arte já pronta.
+> O catálogo completo abaixo é a **referência de para onde crescer** depois do
+> MVP (já semeado como referência comentada em `backend/app/seed_trilha.py`),
+> não o estado atual do produto. O estilo visual e a lógica de animação
+> (seções 00 e 04) valem igualmente para os dois tamanhos de catálogo.
+>
+> Catálogo das 28 peças de arte do catálogo completo (cartões-postais, carimbos, selos)
+> + briefing do estilo visual e da animação de revelação do passaporte.
 >
 > Decidido nas discussões de design. Conecta com:
 >
-> - `rascunho_product.md` seções 3.7 (trilha), 3.10 (recompensas/passaporte), 12 (stack/animação)
-> - `arquitetura.md` Bloco 1, tabelas `pais` / `destino` / `colecionavel`
-> - `analise_riscos.md` seção 07 (animação em aberto / teste da peça-âncora)
+> - `docs/legado-b2b/rascunho_product.md` seções 3.7 (trilha), 3.10 (recompensas/passaporte), 12 (stack/animação)
+> - `docs/legado-b2b/arquitetura.md` Bloco 1, tabelas `pais` / `destino` / `colecionavel`
+> - `docs/legado-b2b/analise_riscos.md` seção 07 (animação em aberto / teste da peça-âncora)
 >
 > Status: catálogo de arte **fechado**; ferramenta de animação **em aberto** (depende
 > do teste da peça-âncora — ver seção final).
@@ -84,7 +95,9 @@ cidade) — otimiza variedade visual, que sustenta o colecionar.
 |19|Shirakawa-go — vila histórica            |Casas de telhado triangular + neve               |⬜ a gerar  |
 |20|Osaka — castelo                          |Castelo branco e verde + cerejeiras + fosso      |⬜ a gerar  |
 
-**Progresso de arte:** 4 de 20 cartões gerados (Rio, Foz, Amazônia, Torre Eiffel).
+**Progresso de arte:** 4 de 20 cartões do catálogo completo gerados (Rio, Foz,
+Amazônia, Torre Eiffel) — e são exatamente os 4 que o MVP atual usa (nenhuma
+peça nova é necessária para lançar o MVP).
 
 > **Egito (reserva, fora das 28):** o 4º país está engatilhado como reserva no produto
 > (seção 3.7) e **não** entra na contagem do MVP. Se a demanda do 1º cliente justificar,

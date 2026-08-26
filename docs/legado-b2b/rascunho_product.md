@@ -2,11 +2,11 @@
 
 > ⚠️ **Pré-pivô B2B.** O produto pivotou pra assinatura B2C direto pra família
 > em 24/08/2026 (decisão registrada em `design/notas-implementacao.md`,
-> plano completo em `docs/plano_b2c.md` — é ele a fonte da verdade atual, não
+> plano completo em `docs/produto/plano_b2c.md` — é ele a fonte da verdade atual, não
 > este documento). O que segue aqui sobre banco de vocabulário, XP/combo,
 > trilha e diagnóstico continua valendo; **público (seção 02), monetização e
 > tudo que envolve professor/escola/turma, não** — onde este documento
-> contradiz `docs/plano_b2c.md`, vale o plano B2C.
+> contradiz `docs/produto/plano_b2c.md`, vale o plano B2C.
 >
 > Fonte da verdade do produto **B2B original**. Este documento registra a visão decidida pelo dono do produto, separando claramente o que está definido do que ainda precisa de validação.
 >

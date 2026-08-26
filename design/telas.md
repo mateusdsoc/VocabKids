@@ -1,12 +1,34 @@
 # Telas do app — especificação de conteúdo e comportamento
 
-> ⚠️ **Pré-pivô B2B.** A seção 1 (Entrada por código de turma) foi
-> **substituída na prática** pelo fluxo B2C implementado em
-> `features/identidade/` (cadastro do responsável, seletor de perfil, criar
-> criança) — ver `docs/plano_b2c.md` Fase 1. As telas novas (cadastro,
-> seletor, paywall) ainda não têm um contrato formal neste documento; até lá,
-> o código é a referência. §2–7 (onboarding, Home, Sessão, Resumo, Trilha,
-> Passaporte) seguem valendo tal como estão.
+> ⚠️ **Pré-pivô B2B — partes deste documento descrevem código DELETADO.**
+> Pivô em 24-25/08/2026 (`docs/produto/plano_b2c.md`, Fases 1-6). Status por
+> seção:
+> - **§1 (Entrada por código de turma):** o endpoint (`POST /v1/acesso/turma`)
+>   e o fluxo **não existem mais** no código — substituídos por
+>   `features/identidade/` (cadastro do responsável e-mail/senha, seletor de
+>   perfil, criar criança). Mantida abaixo só como registro histórico.
+> - **§8.1 (Redação mockada):** desatualizada por **evolução**, não remoção —
+>   a redação é **real** desde a Fase 4 (rubrica por faixa, triagem de risco,
+>   análise via Claude), não mais mock estático. Ver `features/redacao/` no
+>   app e `backend/app/redacao/`.
+> - **§8.2 (Superfície do Professor, web):** descreve uma superfície **inteira
+>   deletada** na Fase 6 (25/08/2026) — `backend/app/professor/`,
+>   `app/lib/features/professor/`, `main_professor.dart` e as rotas
+>   `/v1/professor/*` não existem mais em lugar nenhum do repo. Mantida abaixo
+>   só como registro histórico; **não implemente nada a partir dela**.
+> - **§2–7 (onboarding, Home, Sessão, Resumo, Trilha, Passaporte):** a
+>   mecânica de produto segue valendo. Exceção pontual: a linha sobre "meta
+>   configurada pelo professor" em §3 está **errada** hoje — não há mais
+>   professor; a meta semanal tem default por **faixa etária**
+>   (`progressao/faixa.py`), sem configuração externa (`docs/produto/plano_b2c.md`).
+>   Os números de catálogo citados em §6 (3 países/20 destinos/80 nós) são o
+>   **catálogo completo pós-MVP**; o MVP atual semeado é 2 países/4
+>   destinos/16 nós (`docs/produto/plano_b2c.md` "Escopo do MVP").
+> - **Telas novas do B2C sem contrato formal aqui** (cadastro do responsável,
+>   seletor de perfil, criar perfil de criança, paywall, Redação real
+>   digitada, Área do Responsável): até ganharem uma seção própria, o código é
+>   a referência — `features/identidade/`, `features/assinatura/`,
+>   `features/redacao/`, `features/responsavel/`.
 >
 > **Para que serve:** brief preciso de **o que existe em cada tela**, a
 > hierarquia, as ações, os estados e de onde vêm os dados. É o input para gerar
@@ -19,7 +41,7 @@
 > **depois** e separada da arte (os cartões-postais são multicoloridos; o chrome
 > da UI tem que emoldurá-los sem competir — ver `imagens/PROMPT-ESTILO.md`).
 >
-> Escopo: telas da **fatia A (apresentável)**. Fontes: `docs/rascunho_product.md`
+> Escopo: telas da **fatia A (apresentável)**. Fontes: `docs/legado-b2b/rascunho_product.md`
 > (seções citadas) e a API `/v1` já implementada no backend.
 
 ---
@@ -57,7 +79,11 @@ ENTRADA (código de turma)
 
 ---
 
-## 1. Entrada (código de turma)
+## 1. Entrada (código de turma) [REMOVIDO — endpoint deletado no pivô B2C]
+
+> ⚠️ **`POST /v1/acesso/turma` não existe mais.** Fluxo real hoje: cadastro
+> do responsável (e-mail/senha) → seletor de perfil → escolher/criar criança,
+> em `features/identidade/`. Seção mantida como registro histórico.
 
 - **Objetivo:** acesso provisório da fatia A — aluno entra pelo código da turma.
 - **Conteúdo:** campo *código da turma*; campo *apelido* (rótulo "Seu apelido",
@@ -119,11 +145,10 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
   - **Progresso da meta semanal:** mostra o **avanço** rumo à meta (ex.: "6 de 10
     palavras dominadas esta semana"), não só um estado binário; quando batida,
     vira selo "meta cumprida". Unidade = palavras dominadas/semana (3.5);
-    visibilidade própria, sem virar colecionável. A meta é **configurada pelo
-    professor** (`turma_config.meta_semanal`), com default por ano escolar se
-    nula — o "6 de 10" dos mockups é placeholder; ao definir os defaults,
-    simular contra o ritmo real (2 palavras novas/sessão, domínio em ~3+
-    sessões) para a meta ser batível.
+    visibilidade própria, sem virar colecionável. **[Atualizado pelo pivô B2C]**
+    Não há mais professor configurando meta — o valor é **default por faixa
+    etária** da criança (`progressao/faixa.py`, `docs/produto/plano_b2c.md`
+    §05), sem configuração externa. O "6 de 10" dos mockups é placeholder.
   - **CTA primário:** botão **"Continuar"** → abre/retoma a próxima sessão.
   - **Ação secundária:** acesso ao **mapa da trilha**.
   - **Atalho de redação** → área de redação (mock na fatia A).
@@ -215,7 +240,10 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
   selo "você está aqui"**, decisão revisada: a
   própria trilha já comunica a posição pelo progresso); nós do destino;
   agrupamento por **destino** e **país**; próximo nó/destino.
-  Estrutura: **País → Destino → Nó** (3 países, 20 destinos, 80 nós).
+  Estrutura: **País → Destino → Nó**. Catálogo completo (pós-MVP): 3 países,
+  20 destinos, 80 nós. **MVP atual semeado:** 2 países, 4 destinos, 16 nós
+  (Rio, Foz do Iguaçu, Amazônia, Paris) — ver `docs/produto/plano_b2c.md`
+  "Escopo do MVP".
 - **Layout (decisão 13/07 — revisa a janela paginada de 12/07): mapa
   vertical contínuo.** A trilha inteira vive num canvas único de largura 340
   (altura cresce com a trilha): a serpentina de 4 nós por destino (3 comuns +
@@ -272,6 +300,12 @@ Costura entrada → diagnóstico → 1ª vitória. Sub-telas em sequência:
 Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
 
 ### 8.1 Redação (estática) — produto 4.4
+
+> ⚠️ **SUPERADA — a redação é real desde a Fase 4 (B2C).** O que segue
+> descreve o mock estático de antes do pivô; ver `features/redacao/` no app e
+> `backend/app/redacao/` para o comportamento real hoje (rubrica por faixa,
+> triagem de risco, análise via Claude).
+
 - **Objetivo:** mostrar o **diferencial pedagógico** (redação → vocabulário).
 - **Conteúdo:** o texto do aluno **anotado** com marcações coloridas por dimensão
   (vocabulário repetido/fraco, acentuação, vírgula/pontuação, estrutura/coesão);
@@ -279,7 +313,12 @@ Presentes na demo, **sem backend real** (rotas mock devolvem dados fixos):
   correção (da última redação e do ano) com dados fictícios.
 - **Dados:** `GET /v1/redacoes` (mock estático).
 
-### 8.2 Superfície do Professor (web) — produto 07 + §3.11
+### 8.2 Superfície do Professor (web) — produto 07 + §3.11 [REMOVIDO — código deletado na Fase 6, 25/08/2026]
+
+> ⚠️ **Todo este código foi deletado, não só congelado.** Mantido abaixo
+> apenas como registro histórico do que existiu; `git log` recupera o código
+> se essa frente reabrir um dia. Não implemente nada a partir daqui.
+
 - **Plataforma:** app **web** separado (entrypoint `app/lib/main_professor.dart`),
   reusando o design system; **não entra no bundle do aluno** (regras de isolamento
   em `notas-implementacao.md` → "Professor (web)"). "Professor mobile" é deferido

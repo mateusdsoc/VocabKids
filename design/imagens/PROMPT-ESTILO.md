@@ -65,10 +65,15 @@ fotográfico ou pintura a óleo realista; sem pessoas grandes em primeiro plano
 
 ---
 
-## Cenas por destino (20 cartões — fonte: `docs/referencia_arte.md`)
+## Cenas por destino (20 cartões do catálogo completo pós-MVP — fonte: `docs/referencia_arte.md`)
+
+> O MVP atual usa só 4 destinos (Rio, Foz do Iguaçu, Amazônia, Paris — já
+> gerados). As demais cenas abaixo são referência para quando o catálogo
+> crescer além do MVP (`docs/produto/plano_b2c.md` "Escopo do MVP"), não uma
+> lista de trabalho pendente para o lançamento.
 
 Já existentes em estilo correto: **Rio** e **Paris** (âncoras). As demais
-**a gerar/regerar** neste estilo.
+**a gerar/regerar** neste estilo, quando o catálogo crescer.
 
 ### 🇧🇷 Brasil
 | Destino | CENA |

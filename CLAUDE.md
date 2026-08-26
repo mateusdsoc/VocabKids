@@ -7,15 +7,15 @@ code in this repository.
 
 App de vocabulário (Flutter) + backend FastAPI, assinatura B2C direto pra
 família (7–12 anos) — pivô de B2B/escola em 24/08/2026, ver
-`docs/plano_b2c.md` e a decisão datada em `design/notas-implementacao.md`.
+`docs/produto/plano_b2c.md` e a decisão datada em `design/notas-implementacao.md`.
 Tema: viagem/passaporte. Catálogo do **MVP**: 2 países, 4 destinos, 16 nós
 (Rio, Foz do Iguaçu, Amazônia, Paris) — o catálogo completo (3 países / 20
 destinos / 80 nós) fica pra depois do MVP, já semeado em `seed_trilha.py` como
 referência comentada. **Cliente fino, servidor autoritativo**: o cliente nunca
 calcula pontuação nem recebe a resposta correta antecipada, e nunca decide
-sozinho se a assinatura está ativa (`docs/plano_b2c.md` R-AS-1).
+sozinho se a assinatura está ativa (`docs/produto/plano_b2c.md` R-AS-1).
 
-O **professor/B2B foi removido** (`docs/plano_b2c.md` Fase 6, revisado
+O **professor/B2B foi removido** (`docs/produto/plano_b2c.md` Fase 6, revisado
 25/08/2026 — o plano original previa congelar, o dono decidiu deletar de
 verdade): backend (`app/professor/`), site (`app/lib/features/professor/`,
 `main_professor.dart`) e as tabelas `turma`/`escola`/`associacao_turma`/
@@ -56,7 +56,7 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env                 # obrigatório p/ PO
 uv run alembic upgrade head            # cria as tabelas
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
-uv run python -m app.seed_temas        # catálogo de temas de redação (18 de 120 — ver docs/plano_b2c.md §10.4)
+uv run python -m app.seed_temas        # catálogo de temas de redação (18 de 120 — ver docs/produto/plano_b2c.md §10.4)
 uv run python -m app.seed_demo         # conta+perfis "vitrine" (com assinatura ativa) p/ demo — reset a cada rodada
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
 
@@ -117,7 +117,7 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   (`app/seguranca/rate_limit.py`) e **CORS explícito** via `CORS_ORIGINS`
   (nunca `*`) em `app/main.py`. No app, o token vive em
   `flutter_secure_storage` (`core/token_store.dart`) — só **um** por vez (ver
-  `docs/plano_b2c.md` R-ID-2/R-ID-3).
+  `docs/produto/plano_b2c.md` R-ID-2/R-ID-3).
 - **Assinatura**: `POST /v1/sessoes` é o único endpoint gateado — livre até o
   1º destino (limiar lido do catálogo semeado, não hardcoded), depois exige
   assinatura ativa da conta (402 `assinatura_necessaria`). O backend nunca
@@ -153,27 +153,42 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
 - Estado atual do wiring: **o app do aluno consome o backend real de ponta a
   ponta** — cadastro/login do responsável, seletor de perfil, Home (meta
   semanal por faixa etária), Sessão→Resumo (gateada por assinatura além do 1º
-  destino), Passaporte (coleção e Modo Conquista), mapa da Trilha e
-  diagnóstico do onboarding (orçamento de perguntas por faixa). Paywall
+  destino), Passaporte (coleção e Modo Conquista), mapa da Trilha, diagnóstico
+  do onboarding (orçamento de perguntas por faixa), Redação real
+  (`features/redacao/` — lista, envio digitado, resultado analisado; só o
+  caminho digitado, foto/OCR fica visível mas desabilitada) e a Área do
+  Responsável (`features/responsavel/` — portão PIN, resumo semanal por
+  filho, exclusão de conta; só alcançável no Seletor de Perfil, não de dentro
+  do jogo — ver nota em `docs/produto/plano_b2c.md` §08). Paywall
   (`features/assinatura/`) funciona estruturalmente mas precisa da API key
   real do RevenueCat (`AppConfig.revenueCatApiKey`) pra listar oferta de
-  verdade — sem ela mostra "configuração de pagamento pendente". Redação real
-  (Fase 4) e Área do Responsável (Fase 5) têm backend pronto mas **nenhuma
-  tela Flutter ainda** (`redacao_screen.dart` segue em dado de amostra local;
-  `features/responsavel/` não existe) — é o próximo trabalho de app, não de
-  backend. Estado e próximos passos em `HANDOFF.md` e `docs/plano_b2c.md`.
+  verdade — sem ela mostra "configuração de pagamento pendente". Estado e
+  próximos passos em `HANDOFF.md` e `docs/produto/plano_b2c.md`.
 
 ## Mapa dos documentos
 
-| Documento | Papel |
-|---|---|
-| `docs/plano_b2c.md` | **Plano B2C — fonte da verdade atual**: fases, regras de negócio (R-ID/R-FX/R-AS/...), schema, ferramentas, checklist |
-| `docs/rascunho_product.md` | Produto **B2B original** (pré-pivô, código removido na Fase 6) — banco de vocabulário/XP/trilha/diagnóstico ainda valem; identidade, público e monetização, não (ver plano B2C) |
-| `docs/arquitetura.md` | Arquitetura **B2B original** (pré-pivô, código removido na Fase 6) — pipelines de redação e princípios gerais (cliente fino/servidor autoritativo) ainda valem; Bloco 1 (identidade por turma) e Bloco 3 (domínios), não |
-| `design/telas.md` | **Contrato** de conteúdo/comportamento de cada tela — telas B2B pré-pivô (código removido); as novas telas B2C (cadastro, seletor de perfil, paywall) ainda não têm contrato formal aqui |
-| `design/brief-mockup-*.md` | **Contrato** visual por tela (sistema travado) — mesma ressalva: pré-pivô, código removido |
-| `design/notas-implementacao.md` | Registro vivo: feito, adiado, decisões revisadas |
-| `HANDOFF.md` | Estado de trabalho entre sessões (histórico) |
+**Comece por aqui numa sessão nova:** este `CLAUDE.md` (visão geral +
+comandos) → `HANDOFF.md` (onde paramos, próximos passos) →
+`docs/produto/plano_b2c.md` (spec completa do produto vigente). O resto é
+navegado por assunto, conforme a tabela abaixo — não precisa ler tudo.
+
+| Pasta/Documento | Papel | Status |
+|---|---|---|
+| `CLAUDE.md` | Este arquivo: visão geral, comandos, arquitetura por domínio, decisões travadas | vigente |
+| `HANDOFF.md` | Estado de trabalho entre sessões, mais recente no topo; histórico cronológico abaixo | vigente (topo) / histórico (resto) |
+| `APRESENTACAO.md` | Roteiro pra demonstrar o app (conta "vitrine", passo a passo) | vigente |
+| `docs/produto/plano_b2c.md` | **Fonte da verdade do produto**: fases 1–6, regras de negócio (R-ID/R-FX/R-AS/R-RD/R-RS/...), schema, ferramentas, checklist | vigente |
+| `docs/referencia_arte.md` | Catálogo de arte (cartões/carimbos/selos) + briefing de animação do passaporte — números são do catálogo completo pós-MVP, com nota do que é o MVP atual | vigente, com ressalva de escopo |
+| `docs/legado-b2b/README.md` | Índice do que ainda vale nos 4 documentos abaixo (produto **B2B original**, pré-pivô — código removido na Fase 6) | histórico |
+| `docs/legado-b2b/rascunho_product.md` | Produto B2B: banco de vocabulário/XP/trilha/diagnóstico ainda valem; identidade, público e monetização, não | histórico |
+| `docs/legado-b2b/arquitetura.md` | Arquitetura B2B: pipeline de redação e princípios gerais (cliente fino/servidor autoritativo) ainda valem; identidade por turma e domínio `professor`, não | histórico |
+| `docs/legado-b2b/analise_riscos.md` | Riscos do produto B2B (stack/escopo de escola) — riscos gerais de conteúdo ainda valem | histórico |
+| `docs/legado-b2b/pesquisa_ferramentas.md` | Pesquisa de OCR em nuvem (descartada, hoje é ML Kit on-device) e de LLM (decisão final foi Claude, não registrada lá) | histórico |
+| `design/telas.md` | **Contrato** de conteúdo/comportamento de cada tela — seções marcadas `[REMOVIDO]` descrevem código deletado (entrada por turma, professor web); as telas novas do B2C (cadastro, seletor de perfil, paywall, redação real, Área do Responsável) ainda não têm contrato formal, o código é a referência | parcialmente vigente, ver notas inline |
+| `design/brief-mockup-*.md` | Contrato visual por tela (sistema de marca travado) — Home/Sessão/Resumo/Trilha ainda valem; números de catálogo em `brief-mockup-trilha.md` são do pós-MVP | vigente |
+| `design/imagens/PROMPT-ESTILO.md` | Prompt de geração de imagem por destino — cenas além do MVP são referência pós-MVP | vigente |
+| `design/notas-implementacao.md` | Registro vivo cronológico: feito, adiado, decisões revisadas (a fonte mais granular de "por que isso é assim") | vigente |
+| `backend/README.md`, `app/README.md` | Visão de estrutura de pastas de cada lado do código — comandos completos ficam só aqui no `CLAUDE.md`, para não duplicar | vigente |
 
 ## ⚠️ Regra das decisões revisadas (obrigatória)
 
@@ -182,8 +197,8 @@ junto, no mesmo commit/PR.** Ao mudar uma decisão de produto/design:
 
 1. Registrar a decisão (com data) em `design/notas-implementacao.md`;
 2. **No mesmo commit**, atualizar `design/telas.md` e os briefs afetados
-   (`design/brief-mockup-*.md`) — e `docs/arquitetura.md` se tocar
-   modelo/API;
+   (`design/brief-mockup-*.md`) — e `docs/produto/plano_b2c.md` se tocar
+   modelo/API (é ele a spec vigente, não `docs/legado-b2b/arquitetura.md`);
 3. Se o backend/app já implementa o comportamento antigo, a mudança de código
    (com testes) entra no mesmo PR ou vira pendência explícita nas notas.
 
@@ -202,7 +217,7 @@ se declara travado e está errado é pior que nenhum documento.
   reveal nítido só no Passaporte; determinístico, sem loot box.
 - O cliente nunca calcula pontuação nem recebe a resposta correta antecipada.
 - O cliente nunca decide sozinho se a assinatura está ativa — sempre o backend
-  (`docs/plano_b2c.md` R-AS-1).
+  (`docs/produto/plano_b2c.md` R-AS-1).
 - Nenhuma compra acontece sem um adulto na tela (Apple 5.1.4) — o paywall só é
   alcançável a partir do contexto do responsável, nunca durante o gameplay da
   criança (que só vê "peça pra um adulto continuar").

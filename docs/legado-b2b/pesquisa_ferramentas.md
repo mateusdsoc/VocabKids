@@ -1,5 +1,14 @@
 # Pesquisa de Ferramentas e Custos
 
+> ⚠️ **Pré-pivô B2B, ver `docs/legado-b2b/README.md`.** A pesquisa de **OCR em
+> nuvem** (seção 01 abaixo) descreve uma abordagem descartada — o B2C usa OCR
+> **on-device** (ML Kit), sem custo por página nem upload de imagem
+> (`docs/produto/plano_b2c.md` seção 12). As estimativas de custo "por escola"
+> também não valem mais (modelo é por assinante). A pesquisa de **modelos de
+> IA para análise de redação** ainda é relevante em espírito, mas a decisão
+> final (Claude, via `ANTHROPIC_API_KEY`) já foi tomada e implementada — não
+> registrada aqui.
+>
 > Documento de referência técnica com a pesquisa de modelos de IA, serviços de OCR e ferramentas NLP avaliados para o VocabBR Kids.
 >
 > Data da pesquisa: 19 de maio de 2026.

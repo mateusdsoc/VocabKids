@@ -1,133 +1,55 @@
-# VocabBR Kids — Backend (FastAPI)
+# VocabKids — Backend (FastAPI)
 
-Backend do app, fatia **A** (apresentável) em diante. Stack: **FastAPI + SQLAlchemy Core
-+ Alembic + PostgreSQL** (seção 12 do produto / Bloco 3 da arquitetura).
+Backend do app B2C: FastAPI + SQLAlchemy Core + Alembic + PostgreSQL.
 
-> **Onde roda:** o backend é construído e testado na cloud (Python + Postgres
-> disponíveis). O app **Flutter** é autorado no repositório e **rodado em casa** (precisa
-> do SDK Flutter + emulador/dispositivo, ausentes no container).
+> Comandos completos (setup, seeds, testes, variáveis obrigatórias) vivem no
+> `CLAUDE.md` da raiz do repo — este README não os duplica, só orienta a
+> estrutura. Se os dois divergirem, o `CLAUDE.md` é a fonte da verdade.
 
 ## Estrutura
 
 ```
 backend/
   app/
-    config.py        # settings via env (DATABASE_URL async; deriva a URL síncrona do Alembic)
-    db.py            # engine/sessão async (asyncpg)
-    schema.py        # Bloco 1 — 25 tabelas (SQLAlchemy Core), fonte única do schema
-    errors.py        # convenção de erro única (Bloco 3, decisão #5)
-    seed.py          # seed mínimo da fatia A (escola + turma); `python -m app.seed`
-    seed_vocabulario.py  # seed do banco base (palavras + sinônimos + questões)
-    seed_trilha.py   # seed da trilha (países/destinos/nós) + 28 colecionáveis
-    main.py          # app FastAPI: /health + handlers de erro + router /v1
+    config.py        # settings via env
+    db.py             # engine/sessão async (asyncpg)
+    schema.py         # schema único (25 tabelas, SQLAlchemy Core) — fonte das migrations e dos testes
+    errors.py         # convenção de erro única: {"error": {"code","message","details"}}
+    main.py           # app FastAPI: /health + handlers de erro + router /v1
+    seed_vocabulario.py  # banco base de palavras/questões — idempotente
+    seed_trilha.py    # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
+    seed_temas.py     # catálogo de temas de redação
+    seed_demo.py      # conta+perfis "vitrine" (assinatura ativa) p/ demo — reset a cada rodada
     api/
-      deps.py        # dependências compartilhadas (conexão transacional por request)
-      v1.py          # agregador das rotas sob /v1
-    identidade/      # domínio: acesso por código de turma, /me (camadas abaixo)
-      routes.py      # rotas (validação Pydantic, serialização)
-      service.py     # lógica de domínio
-      repository.py  # SQLAlchemy Core (1 lugar para o SQL do agregado)
-      schemas.py     # contratos de entrada/saída (Pydantic)
-      auth.py        # token PROVISÓRIO da fatia A (auth real é plugada depois)
-    vocabulario/     # leitura do banco global (card de descoberta)
-    sessao/          # montar_sessao, responder (XP/combo/estado), fim (adaptação)
-    diagnostico/     # escada grosso→fino → nivel_dificuldade_atual
-    progressao/      # regras puras de XP/combo (xp.py)
-    adaptacao/       # regra pura da adaptação de nível (regras.py)
-    trilha/          # mapa, passaporte e loop de recompensa (cartão/carimbo/selo)
-    report/          # POST /v1/questoes/{id}/report — MOCK na fatia A
-    redacao/         # GET /v1/redacoes, /v1/dashboard — MOCK estático na fatia A
-  tests/             # pytest + httpx (ASGI), contra um Postgres de teste
-  alembic/           # migrations (env.py aponta para app.schema:metadata)
-  alembic.ini
-  pyproject.toml
-  .env.example       # copie para .env
+      v1.py           # agregador das rotas sob /v1
+    identidade/       # conta do responsável + perfis de criança (cadastro, login, JWT)
+    assinatura/       # gate de entitlement + webhook do RevenueCat
+    vocabulario/      # leitura do banco global (card de descoberta)
+    sessao/           # montar_sessao, responder (XP/combo/estado), fim (adaptação)
+    diagnostico/      # escada grosso→fino → nivel_dificuldade_atual
+    progressao/       # regras puras de XP/combo/faixa etária (xp.py, faixa.py, semana.py)
+    adaptacao/        # regra pura da adaptação de nível
+    trilha/           # mapa, passaporte e loop de recompensa (cartão/carimbo/selo)
+    redacao/          # rubrica por faixa, triagem de risco, análise via Claude
+    responsavel/      # Área do Responsável: PIN, resumo semanal por perfil
+    report/           # POST /v1/questoes/{id}/report — ainda mock (sem fase B2C prevista)
+    seguranca/        # rate limiting em memória
+  tests/              # pytest + httpx (ASGI), contra um Postgres de teste
+  alembic/            # migrations lineares (env.py aponta para app.schema:metadata)
 ```
 
-Organização **por domínio** (rotas→serviço→repositório), espelhando o Bloco 1. Novos
-domínios (vocabulário, sessão, trilha…) entram como pastas-irmãs de `identidade/` e uma
-linha em `api/v1.py`.
+Organização **por domínio** (rotas → serviço → repositório). Domínio novo =
+pasta nova + uma linha em `app/api/v1.py`.
 
-> **Acesso é provisório na fatia A.** A entrada nasce do `codigo_turma` e o token é só
-> `prov_<usuario_id>` (sem assinatura/expiração) — ver `app/identidade/auth.py`. A
-> autenticação real é plugada na janela do 1º cliente **sem mexer nas rotas** (princípio
-> auth-agnóstico; arquitetura seção 3.11 / Bloco 3 decisão #4).
+> O domínio `professor` (venda por escola, B2B) foi **deletado** no pivô pra
+> assinatura B2C — ver `CLAUDE.md` e `docs/produto/plano_b2c.md` §09. `git log`
+> tem o código se essa frente reabrir.
 
-## Rodar localmente
+## Rodar e testar
 
-Pré-requisito: um PostgreSQL acessível e a `DATABASE_URL` apontando para ele.
+Ver `CLAUDE.md` (seção "Comandos → Backend") para o passo a passo completo:
+Postgres local, variáveis de ambiente obrigatórias (`JWT_SECRET`,
+`REVENUECAT_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`), migrations, seeds e
+`uv run pytest`.
 
-```bash
-cd backend
-python3 -m venv .venv && . .venv/bin/activate
-pip install -e .
-cp .env.example .env            # ajuste a DATABASE_URL se necessário
-
-alembic upgrade head            # cria as tabelas do Bloco 1
-python -m app.seed              # cria a turma de demo (código DEMO7A) — idempotente
-python -m app.seed_vocabulario  # popula o banco base (8 palavras, 64 questões) — idempotente
-python -m app.seed_trilha       # popula a trilha (3 países, 20 destinos, 80 nós, 28 itens)
-uvicorn app.main:app --reload   # sobe a API
-curl localhost:8000/health      # -> {"status":"ok"}
-```
-
-### Endpoints da fatia A (já implementados)
-
-```bash
-# entrar por código de turma (acha-ou-cria o aluno) → token provisório
-curl -s -X POST localhost:8000/v1/acesso/turma \
-  -H 'Content-Type: application/json' \
-  -d '{"codigo_turma":"DEMO7A","nome":"Ana"}'
-# -> {"token":"prov_1","usuario_id":1,"nome":"Ana","turma":{...},"novo":true}
-
-# perfil + progresso do aluno autenticado
-curl -s localhost:8000/v1/me -H 'Authorization: Bearer prov_1'
-
-# banco de vocabulário (atrás da sessão; paginação por cursor)
-curl -s 'localhost:8000/v1/palavras?limit=3' -H 'Authorization: Bearer prov_1'
-curl -s localhost:8000/v1/palavras/4 -H 'Authorization: Bearer prov_1'   # card de "relevante"
-```
-
-> O `/v1/palavras` devolve só o conteúdo do **card** (palavra, definição, exemplo,
-> sinônimos). As **questões e respostas não saem por aqui** — serão servidas pela
-> sessão, server-side, sem vazar a resposta correta (Bloco 3, cliente fino).
-
-Erros saem no formato único (Bloco 3, decisão #5):
-`{ "error": { "code": <snake_case>, "message": <legível>, "details": {} } }`.
-
-## Testes
-
-```bash
-pip install -e ".[dev]"                       # pytest, pytest-asyncio, httpx
-createdb -h localhost -U postgres vocabkids_test   # ou TEST_DATABASE_URL=...
-pytest                                        # cria o schema a partir de app.schema
-```
-
-Os testes sobem o app via ASGI (sem rede) e usam um Postgres dedicado
-(`vocabkids_test` por padrão; sobrescreva com `TEST_DATABASE_URL`). O schema vem do
-mesmo `metadata` das migrations.
-
-### Subir um Postgres de desenvolvimento (sem Docker)
-
-```bash
-PGBIN=$(ls -d /usr/lib/postgresql/*/bin | head -1)
-su postgres -c "$PGBIN/initdb -D /tmp/pgdata -U postgres --auth=trust"
-su postgres -c "$PGBIN/pg_ctl -D /tmp/pgdata -o '-p 5432 -k /tmp' -l /tmp/pglog.log start"
-psql -h localhost -U postgres -c "create database vocabkids;"
-```
-
-## Migrations (Alembic)
-
-O schema vive em `app/schema.py` (SQLAlchemy Core). O Alembic autogera a partir dele:
-
-```bash
-alembic revision --autogenerate -m "descrição"   # após mudar o schema
-alembic upgrade head                              # aplica
-alembic downgrade -1                              # reverte uma
-```
-
-Decisões relevantes (Bloco 1 / Bloco 3 da arquitetura):
-- PK `BIGINT GENERATED ALWAYS AS IDENTITY`; `created_at TIMESTAMPTZ DEFAULT now()`.
-- Enums via `VARCHAR + CHECK` (fáceis de evoluir).
-- **Schema único**: as tabelas da fatia C (redação, report, telemetria) já existem —
-  ficam vazias/mock no apresentável, evitando migração dupla.
+Erros saem no formato único: `{ "error": { "code": <snake_case>, "message": <legível>, "details": {} } }`.

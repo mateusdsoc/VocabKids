@@ -1,10 +1,14 @@
-# VocabBR Kids — App (Flutter)
+# VocabKids — App (Flutter)
 
-App do aluno, fatia **A** (apresentável). Cliente **fino**: renderiza e captura;
-toda a regra (XP, combo, sessão, adaptação) mora no backend (Bloco 3 da arquitetura).
+App do aluno (7–12 anos), B2C. Cliente **fino**: renderiza e captura; toda a
+regra (XP, combo, sessão, adaptação, entitlement de assinatura) mora no
+backend. Stack: Flutter + Riverpod, feature-first, mobile-only, único
+entrypoint (`lib/main.dart`).
 
-Stack decidida (arquitetura, Bloco 3): **Flutter + Riverpod**, feature-first,
-mobile-only no apresentável. Fala a API `/v1` do backend (REST/JSON, auth-agnóstica).
+> Comandos completos (dart-defines, como rodar, `flutter analyze`/`test`)
+> vivem no `CLAUDE.md` da raiz do repo — este README não os duplica, só
+> orienta a estrutura. Se os dois divergirem, o `CLAUDE.md` é a fonte da
+> verdade.
 
 ## Estrutura
 
@@ -12,50 +16,36 @@ mobile-only no apresentável. Fala a API `/v1` do backend (REST/JSON, auth-agnó
 app/
   lib/
     core/                 # transporte e infraestrutura (sem regra de domínio)
-      config.dart         # base da API via --dart-define=API_BASE_URL
-      api_client.dart     # HTTP sobre /v1: JSON, Bearer, traduz falhas p/ ApiException
-      api_exception.dart  # erro no formato único do backend ({error:{code,message,details}})
-      token_store.dart    # token provisório da fatia A (prov_<id>); auth real entra depois
+      config.dart         # dart-defines (API_BASE_URL, DEMO, THEME, REVENUECAT_API_KEY)
+      api_client.dart      # HTTP sobre /v1: JSON, Bearer, traduz falhas p/ ApiException
+      token_store.dart     # token JWT em flutter_secure_storage — só um por vez
+      theme/               # tokens de cor/tipografia (app_colors.dart, ...)
     features/
-      identidade/         # acesso por código de turma → /me
-        models.dart       # espelha identidade/schemas.py (Pydantic)
-        repository.dart   # /v1/acesso/turma, /v1/me
-        auth_controller.dart  # AsyncNotifier<Me?> + providers Riverpod
-        entrada_screen.dart   # UI PROVISÓRIA (design pendente)
-        perfil_screen.dart    # Perfil: identidade + progresso + atalho ao Passaporte + Configurações
-      configuracoes/        # preferências locais do aparelho (SharedPreferences)
-        preferencias.dart           # modelo (tema/som/vibração/lembretes)
-        preferencias_controller.dart # AsyncNotifier persistido; alimenta o themeMode
-        configuracoes_screen.dart   # tela de ajustes (aparência ao vivo, som/tato, conta, sobre)
-    main.dart             # ProviderScope + _Gate (rota por estado de auth)
+      identidade/          # cadastro/login do responsável, seletor de perfil, criar criança, /me
+      assinatura/           # paywall (RevenueCat) — só alcançável pelo responsável
+      onboarding/            # boas-vindas, demos, diagnóstico
+      home/                  # hub: status, meta semanal, "Continuar"
+      sessao/                # prática: cards de descoberta + questões
+      resumo/                # resumo de fim de sessão
+      trilha/                # mapa da jornada (mapa vertical contínuo)
+      passaporte/            # coleção (Modo Conquista / Modo Exploração)
+      redacao/               # lista, envio (digitado), resultado analisado
+      responsavel/           # portão PIN, resumo semanal por filho, excluir conta
+      configuracoes/         # preferências locais do aparelho (SharedPreferences)
+    main.dart              # ProviderScope + _Gate (rota por SessaoState)
   test/
 ```
 
-Novas features (sessão, trilha, passaporte…) entram como pastas-irmãs de `identidade/`.
+Padrão de dados em toda feature: DTOs espelham os schemas do backend
+(`data/`), um `*Mapper` traduz para modelos de apresentação, providers
+Riverpod (GETs em `FutureProvider`, mutações em `AsyncNotifier`).
+`AppConfig.demo` serve dados `*.sample` sem backend.
 
-> **UI provisória.** As telas de identidade têm layout mínimo só para exercitar o
-> fluxo de dados. O **design visual** (tema viagem/passaporte — ver
-> `docs/referencia_arte.md`) entra depois, por cima deste fluxo que já funciona.
+> Havia um segundo entrypoint (`main_professor.dart`, web, venda por escola)
+> até o pivô pra assinatura B2C deletar o professor — ver `CLAUDE.md` e
+> `docs/produto/plano_b2c.md` §09.
 
-## Rodar localmente
+## Rodar e testar
 
-Pré-requisito: o backend rodando (ver `backend/README.md`) e um
-emulador/dispositivo.
-
-```bash
-cd app
-flutter pub get
-
-# Emulador Android alcança o host por 10.0.2.2 (default do config).
-# iOS simulator / desktop: use localhost.
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
-```
-
-Entre com o código da turma de demo **DEMO7A** (seed do backend) e um nome.
-
-## Verificação
-
-```bash
-flutter analyze
-flutter test
-```
+Ver `CLAUDE.md` (seção "Comandos → App") para o passo a passo completo:
+backend rodando, dart-defines e `flutter analyze && flutter test`.

@@ -18,8 +18,10 @@
 A **Trilha (mapa)** (produto 3.7): aterrissagem ao **sair de uma sessão**. Mapa
 visual da jornada — nó atual em destaque, concluído e o que vem, agrupado por
 **país → destino**. Fundamental II (~11–14), celular retrato, PT-BR, mockup HTML/CSS.
-Jornada: **3 países → 20 destinos → 80 nós** (~4.500 XP/nó). Mostre um recorte
-navegável, não os 80 nós.
+Jornada: **catálogo completo (pós-MVP) 3 países → 20 destinos → 80 nós**
+(~4.500 XP/nó); **MVP atual semeado: 2 países → 4 destinos → 16 nós** (Rio,
+Foz do Iguaçu, Amazônia, Paris — `docs/produto/plano_b2c.md` "Escopo do MVP").
+Mostre um recorte navegável, não a trilha inteira.
 
 > **Revisado (decisão 13/07 — substitui a janela paginada de 12/07): mapa
 > vertical contínuo.** A trilha inteira num canvas único de largura 340

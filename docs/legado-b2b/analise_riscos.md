@@ -1,7 +1,14 @@
 # Análise de Riscos e Gaps — VocabBR Kids
 
-> Análise crítica do estado atual do projeto: o que falta decidir, como está a
-> arquitetura, pontos a melhorar e riscos (arquiteturais e de cronograma).
+> ⚠️ **Pré-pivô B2B, ver `docs/legado-b2b/README.md`.** Analisa a stack e o
+> escopo do produto B2B original (dashboards de professor/escola, OCR em
+> nuvem) — o pivô B2C (24/08/2026, `docs/produto/plano_b2c.md`) descartou boa
+> parte dessa análise. Riscos gerais de produto/conteúdo que não dependem do
+> modelo de venda ainda valem; o resto, não.
+>
+> Análise crítica do estado do projeto **na época** (maio/2026): o que faltava
+> decidir, como estava a arquitetura, pontos a melhorar e riscos (arquiteturais
+> e de cronograma).
 >
 > Base: `rascunho_product.md` (rev. 12) e `pesquisa_ferramentas.md`.
 > Data: 29 de maio de 2026.

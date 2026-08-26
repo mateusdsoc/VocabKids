@@ -559,7 +559,7 @@ plataforma — **não** migrar para Cupertino puro. Centralizado em
   padrão.)
 - **Combo é por sessão** (decidido 10/06): zera ao iniciar cada sessão (além de
   ao errar/2ª tentativa); não carrega entre sessões — `combo_data` removido do
-  modelo (`docs/arquitetura.md`).
+  modelo (`docs/legado-b2b/arquitetura.md`).
 - **Trilha sem selo "você está aqui"** (decisão revisada): o nó atual em
   destaque + caminho percorrido já comunicam a posição.
 - Sem streak diário, meta diária, mascote, % de acerto ou tempo (produto).
@@ -707,12 +707,12 @@ atualizada para o estado atual (11 destinos ilustrados).
 baixa (nenhuma escola fechada) levou o dono a decidir tentar B2C: assinatura
 mensal/anual via Apple IAP, venda direto pra família (7–12 anos), sem
 professor no meio. Análise completa, regras de negócio e o plano de execução
-fase a fase estão em **`docs/plano_b2c.md`** (documento novo — é ele que
+fase a fase estão em **`docs/produto/plano_b2c.md`** (documento novo — é ele que
 passa a ser a fonte da verdade do produto daqui pra frente, não este arquivo
-nem `docs/rascunho_product.md`/`docs/arquitetura.md`, que continuam
+nem `docs/legado-b2b/rascunho_product.md`/`docs/legado-b2b/arquitetura.md`, que continuam
 descrevendo o produto B2B pré-pivô e não foram reescritos por inteiro: o custo
 de reescrever ~2000 linhas de prosa B2B não se pagava frente a ter
-`docs/plano_b2c.md` como spec B2C paralela e completa. `CLAUDE.md` foi
+`docs/produto/plano_b2c.md` como spec B2C paralela e completa. `CLAUDE.md` foi
 atualizado para apontar pra ela).
 
 **O que muda de raiz:** identidade por turma/código → conta do responsável +
@@ -725,7 +725,7 @@ reduzida a 2 países/4 destinos/16 nós — só os destinos com arte já pronta
 (Rio, Foz do Iguaçu, Amazônia, Paris); o catálogo completo (3 países/20/80)
 volta depois, sem mudar schema nem lógica.
 
-**Executado nesta sessão (Fases 1–3 de `docs/plano_b2c.md`):**
+**Executado nesta sessão (Fases 1–3 de `docs/produto/plano_b2c.md`):**
 
 - **Fase 1 — Identidade familiar.** Tabelas `conta`/`perfil_crianca`; domínio
   `identidade` reescrito (`POST /v1/conta`, `POST /v1/sessao`, `GET/POST
@@ -763,10 +763,10 @@ paywall → webhook → sessão liberada) rodado ao vivo no simulador iOS e via
 curl contra o backend real — não só nos testes automatizados.
 
 **Pendências explícitas, fora do escopo desta sessão:**
-- `docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md` e os
+- `docs/legado-b2b/rascunho_product.md`, `docs/legado-b2b/arquitetura.md`, `design/telas.md` e os
   briefs **não foram reescritos por inteiro** pro B2C (só ganharam uma nota
-  no topo apontando pra `docs/plano_b2c.md` — ver `CLAUDE.md` "Mapa dos
-  documentos"). Se algo nesses arquivos contradisser `docs/plano_b2c.md`,
+  no topo apontando pra `docs/produto/plano_b2c.md` — ver `CLAUDE.md` "Mapa dos
+  documentos"). Se algo nesses arquivos contradisser `docs/produto/plano_b2c.md`,
   vale o plano B2C.
 - Fases 4–6 do plano (redação real com IA, Área do Responsável, congelamento
   formal do professor) não começaram.
@@ -776,7 +776,7 @@ curl contra o backend real — não só nos testes automatizados.
 
 ## 🖋️ Fase 4 — Redação real (backend), parcial (25/08)
 
-Implementado nesta sessão, a partir de `docs/plano_b2c.md` §07: domínio
+Implementado nesta sessão, a partir de `docs/produto/plano_b2c.md` §07: domínio
 `backend/app/redacao/` deixou de ser mock. Rotas reais (`GET /redacoes`,
 `POST /redacoes/{id}/enviar`, `GET /redacoes/{id}/analise`, `POST
 /redacoes/tema-extra`), rubrica pura por faixa (`redacao/rubrica.py`, no
@@ -786,7 +786,7 @@ como Protocol para os testes usarem um fake — nenhum teste faz chamada de
 rede). 13 testes novos, 160 no total (backend).
 
 **Decisão revisada registrada aqui** (`CLAUDE.md` "regra das decisões
-revisadas" — já editado em `docs/plano_b2c.md` §7.4 no mesmo commit): o desenho
+revisadas" — já editado em `docs/produto/plano_b2c.md` §7.4 no mesmo commit): o desenho
 original do plano mandava REMOVER `turma_id`/`professor_associacao_id` de
 `redacao_atribuicao` na migration da Fase 4. Isso quebraria
 `app/professor/repository.py` (`criar_atribuicao`/`redacoes_do_aluno`), que o
@@ -846,9 +846,40 @@ falta de infra ou de conteúdo que não existiam antes desta sessão):
   foto de caderno. Isso só pode ser feito na máquina do dono (Flutter SDK não
   está disponível no container do agente, ver `CLAUDE.md` "Ambiente").
 
+### Fase 4, app (25/08 — mesmo dia, sessão seguinte)
+
+`app/lib/features/redacao/` trocou `Redacao.sample()` local por
+`GET/POST /v1/redacoes*` reais (`data/redacao_models.dart` +
+`data/redacao_repository.dart` + `redacao_mapper.dart` +
+`redacao_controller.dart`, no mesmo padrão DTO→Mapper→provider Riverpod de
+`features/sessao/`). **Decisão do dono (25/08): só o caminho digitado**
+(`formato: 'digital'`) nesta rodada — a captura de foto (`image_picker`,
+já no `pubspec.yaml`) fica visível mas desabilitada ("em breve"), sem tocar
+em OCR/ML Kit, que segue como pendência separada (ver item acima). O
+`RedacaoStatus` da apresentação cresceu de 3 para 6 valores (`aberta`,
+`processando`, `erroIngestao`, `erroAnalise`, `revisaoHumana`, `analisada`)
+para cobrir o `status` real do backend; a tela de resultado renderiza a
+análise de verdade (`pontos_fortes` + texto grifado por âncora + anotações
+por dimensão, com cor fixa por uma das 5 dimensões da rubrica) em vez do
+placeholder honesto anterior, e trata `revisao_humana`/`erro_ingestao`/
+`erro_analise` com mensagens específicas (nunca como erro técnico genérico,
+R-RD-7). Copy órfã do professor em `widgets/empty_open.dart` corrigida (não
+é mais "seu professor" quem abre o tema). `POST .../enviar` é síncrono
+(alguns segundos por causa da chamada ao Claude) — a tela de envio mostra
+loading real ("Lendo sua redação com carinho…"), sem o delay fake antigo.
+Verificado ao vivo: `flutter analyze` limpo, `flutter test` 26/26, e os 4
+desfechos (aberta → enviar digitado → analisada / erro_ingestao) rodados no
+navegador via `flutter build web --dart-define=DEMO=true`. Pendência notada
+durante a verificação: o provider da lista (`redacaoListaProvider`) não tem
+estado próprio em `AppConfig.demo` — como `Redacao.sample()` é uma função
+pura sem memória, enviar uma redação em modo demo não persiste o "enviado"
+entre invalidações da lista (a redação aberta reaparece aberta). Inofensivo
+(é só o modo demo, sem usuário real por trás) e não afeta o caminho real
+contra o backend, mas fica registrado caso vire confusão numa demo ao vivo.
+
 ## 👪 Fase 5 — Área do Responsável, backend só (25/08)
 
-Implementado na mesma sessão da Fase 4, a partir de `docs/plano_b2c.md` §08:
+Implementado na mesma sessão da Fase 4, a partir de `docs/produto/plano_b2c.md` §08:
 domínio novo `backend/app/responsavel/`. Portão PIN (`GET/POST /conta/pin`,
 `POST /conta/pin/verificar` — hash argon2 em `conta.pin_hash`, coluna que já
 existia no schema desde a Fase 1 mas nunca tinha sido usada) e resumo semanal
@@ -911,9 +942,90 @@ trabalho de app ou decisão do dono):
   `DELETE /v1/conta`, que já existiam. Fica registrado que isto foi decisão
   deliberada (evitar duplicar contrato), não esquecimento.
 
+### Fase 5, app (25/08 — mesmo dia, sessão seguinte à do app da Fase 4)
+
+`app/lib/features/responsavel/` criado: `pin_gate_screen.dart` (portão —
+"criar PIN" quando `GET /conta/pin` devolve `definido: false`, senão "digite
+o PIN"; link "Esqueci o PIN" cai no mesmo fluxo de criação, já que
+`POST /conta/pin` não exige o PIN antigo — o token do responsável já é a
+autenticação forte por trás dele), `responsavel_home_screen.dart` (conta +
+lista de filhos + atalhos de assinatura/adicionar criança/excluir conta),
+`resumo_screen.dart` (meta semanal, minutos/sessões, as 5 palavras
+aprendidas, evolução da redação em chips coloridos por dimensão — mesmo
+padrão DTO→Mapper→provider Riverpod das outras features) e
+`excluir_conta_screen.dart` (senha + checkbox de confirmação — pede a senha
+de novo mesmo já tendo passado o PIN, porque excluir é irreversível e um PIN
+de 4 dígitos é gate leve demais pra isso).
+
+**Achado arquitetural que mudou o ponto de entrada** (a pendência do backend
+"R-RS-1 só é imposto pelo app" acima cobra essa decisão): o `TokenStore`
+guarda **um único token** por vez (R-ID-2/R-ID-3), e não existe endpoint pra
+trocar o token de criança de volta pro de responsável — só
+`POST /perfis/{id}/entrar` (responsável → criança), nunca o caminho inverso.
+Ou seja: a Área do Responsável só é alcançável enquanto o token do
+responsável ainda está ativo, isto é, **na tela de Seletor de Perfil**
+(`AguardandoPerfil`, entre o login e a escolha do filho) — exatamente onde o
+Paywall já vive (o próprio comentário em `assinatura_controller.dart` já
+antecipava isso: "relido a cada vez que a Área do Responsável ou o paywall
+abrem"). Por isso o atalho novo entrou no header do
+`SeletorPerfilScreen` (`AppIcons.familia`, ao lado do de assinatura), **não**
+dentro do jogo da criança. Como no dia a dia o app abre direto na Home da
+criança (o `AuthController` resolve o token salvo sem passar pelo Seletor de
+novo), foi adicionado um atalho em `ConfiguracoesScreen` ("Área do
+Responsável") que explica isso e oferece sair + entrar de novo com o e-mail
+do responsável — sem inventar endpoint novo de troca de token, que seria
+mudança de backend fora do escopo desta sessão. Se algum dia isso incomodar
+na prática, a correção é de backend (um endpoint tipo
+`POST /perfis/sair-para-responsavel`), não de app.
+
+Também corrigido de passagem: `AssinaturaRepository.status()` nunca tinha
+sido chamado com `AppConfig.demo` ligado antes desta sessão (só
+`ofertaAtual()`/paywall eram exercitados em demo) — a `_AssinaturaCard` nova
+expôs que ele sempre batia na rede de verdade, travando em modo demo sem
+backend. Adicionado o mesmo branch de demo que todo o resto do app já usa.
+
+Verificado: `flutter analyze` limpo, `flutter test` 26/26, e as 4 telas
+navegadas ao vivo no navegador (build web com `DEMO=true`, apontando
+`main.dart` temporariamente pro `PinGateScreen` só pra QA — revertido antes
+de terminar, `git diff` em `main.dart` ficou vazio).
+
+### Verificação em Simulador iOS — Redação + Área do Responsável (25/08, sessão seguinte)
+
+Fechada a pendência "nenhuma verificação em simulador iOS/dispositivo real"
+das duas seções acima. `flutter build ios --simulator` (iPhone 17 Pro, iOS
+26.5) + `--dart-define=DEMO=true`, com o mesmo truque temporário de apontar
+`main.dart` pro `PinGateScreen` só durante a sessão de QA (revertido depois,
+`git diff` em `main.dart` ficou vazio de novo). Confirmado ao vivo, em
+renderização nativa real (não navegador): Home → Redação (lista, chips de
+status, envio digitado com contador de palavras ao vivo) → Resultado
+analisado (texto grifado por âncora + cartões de anotação por dimensão,
+idêntico ao navegador) → Resultado `erro_ingestao` (placeholder acolhedor) →
+Área do Responsável: portão de PIN (máscara `••••`, título/subtítulo,
+"Esqueci o PIN"). Fontes (Fredoka/Nunito/Caveat/mono), cores e Cupertino
+touches (linha customizada do PassportField etc.) todos corretos no
+dispositivo real.
+
+**Limitação de ferramenta encontrada, não bug de app:** neste simulador, com
+um `TextField` focado, o teclado de software cobre a faixa inferior da tela
+(~291pt) mas **não aparece no screenshot** desta ferramenta de automação — as
+coordenadas de toque continuam sendo despachadas pro teclado (invisível na
+imagem), então qualquer botão nessa faixa (`Enviar` da redação, `Entrar` do
+PIN) fica intocável via automação enquanto o campo está focado, mesmo com
+coordenadas corretas. Testado exaustivamente (varredura de coordenadas,
+gestos de arrastar pra fechar o teclado, relançar o app) sem solução
+confiável dentro da ferramenta. Isso **não é um defeito do app** — o mesmo
+fluxo de envio (digitar → enviar → ver análise) já foi validado de ponta a
+ponta no navegador (ver nota da Fase 4, app) e a única diferença aqui é a
+ferramenta de automação não conseguir "furar" o teclado nativo para tocar o
+botão. Um humano tocando a tela normalmente não teria esse problema. Fica
+registrado para quem for automatizar testes de UI reais (ex.: `integration_test`)
+nesse tipo de tela — soluções mais robustas usariam `flutter_driver`/
+`integration_test` (que conhece o `MediaQuery.viewInsets` de verdade) em vez
+de coordenadas de tela fixas.
+
 ## 🗑️ Fase 6 — Professor removido (decisão revisada 25/08, mesma sessão)
 
-`docs/plano_b2c.md` §09 original mandava **congelar** o professor/B2B (código
+`docs/produto/plano_b2c.md` §09 original mandava **congelar** o professor/B2B (código
 parado no repo, fora da API pública, deletar de verdade só depois de 3 meses
 de B2C validado). Ao propor executar esse passo, encontrei uma contradição
 real entre o próprio texto do plano — passo 1 ("remover `professor_router` da
@@ -946,7 +1058,7 @@ os dois lados:
   plano** (só `usuario_id`+`origem`+`tema_catalogo_id`, sem `turma_id`) — a
   decisão da Fase 4 de fazer a tabela coexistir com o professor
   (`turma_id` XOR `usuario_id`) só existia por causa do professor; sem ele, a
-  coexistência não tem mais razão de ser. Registrado em `docs/plano_b2c.md`
+  coexistência não tem mais razão de ser. Registrado em `docs/produto/plano_b2c.md`
   §7.4.
 - **App Flutter removido:** `app/lib/features/professor/` (8 arquivos:
   telas, DTOs, mapper, providers, shell), `app/lib/main_professor.dart`,
@@ -964,7 +1076,7 @@ os dois lados:
 check`).
 
 **Não é pendência, é decisão registrada:** os documentos B2B pré-pivô
-(`docs/rascunho_product.md`, `docs/arquitetura.md`, `design/telas.md`,
+(`docs/legado-b2b/rascunho_product.md`, `docs/legado-b2b/arquitetura.md`, `design/telas.md`,
 `design/brief-mockup-*.md`) agora descrevem código que **não existe mais no
 repo** (antes descreviam código congelado, ainda presente). Não foram
 reescritos — o custo de reescrever ~2000 linhas de prosa B2B segue não se
