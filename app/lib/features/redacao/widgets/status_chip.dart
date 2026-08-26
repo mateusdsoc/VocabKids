@@ -19,8 +19,11 @@ class StatusChip extends StatelessWidget {
     final c = context.colors;
     final (Color tint, IconData icon, String label) = switch (status) {
       RedacaoStatus.aberta => (c.primary, AppIcons.redacao, 'Aberta'),
-      RedacaoStatus.emAnalise => (c.warn, AppIcons.retry, 'Em análise'),
+      RedacaoStatus.processando => (c.warn, AppIcons.clock, 'Em análise'),
       RedacaoStatus.analisada => (c.goal, AppIcons.check, 'Analisada'),
+      RedacaoStatus.erroIngestao => (c.error, AppIcons.report, 'Texto curto'),
+      RedacaoStatus.erroAnalise => (c.error, AppIcons.report, 'Erro na análise'),
+      RedacaoStatus.revisaoHumana => (c.warn, AppIcons.info, 'Em revisão'),
     };
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 4),

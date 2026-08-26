@@ -45,6 +45,10 @@ class AssinaturaRepository {
 
   /// Status real, sempre do backend — nunca derivado do SDK local.
   Future<AssinaturaStatus> status() async {
+    if (AppConfig.demo) {
+      return AssinaturaStatus(
+          assinante: true, status: 'ativa', expiraEm: null, emTrial: false);
+    }
     final json = await _api.get('/assinatura');
     return AssinaturaStatus.fromJson(json as Map<String, dynamic>);
   }

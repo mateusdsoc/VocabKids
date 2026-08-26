@@ -1,94 +1,90 @@
-/// Modelos da área de Redação (produto §4.6).
-///
-/// O professor **atribui** uma redação (tema + prazo); o aluno **envia** em
-/// resposta (foto manuscrita → OCR, ou PDF). Aqui só o que a UI precisa — o
-/// pipeline real (OCR → análise → atribuição de palavras) é da fatia C; por
-/// isso o resultado fica num placeholder honesto, sem métricas inventadas.
-///
-/// Espelha `backend/app/redacao/routes.py` (`GET /redacoes`, hoje mockado):
-/// `tema`, `prazo`, `status`.
+/// Modelos de apresentação da área de Redação (produto §4.6). Espelha o ciclo
+/// real do backend (`backend/app/redacao/schemas.py`, `docs/plano_b2c.md`
+/// §07): o responsável/servidor **atribui** um tema a cada 15 dias (ou sob
+/// demanda, R-RD-4); o aluno **envia** em resposta (hoje só texto digitado —
+/// manuscrita depende de OCR on-device ainda não integrado ao app).
 library;
 
-/// Onde a redação está no ciclo do aluno.
+/// Onde a redação está no ciclo do aluno — espelha o `status` de
+/// `RedacaoAtribuicaoOut`/`AnaliseOut` (`null` no backend = [aberta]).
 enum RedacaoStatus {
-  /// Atribuída pelo professor, ainda não enviada — é o "herói" da tela.
+  /// Atribuída, ainda não enviada — é o "herói" da tela.
   aberta,
 
-  /// Enviada; aguardando a análise (fatia C). Sem resultado ainda.
-  emAnalise,
+  /// Enviada; a análise (chamada ao Claude) está rodando no servidor. Como o
+  /// envio é síncrono, isto só aparece se o app for fechado no meio ou numa
+  /// nova consulta antes do processamento terminar.
+  processando,
+
+  /// Texto mais curto que o mínimo da rubrica da faixa etária — o servidor
+  /// não chegou a analisar.
+  erroIngestao,
+
+  /// A chamada de análise falhou no servidor; sem detalhe de motivo exposto.
+  erroAnalise,
+
+  /// R-RD-7: a triagem de risco encontrou um sinal (violência doméstica,
+  /// autolesão, abuso). Nenhuma análise é gravada ou mostrada — a tela deve
+  /// ser acolhedora, nunca tratar como erro técnico.
+  revisaoHumana,
 
   /// Análise concluída — resultado disponível.
   analisada,
 }
 
+RedacaoStatus redacaoStatusDe(String? status) => switch (status) {
+      null => RedacaoStatus.aberta,
+      'processando' => RedacaoStatus.processando,
+      'erro_ingestao' => RedacaoStatus.erroIngestao,
+      'erro_analise' => RedacaoStatus.erroAnalise,
+      'revisao_humana' => RedacaoStatus.revisaoHumana,
+      'analisada' => RedacaoStatus.analisada,
+      _ => RedacaoStatus.processando,
+    };
+
 class Redacao {
   const Redacao({
-    required this.id,
+    required this.atribuicaoId,
     required this.tema,
     required this.status,
     this.prazo,
-    this.enviadaEm,
-    this.paginas = 0,
+    this.redacaoId,
   });
 
-  final int id;
+  /// Id da **atribuição** (`GET /redacoes`) — é o que `POST .../enviar` espera.
+  final int atribuicaoId;
   final String tema;
   final RedacaoStatus status;
 
-  /// Prazo de entrega; `null` = sem prazo definido pelo professor.
+  /// Prazo de entrega; `null` = sem prazo (hoje sempre o caso — a rubrica não
+  /// define prazo, ver `design/notas-implementacao.md` § "Fase 4").
   final DateTime? prazo;
 
-  /// Quando o aluno enviou (para o histórico); `null` se ainda aberta.
-  final DateTime? enviadaEm;
-
-  /// Quantas páginas o aluno enviou (manuscrita pode ter 1–2 folhas).
-  final int paginas;
+  /// Id da **redação** enviada; `null` enquanto [aberta]. É o que
+  /// `GET .../analise` espera.
+  final int? redacaoId;
 
   bool get aberta => status == RedacaoStatus.aberta;
 
-  Redacao copyWith({
-    RedacaoStatus? status,
-    DateTime? enviadaEm,
-    int? paginas,
-  }) =>
-      Redacao(
-        id: id,
-        tema: tema,
-        prazo: prazo,
-        status: status ?? this.status,
-        enviadaEm: enviadaEm ?? this.enviadaEm,
-        paginas: paginas ?? this.paginas,
-      );
-
-  /// Amostra para o apresentável: 1 redação aberta (caso comum) + histórico.
-  /// Prazos são relativos a "agora" para a urgência fazer sentido em qualquer
-  /// dia. Trocar por `GET /redacoes` quando ligar no backend.
-  static List<Redacao> sample() {
-    final hoje = DateTime.now();
-    DateTime emDias(int d) => DateTime(hoje.year, hoje.month, hoje.day + d);
-    return [
-      Redacao(
-        id: 1,
-        tema: 'Minhas férias dos sonhos',
-        status: RedacaoStatus.aberta,
-        prazo: emDias(3),
-      ),
-      Redacao(
-        id: 2,
-        tema: 'Um herói brasileiro',
-        status: RedacaoStatus.analisada,
-        prazo: emDias(-9),
-        enviadaEm: emDias(-11),
-        paginas: 2,
-      ),
-      Redacao(
-        id: 3,
-        tema: 'Se eu pudesse mudar o mundo',
-        status: RedacaoStatus.emAnalise,
-        prazo: emDias(-2),
-        enviadaEm: emDias(-1),
-        paginas: 1,
-      ),
-    ];
-  }
+  /// Amostra para `AppConfig.demo`: 1 aberta (caso comum) + histórico com os
+  /// principais desfechos possíveis.
+  static List<Redacao> sample() => const [
+        Redacao(
+          atribuicaoId: 1,
+          tema: 'Minhas férias dos sonhos',
+          status: RedacaoStatus.aberta,
+        ),
+        Redacao(
+          atribuicaoId: 2,
+          tema: 'Um herói brasileiro',
+          status: RedacaoStatus.analisada,
+          redacaoId: 102,
+        ),
+        Redacao(
+          atribuicaoId: 3,
+          tema: 'Se eu pudesse mudar o mundo',
+          status: RedacaoStatus.erroIngestao,
+          redacaoId: 103,
+        ),
+      ];
 }

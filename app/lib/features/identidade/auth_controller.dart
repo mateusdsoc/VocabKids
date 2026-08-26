@@ -139,6 +139,14 @@ class AuthController extends AsyncNotifier<SessaoState> {
     await _repo.sair();
     state = const AsyncValue.data(Deslogado());
   }
+
+  /// Exclui a conta do responsável (R-ID-6, Área do Responsável). Lança
+  /// [ApiException] em falha (ex.: senha errada) — a tela mantém a sessão
+  /// atual pra tentar de novo.
+  Future<void> excluirConta({required String senha}) async {
+    await _repo.excluirConta(senha: senha);
+    state = const AsyncValue.data(Deslogado());
+  }
 }
 
 final authControllerProvider =

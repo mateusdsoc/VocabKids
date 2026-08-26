@@ -38,7 +38,7 @@ class EmptyOpen extends StatelessWidget {
               style: AppType.fredoka(size: 18, color: c.ink)),
           const SizedBox(height: 6),
           Text(
-            'Quando seu professor abrir uma redação,\nela chega aqui pra você responder.',
+            'Um novo tema chega aqui de tempos em\ntempos, pra você escrever sobre ele.',
             textAlign: TextAlign.center,
             style: AppType.nunito(
                 size: 13, weight: FontWeight.w600, color: c.muted, height: 1.35),

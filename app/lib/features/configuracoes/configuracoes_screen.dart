@@ -120,6 +120,15 @@ class ConfiguracoesScreen extends ConsumerWidget {
                             ),
                           ),
                           SettingTile(
+                            icon: AppIcons.familia,
+                            title: 'Área do Responsável',
+                            subtitle: 'Saia e entre com o e-mail do responsável',
+                            accent: c.accentStrong,
+                            trailing: Icon(AppIcons.chevron,
+                                size: 20, color: c.muted),
+                            onTap: () => _confirmarSaidaParaResponsavel(context, sair),
+                          ),
+                          SettingTile(
                             icon: AppIcons.signout,
                             title: 'Trocar de perfil / sair',
                             accent: c.warn,
@@ -169,6 +178,39 @@ void _emBreve(BuildContext context) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(const SnackBar(content: Text('Privacidade — em breve')));
+}
+
+/// A Área do Responsável só existe no contexto do token do responsável
+/// (R-ID-3: token de criança não acessa rota de gameplay, e vice-versa) —
+/// dentro do jogo o único jeito de chegar lá é sair e entrar de novo com o
+/// e-mail do responsável, que cai no Seletor de Perfil (onde o atalho vive).
+Future<void> _confirmarSaidaParaResponsavel(
+    BuildContext context, Future<void> Function() sair) async {
+  final c = context.colors;
+  final confirmou = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: c.paper,
+      title: Text('Sair para a Área do Responsável?',
+          style: AppType.fredoka(size: 17, color: c.ink)),
+      content: Text(
+        'Você vai sair desta criança e voltar à tela de entrada. Entre de '
+        'novo com o seu e-mail e senha pra abrir a Área do Responsável.',
+        style: AppType.nunito(size: 13.5, weight: FontWeight.w600, color: c.muted),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Sair'),
+        ),
+      ],
+    ),
+  );
+  if (confirmou == true) await sair();
 }
 
 /// Rótulo micro de seção (mesmo eyebrow mono do passaporte), usado solto antes

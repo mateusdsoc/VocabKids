@@ -8,6 +8,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/surface_card.dart';
 import '../assinatura/paywall_screen.dart';
+import '../responsavel/pin_gate_screen.dart';
 import 'auth_controller.dart';
 import 'criar_crianca_screen.dart';
 import 'models.dart';
@@ -61,6 +62,9 @@ class SeletorPerfilScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(17, 8, 17, 0),
                   child: _Header(
+                    onResponsavel: () => Navigator.of(context).push(
+                      adaptivePageRoute(builder: (_) => const PinGateScreen()),
+                    ),
                     onAssinatura: () => Navigator.of(context).push(
                       adaptivePageRoute(builder: (_) => const PaywallScreen()),
                     ),
@@ -120,7 +124,12 @@ class SeletorPerfilScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onAssinatura, required this.onSair});
+  const _Header({
+    required this.onResponsavel,
+    required this.onAssinatura,
+    required this.onSair,
+  });
+  final VoidCallback onResponsavel;
   final VoidCallback onAssinatura;
   final VoidCallback onSair;
 
@@ -147,6 +156,8 @@ class _Header extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            botao(AppIcons.familia, onResponsavel),
+            const SizedBox(width: 10),
             botao(AppIcons.passaporte, onAssinatura),
             const SizedBox(width: 10),
             botao(AppIcons.signout, onSair),
