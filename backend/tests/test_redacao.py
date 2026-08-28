@@ -1,8 +1,8 @@
 """Redação B2C real — atribuição, envio, triagem de risco (Fase 4, docs/plano_b2c.md).
 
 Usa um `Analisador` fake via `app.dependency_overrides` — nenhum teste aqui faz
-chamada de rede nem depende de `ANTHROPIC_API_KEY` (ver pendência registrada em
-`app/redacao/analisador.py` sobre o `AnalisadorClaude` real nunca ter sido
+chamada de rede nem depende de `OPENAI_API_KEY` (ver pendência registrada em
+`app/redacao/analisador.py` sobre o `AnalisadorOpenAI` real nunca ter sido
 exercitado contra a API de verdade).
 """
 import pytest

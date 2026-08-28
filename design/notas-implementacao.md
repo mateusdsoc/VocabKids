@@ -1082,3 +1082,298 @@ repo** (antes descreviam código congelado, ainda presente). Não foram
 reescritos — o custo de reescrever ~2000 linhas de prosa B2B segue não se
 pagando — mas `CLAUDE.md` "Mapa dos documentos" foi atualizado pra deixar
 isso explícito.
+
+---
+
+## 🔀 Troca de provedor de LLM: Anthropic (Claude) → OpenAI (26/08)
+
+**Decisão do dono (26/08):** a análise de redação (`app/redacao/analisador.py`,
+Fase 4) vai usar a API da **OpenAI (GPT-4o-mini ou similar)** em vez da
+Anthropic. Motivo: a tarefa (rubrica + triagem de risco por faixa etária, com
+prompt estruturado) não exige o modelo mais caro/inteligente da Anthropic —
+custo por redação analisada importa mais numa assinatura B2C de baixo ticket
+do que a última milha de qualidade do modelo.
+
+**Atualização (26/08, mesma sessão): a troca de código foi feita.**
+`backend/app/redacao/analisador.py` — `AnalisadorClaude` virou
+`AnalisadorOpenAI`: `AsyncAnthropic`/tool-use → `AsyncOpenAI`/function-calling
+(`chat.completions.create` com `tools=[...]`, `tool_choice={"type":
+"function", ...}`; resposta vem em `choices[0].message.tool_calls[0]
+.function.arguments`, uma string JSON — precisa de `json.loads`, diferente do
+`bloco.input` já-parseado da Anthropic). `backend/app/config.py`:
+`anthropic_api_key`/`anthropic_modelo_redacao` → `openai_api_key`
+(`OPENAI_API_KEY`)/`openai_modelo_redacao` (default `"gpt-4o-mini"`).
+`backend/pyproject.toml`: dependência `anthropic` → `openai`, `uv lock` +
+`uv sync` rodados. `.env.example` não tinha a chave documentada, nada a
+mudar lá.
+
+**Verificado:** `uv run pytest` segue 155/155 (o fake em `test_redacao.py`
+nunca dependeu do formato de resposta da Anthropic, só da interface
+`Analisador`). Import do módulo novo funciona (`AnalisadorOpenAI`,
+`get_analisador()` retorna a classe certa). A estrutura do tool-schema em
+formato OpenAI (`type: function`, `function.parameters`) foi conferida
+isoladamente (chaves e `required` batendo com o schema original).
+
+**Segue pendência, não mudou com a troca de SDK:** nunca rodou contra a API
+de verdade em nenhum provedor (nem Anthropic, nem OpenAI agora) — falta
+`OPENAI_API_KEY` real pra validar ao vivo, principalmente a triagem de risco
+(R-RD-7).
+
+---
+
+## 📚 Vocabulário — 37 → 100 palavras (26/08)
+
+**Feito:** [seed_vocabulario.py](../backend/app/seed_vocabulario.py) ganhou
+as 63 palavras que faltavam pro MVP (10 por nível de dificuldade 1–10, antes
+eram 3–4). Cada uma com definição, 2–3 sinônimos, frase de exemplo e as 8
+questões (4 níveis × 2 variações), no mesmo formato de autoria manual das 37
+originais — sem passar pelo pipeline de LLM+QA automático descrito em
+`docs/produto/plano_b2c.md` §10.1 (esse pipeline ainda não existe como
+código, é só o plano de como escalar pro pós-MVP).
+
+**Processo:** lista de 63 lemas + definição + sinônimos + exemplo foi
+rascunhada primeiro (sem as questões) e revisada pelo dono antes de escrever
+as 504 questões novas (63×8). `_validar()` (já existente no arquivo) mais uma
+checagem ad-hoc confirmam: 100 palavras, exatamente 10 por nível, nenhum lema
+duplicado, nenhuma opção repetida dentro de uma questão, resposta correta
+sempre presente nas opções.
+
+**Pendência explícita:** as 504 questões novas em si (os enunciados e
+distratores, não a lista de palavras) ainda não passaram por revisão humana
+por amostragem — o plano exige mínimo 20% revisado, 100% na faixa 7–8 (níveis
+1–4). A lista de palavras/definições foi revisada; as questões, não. Ver
+`docs/produto/plano_b2c.md` R1 (riscos) e checklist §15, ambos atualizados
+pra refletir esse estado intermediário.
+
+## ✍️ Temas de redação — 18 → 120 (26/08)
+
+**Feito:** os 102 temas que faltavam (34 por faixa etária, completando os 40
+de cada uma) estão em [seed_temas.py](../backend/app/seed_temas.py) por
+inteiro — título, gênero e enunciado revisados pelo dono antes do `apoio`
+(2 perguntas-gancho por tema) ser escrito e migrado pra lá. O rascunho
+intermediário (`docs/produto/rascunho_vocabulario_temas.md`) foi apagado —
+conteúdo final vive só no seed agora, sem duplicar em dois lugares.
+
+**Verificado:** `uv run python -m app.seed_temas` insere os 102 novos
+(`temas_inseridos: 102`), idempotente na segunda chamada
+(`temas_inseridos: 0`). Checagem ad-hoc: 120 temas no total, exatamente 40
+por faixa, nenhum título duplicado, todo `apoio` com ≥2 perguntas, todo
+`genero` dentro do enum válido.
+
+**Pendência explícita, igual à do vocabulário:** o `apoio` dos 102 temas
+novos (conteúdo gerado, não só revisado pelo dono como título/enunciado) não
+passou por revisão humana por amostragem — mesma lacuna do risco R1 do plano
+B2C, só que pro conteúdo de redação em vez de vocabulário.
+
+---
+
+## ⚖️ Documentação legal — rascunhos LGPD/App Store (26/08)
+
+**Feito:** os 9 documentos do checklist §15 "Legal" do plano B2C (`docs/produto/plano_b2c.md`
+§11.1) foram rascunhados em `docs/legal/` — Política de Privacidade, Termos
+de Uso, Termo de Consentimento Parental, ROPA, Política de Retenção e
+Exclusão, Plano de Resposta a Incidente, Lista de Suboperadores, pesquisa de
+opt-out de treinamento com a OpenAI, e mapeamento de Privacy Nutrition
+Labels. Índice em `docs/legal/README.md`.
+
+**Como foi feito, pra não virar "genérico de internet":** cada documento foi
+escrito a partir do schema real (`backend/app/schema.py` — `conta.pin_hash`,
+`conta.consentimento_lgpd_em`/`consentimento_versao`, `perfil_crianca.apelido`/
+`ano_nascimento`, o fluxo de triagem de risco de `redacao/analisador.py`) e
+das regras R-LG-1 a R-LG-5 já descritas no plano, não de um template
+genérico de política de privacidade.
+
+**Decisões que o dono tomou nesta sessão pra viabilizar os rascunhos:**
+pessoa física por enquanto (sem CNPJ ainda — documentos ficam com
+placeholder até abrir empresa), DPO é o próprio fundador provisoriamente,
+escopo só LGPD/Brasil por enquanto (sem cláusulas de COPPA/GDPR, mais simples
+pro MVP).
+
+**Pendência explícita — nada disto está pronto pra publicar:**
+- Todos os 9 documentos precisam de **revisão por advogado** antes de valer
+  como documento legal de verdade — são rascunhos técnicos competentes, não
+  aconselhamento jurídico.
+- `termo_consentimento_parental.md` é o mais crítico (art. 14 §1 exige
+  "consentimento específico e em destaque") — a tela de consentimento em si
+  e o gate no backend antes de `POST /v1/conta/perfis` **ainda não foram
+  implementados no código**, só o texto e a nota de onde plugar
+  (`conta.consentimento_lgpd_em`/`consentimento_versao`, que já existem no
+  schema desde a Fase 1, nunca usados até agora).
+- `opt_out_llm.md` precisa de ação humana fora do repo (acessar o painel da
+  conta OpenAI, avaliar Zero Data Retention, assinar o DPA deles) — nenhum
+  agente consegue fazer isso sozinho.
+- Job de expurgo automático de redação aos 24 meses (política de retenção)
+  não existe no código ainda — não é urgente, ninguém tem 24 meses de uso.
+- Decisão D9 (categoria Kids vs. Educação/4+) continua em aberto, referenciada
+  mas não decidida por estes documentos.
+
+---
+
+## 🔎 Pesquisa jurídica de fonte primária — sem advogado, por decisão do dono (26/08)
+
+**Decisão do dono, explícita:** não contratar advogado. Pediu pra pesquisar
+leis de verdade (Google/fontes públicas) e deixar os documentos legais o
+mais sólidos possível com isso, em vez de deixar tudo marcado como
+"pendente de revisão jurídica". Passo seguinte da sessão de documentação
+legal (mesmo dia, ver seção acima).
+
+**O que a pesquisa mudou de fato** (proveniência completa em
+`docs/legal/fontes_pesquisa.md`):
+
+1. **ECA Digital (Lei 15.211/2025)** — lei nova, em vigor desde 17/03/2026,
+   que não existia quando o `plano_b2c.md` original foi escrito (nem quando
+   os rascunhos legais da rodada anterior desta sessão foram feitos, horas
+   antes). Achado real, não só formalidade: a lei exige canal de reporte às
+   autoridades pra sinal de risco grave, e o produto só tinha "revisão
+   humana interna" pra isso. Endereçado em `docs/legal/eca_digital.md` +
+   novo §6 em `plano_resposta_incidente.md` (Disque 100/Conselho
+   Tutelar/SaferNet) + R9 na tabela de riscos do plano.
+2. **Decisão D9 resolvida** (categoria da App Store) — Educação/4+, não Kids
+   Category. Motivo concreto encontrado na pesquisa: a Kids Category usa
+   faixas etárias fechadas (5-, 6–8, 9–11) que não cobrem os 7–12 do
+   VocabKids por inteiro, e proíbe qualquer transmissão de dado a terceiro
+   mesmo pseudonimizado — conflitaria com o envio à OpenAI.
+3. **DPO não é obrigatório** pro estágio atual — Resolução CD/ANPD nº 2/2022
+   dispensa agente de tratamento pessoa física (que é o caso, sem CNPJ) da
+   exigência formal do art. 41. Mantido mesmo assim por transparência, mas
+   deixou de ser "pendência legal" e virou "escolha".
+4. **Prazo de notificação de incidente não é "prazo razoável" vago** —
+   Resolução CD/ANPD nº 15/2024 define 3 dias úteis (6 pra pequeno porte).
+   Documento antigo tinha um placeholder pedindo confirmação com advogado;
+   agora tem o número exato, com fonte.
+5. **OpenAI já não usa dado de API pra treino por padrão** — não era uma
+   pendência de configuração, era desconhecimento: a garantia mais
+   importante (não treinar com o texto da redação) já existe sem nenhuma
+   ação nossa. O que resta (Zero Data Retention, DPA) é real, mas
+   reconhecidamente inacessível a uma operação solo hoje (passa por canal
+   de vendas empresarial) — documentado como tal, não escondido.
+6. **Prazos de retenção genéricos preenchidos** com base em prazos gerais do
+   direito brasileiro (5 anos fiscal/civil, referência CTN art. 173 e CC
+   art. 206) em vez de ficarem como placeholder "confirmar com advogado".
+7. **Texto-modelo de comunicação de incidente** escrito (antes só descrevia
+   o conteúdo esperado, não tinha um rascunho pronto).
+
+**O que a pesquisa não resolve, por natureza** (fica registrado, não
+escondido): nenhuma pesquisa por IA substitui uma revisão jurídica
+individualizada de verdade — o que está em `docs/legal/` é o melhor esforço
+possível a partir de fonte pública nesta data (26/08/2026), com duas fontes
+primárias que não puderam ser acessadas diretamente por erro de rede
+(planalto.gov.br, guidelines completas da Apple — contornado com fontes
+secundárias confiáveis que citam o texto original). A regulamentação
+complementar do ECA Digital (decreto) ainda não existe — o que ela vai
+exigir em detalhe técnico é, por definição, desconhecido até ser publicada.
+
+---
+
+## ✅ Tela de consentimento parental — implementada (27/08)
+
+**Achado ao investigar antes de codar:** o gate no **backend** já existia
+desde a Fase 1 (`_exigir_consentimento` em `app/identidade/routes.py`,
+testado) — não era pendência de código nova. A pendência real era só a
+**UI**: `cadastro_screen.dart` tinha uma única caixa de marcação (texto
+parafraseado, sem link pro conteúdo de verdade) e `repository.dart` mandava
+`aceite_termos: true, consentimento_lgpd: true` **fixos**, independente do
+que a caixa dissesse — funcionava porque a UI bloqueava o envio sem marcar,
+mas não representava de verdade dois consentimentos distintos.
+
+**Descoberta que mudou o desenho do `termo_consentimento_parental.md`:** o
+consentimento é pedido na **criação da conta** (`POST /v1/conta`), **antes
+de qualquer perfil de criança existir** (perfis são criados depois, um a
+um, até 3 por conta). A primeira versão do documento (rascunho de 26/08)
+assumia incorretamente uma tela por criança, template com `{apelido}`,
+gatilhada em `POST /v1/conta/perfis` — teria exigido schema novo
+(consentimento por perfil, não por conta) e um segundo gate. Reescrito pra
+descrever a arquitetura real: um consentimento por conta, texto genérico
+("a(s) criança(s) que você cadastrar"), com a alternativa por-criança
+registrada em "Decisões que ficaram de fora" como evolução futura, não
+bloqueador.
+
+**Feito:**
+- `app/lib/features/identidade/legal_texts.dart` — texto condensado (versão
+  mobile) dos Termos de Uso e do consentimento LGPD, mais
+  `kVersaoConsentimentoLgpd` em sincronia manual com
+  `CONSENTIMENTO_VERSAO_ATUAL` do backend.
+- `app/lib/features/identidade/widgets/legal_text_screen.dart` — tela
+  genérica reutilizável pra exibir esses textos (sem dependência nova:
+  texto puro, sem webview/markdown).
+- `cadastro_screen.dart` — duas caixas de marcação **separadas**: aceite dos
+  Termos de Uso (simples) e consentimento LGPD (cartão destacado, borda e
+  fundo próprios, texto "Ver o que isso significa" abrindo a tela
+  completa). Nenhuma pré-marcada; erro visual (borda âmbar) em qualquer uma
+  não marcada ao tentar submeter.
+- `repository.dart`/`auth_controller.dart` — `cadastrar()` agora recebe
+  `aceiteTermos`/`consentimentoLgpd` como parâmetros de verdade e manda o
+  valor real ao backend, não mais `true` fixo.
+
+**Bug pego durante a implementação:** tentei usar `\` no fim de linha
+dentro das strings triple-quoted do Dart pra continuar a frase na linha de
+baixo (hábito de Python) — `flutter analyze` acusou `unnecessary_string_escapes`.
+Testei com `dart run` isolado: o `\` é descartado mas a quebra de linha
+**permanece** (Dart não tem continuação de linha assim), o que teria
+quebrado as frases no meio silenciosamente se eu não tivesse verificado.
+Corrigido escrevendo cada parágrafo numa linha só no arquivo fonte.
+
+**Verificado ao vivo, não só testes:** subi o backend real
+(`uvicorn`) + o app Flutter web (`flutter run -d web-server`) contra ele,
+com um `.claude/launch.json` novo pro preview. No navegador: (1) botão
+"Criar conta" sem marcar nada → as duas caixas ficam com borda de erro; (2)
+link "Ver o que isso significa" abre o texto completo, sem escape/quebra
+estranha; (3) as duas marcadas → conta criada de verdade. Conferi no
+Postgres: `conta.consentimento_lgpd_em` com timestamp real e
+`consentimento_versao = '1.0'`, batendo com `CONSENTIMENTO_VERSAO_ATUAL`.
+Conta de teste apagada depois. `flutter analyze` limpo, `flutter test`
+26/26 (nenhum teste de widget cobria cadastro antes; não adicionei um novo
+porque a verificação ao vivo já cobriu o caminho crítico e não há padrão de
+teste de widget nesta base — ver se vale adicionar depois).
+
+**Pendência que sobrou, registrada em `docs/legal/termo_consentimento_parental.md`:**
+não existe hoje um mecanismo de "pedir consentimento de novo" pra uma conta
+já existente quando `CONSENTIMENTO_VERSAO_ATUAL` sobe — o gate atual só
+vale pra contas novas. Não é urgente (a versão nunca mudou desde que existe
+o campo), mas fica registrado antes que vire problema silencioso.
+
+---
+
+## 🗑️ Canal de reporte às autoridades (ECA Digital) — descartado por decisão do dono (27/08)
+
+**O que era:** na rodada de pesquisa jurídica de 26/08, identifiquei que o
+ECA Digital (Lei 15.211/2025) exige um "mecanismo eficaz de reporte
+imediato às autoridades" quando a triagem de risco da redação confirma algo
+grave (abuso, violência, exploração) — e documentei um processo manual pra
+isso em `docs/legal/plano_resposta_incidente.md` §6 (Conselho
+Tutelar/Disque 100/SaferNet Brasil), registrado como R9 na tabela de riscos
+do plano.
+
+**Decisão do dono (27/08):** não vamos ter esse canal — a operação (uma
+pessoa) não tem capacidade de manter esse processo. Pedido explícito: tirar
+o conteúdo relacionado, não só marcar como pendência.
+
+**O que foi removido/ajustado:**
+- `docs/legal/plano_resposta_incidente.md` — §6 (o passo a passo inteiro)
+  removido; virou um §8 curto "Fora de escopo, por decisão do dono",
+  nomeando a decisão sem manter o processo detalhado.
+- `docs/legal/politica_privacidade.md` §2 e §6.1 — reescritas pra não
+  afirmar mais que o VocabKids aciona esses canais.
+- `docs/legal/eca_digital.md` — a linha da tabela sobre esse requisito
+  mudou de "gap identificado e endereçado" pra "gap conhecido, aceito por
+  decisão do dono — não vai ser construído".
+- `docs/produto/plano_b2c.md` — risco R9 reescrito (mitigação: "nenhuma",
+  risco aceito conscientemente); checklist §15 ajustado.
+- `docs/legal/README.md` — nova seção "Escopo descartado por decisão do
+  dono".
+
+**O que isso significa de verdade, sem eufemismo:** a exigência legal do
+ECA Digital não desaparece por não estar documentada — só significa que,
+se `redacao.risco_sinalizado = true` confirmar um caso real algum dia,
+não há processo escrito de o que fazer. É um risco assumido
+conscientemente pelo dono, não um problema resolvido. Registrado aqui e em
+`docs/legal/eca_digital.md`/`plano_resposta_incidente.md` §8 exatamente
+pra não virar um "esquecimento" — é uma decisão, com dono e data.
+
+**Também esclarecido nesta conversa:** a "checagem de 10min na conta
+OpenAI" (`opt_out_llm.md`) listada como pendência não faz sentido cobrar
+agora — não existe conta/chave OpenAI configurada ainda
+(`OPENAI_API_KEY` nunca foi setada). Isso não foi removido do documento
+(ao contrário do canal de reporte, é um passo real que ainda vai ser
+necessário), só recontextualizado: é ação pra quando a conta existir, não
+pendência ativa hoje.

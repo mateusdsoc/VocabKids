@@ -58,7 +58,7 @@ uv run python -m app.seed_demo         # <-- conta vitrine + Ana e Beto
 
 > Se der erro de banco/variável de ambiente na primeira vez, veja o
 > `CLAUDE.md` (seção Backend): precisa de um Postgres rodando (Passo 0), um
-> `.env` com `JWT_SECRET`, `REVENUECAT_WEBHOOK_SECRET` e `ANTHROPIC_API_KEY`.
+> `.env` com `JWT_SECRET`, `REVENUECAT_WEBHOOK_SECRET` e `OPENAI_API_KEY`.
 
 ---
 

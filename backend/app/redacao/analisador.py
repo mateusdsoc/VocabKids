@@ -2,20 +2,23 @@
 
 Uma chamada só cobre TRIAGEM DE RISCO (R-RD-7) + análise pedagógica pela
 rubrica da faixa — trade-off deliberado de custo por chamada de LLM (§7.3: "1
-chamada Claude"). Isto é mais fraco do que um classificador de segurança
+chamada ao LLM"). Isto é mais fraco do que um classificador de segurança
 dedicado e independente do prompt pedagógico (que não erra junto se o prompt
 pedagógico "distrair" o modelo) — ver a pendência registrada em
 `design/notas-implementacao.md` (Fase 4, 25/08) antes de tratar isto como
 hardening suficiente para produção.
 
 `Analisador` é um Protocol para o service depender de uma interface, não da
-implementação Claude — os testes usam um fake em memória (sem chamada de rede,
-sem precisar de `ANTHROPIC_API_KEY`).
+implementação OpenAI — os testes usam um fake em memória (sem chamada de rede,
+sem precisar de `OPENAI_API_KEY`). Provedor OpenAI desde 26/08 (era Anthropic
+— troca registrada em `design/notas-implementacao.md`, motivo é custo por
+chamada; a tarefa não precisa do modelo mais caro/inteligente da Anthropic).
 """
+import json
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from app.config import settings
 from app.errors import ApiError
@@ -111,11 +114,13 @@ def _montar_prompt(*, texto: str, faixa_etaria: str, tema: str) -> str:
 
 
 _FERRAMENTA_RELATORIO = {
-    "name": "reportar_analise",
-    "description": "Reporta o resultado da triagem de segurança e (se aplicável) da análise pedagógica.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
+    "type": "function",
+    "function": {
+        "name": "reportar_analise",
+        "description": "Reporta o resultado da triagem de segurança e (se aplicável) da análise pedagógica.",
+        "parameters": {
+            "type": "object",
+            "properties": {
             "risco_sinalizado": {"type": "boolean"},
             "risco_motivo": {"type": ["string", "null"]},
             "pontos_fortes": {"type": "array", "items": {"type": "string"}},
@@ -162,7 +167,8 @@ _FERRAMENTA_RELATORIO = {
             },
         },
         "required": ["risco_sinalizado"],
-    },
+            },
+        },
 }
 
 
@@ -192,46 +198,49 @@ def _parse_resposta(entrada: dict) -> ResultadoAnalise:
     )
 
 
-class AnalisadorClaude:
-    """Implementação real — chamada única ao Claude, JSON forçado por tool-use.
+class AnalisadorOpenAI:
+    """Implementação real — chamada única à OpenAI, JSON forçado por function-calling.
 
     ⚠️ Pendência explícita (ver `design/notas-implementacao.md`, Fase 4,
-    25/08): este código nunca rodou contra a API de verdade nesta sessão (sem
-    `ANTHROPIC_API_KEY` no ambiente do agente). O contrato do prompt/schema
+    25/08, e § "Troca de provedor de LLM", 26/08): este código nunca rodou
+    contra a API de verdade em nenhum provedor. O contrato do prompt/schema
     está implementado por inteiro, mas falta VALIDAR ao vivo que o modelo
     respeita o schema e que o prompt produz anotações de qualidade — inclusive
     a triagem de risco (R-RD-7), que é a parte mais crítica de acertar.
     """
 
     def __init__(self, api_key: str | None = None, modelo: str | None = None):
-        self._api_key = api_key if api_key is not None else settings.anthropic_api_key
-        self._modelo = modelo or settings.anthropic_modelo_redacao
+        self._api_key = api_key if api_key is not None else settings.openai_api_key
+        self._modelo = modelo or settings.openai_modelo_redacao
 
     async def analisar(self, *, texto: str, faixa_etaria: str, tema: str) -> ResultadoAnalise:
         if not self._api_key:
             raise ApiError(
                 503,
                 "analise_indisponivel",
-                "Configuração de IA pendente — defina ANTHROPIC_API_KEY.",
+                "Configuração de IA pendente — defina OPENAI_API_KEY.",
             )
-        cliente = AsyncAnthropic(api_key=self._api_key)
-        resposta = await cliente.messages.create(
+        cliente = AsyncOpenAI(api_key=self._api_key)
+        resposta = await cliente.chat.completions.create(
             model=self._modelo,
-            max_tokens=2000,
-            system=_PROMPT_SISTEMA,
             tools=[_FERRAMENTA_RELATORIO],
-            tool_choice={"type": "tool", "name": "reportar_analise"},
+            tool_choice={"type": "function", "function": {"name": "reportar_analise"}},
             messages=[
-                {"role": "user", "content": _montar_prompt(texto=texto, faixa_etaria=faixa_etaria, tema=tema)}
+                {"role": "system", "content": _PROMPT_SISTEMA},
+                {"role": "user", "content": _montar_prompt(texto=texto, faixa_etaria=faixa_etaria, tema=tema)},
             ],
         )
-        bloco = next((b for b in resposta.content if b.type == "tool_use"), None)
-        if bloco is None:
+        chamadas = resposta.choices[0].message.tool_calls
+        if not chamadas:
             raise ApiError(502, "analise_malformada", "A IA não devolveu um relatório estruturado.")
-        return _parse_resposta(bloco.input)
+        try:
+            argumentos = json.loads(chamadas[0].function.arguments)
+        except (json.JSONDecodeError, TypeError) as erro:
+            raise ApiError(502, "analise_malformada", "A IA não devolveu um relatório estruturado.") from erro
+        return _parse_resposta(argumentos)
 
 
 def get_analisador() -> Analisador:
     """Dependency FastAPI — troca por um fake em teste via `app.dependency_overrides`
-    (a suíte não faz chamada de rede nem depende de `ANTHROPIC_API_KEY`)."""
-    return AnalisadorClaude()
+    (a suíte não faz chamada de rede nem depende de `OPENAI_API_KEY`)."""
+    return AnalisadorOpenAI()

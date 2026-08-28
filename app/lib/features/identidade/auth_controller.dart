@@ -86,10 +86,18 @@ class AuthController extends AsyncNotifier<SessaoState> {
     required String nome,
     required String email,
     required String senha,
+    required bool aceiteTermos,
+    required bool consentimentoLgpd,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await _repo.cadastrar(nome: nome, email: email, senha: senha);
+      await _repo.cadastrar(
+        nome: nome,
+        email: email,
+        senha: senha,
+        aceiteTermos: aceiteTermos,
+        consentimentoLgpd: consentimentoLgpd,
+      );
       return const AguardandoPerfil([]);
     });
   }

@@ -45,9 +45,11 @@ class Settings(BaseSettings):
 
     # Redação real (B2C, docs/plano_b2c.md Fase 4). Sem default de propósito:
     # sem a chave, a análise falha com um erro claro ("configuração pendente"),
-    # não com um 500 opaco — mesma convenção do RevenueCat acima.
-    anthropic_api_key: str = ""
-    anthropic_modelo_redacao: str = "claude-sonnet-5"
+    # não com um 500 opaco — mesma convenção do RevenueCat acima. Provedor
+    # OpenAI (decisão 26/08, design/notas-implementacao.md — troca da
+    # Anthropic por custo/chamada menor).
+    openai_api_key: str = ""
+    openai_modelo_redacao: str = "gpt-4o-mini"
 
     @property
     def cors_origins_list(self) -> list[str]:

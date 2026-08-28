@@ -49,7 +49,7 @@ pasta nova + uma linha em `app/api/v1.py`.
 
 Ver `CLAUDE.md` (seção "Comandos → Backend") para o passo a passo completo:
 Postgres local, variáveis de ambiente obrigatórias (`JWT_SECRET`,
-`REVENUECAT_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`), migrations, seeds e
+`REVENUECAT_WEBHOOK_SECRET`, `OPENAI_API_KEY`), migrations, seeds e
 `uv run pytest`.
 
 Erros saem no formato único: `{ "error": { "code": <snake_case>, "message": <legível>, "details": {} } }`.

@@ -52,7 +52,7 @@ psql -h localhost -U postgres -c "create database vocabkids_test;"
 cp .env.example .env                   # ajuste DATABASE_URL se preciso
 echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env          # obrigatório (auth JWT)
 echo "REVENUECAT_WEBHOOK_SECRET=troque-isto" >> .env       # obrigatório p/ POST /v1/assinatura/webhook
-echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env                 # obrigatório p/ POST /v1/redacoes/{id}/enviar (Fase 4)
+echo "OPENAI_API_KEY=sk-..." >> .env                        # obrigatório p/ POST /v1/redacoes/{id}/enviar (Fase 4)
 uv run alembic upgrade head            # cria as tabelas
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
@@ -96,7 +96,9 @@ SQLAlchemy Core). Domínio novo = pasta nova + uma linha em `app/api/v1.py`.
   de XP/combo, semana letiva, meta por faixa etária e faixa→parâmetros —
   `progressao/faixa.py`), `adaptacao` (regra pura de nível, respeita o teto da
   faixa), `redacao` (real desde a Fase 4 — rubrica pura por faixa, triagem de
-  risco + análise via Claude), `responsavel` (real desde a Fase 5 — PIN da
+  risco + análise via LLM externo — OpenAI, ver
+  `design/notas-implementacao.md` § "Troca de provedor de LLM"),
+  `responsavel` (real desde a Fase 5 — PIN da
   Área do Responsável em `conta.pin_hash`, resumo semanal por perfil:
   meta/minutos/sessões, 5 palavras aprendidas, evolução da redação por
   dimensão) e o **mock restante da fatia A**: `report` (sem fase B2C
@@ -183,12 +185,13 @@ navegado por assunto, conforme a tabela abaixo — não precisa ler tudo.
 | `docs/legado-b2b/rascunho_product.md` | Produto B2B: banco de vocabulário/XP/trilha/diagnóstico ainda valem; identidade, público e monetização, não | histórico |
 | `docs/legado-b2b/arquitetura.md` | Arquitetura B2B: pipeline de redação e princípios gerais (cliente fino/servidor autoritativo) ainda valem; identidade por turma e domínio `professor`, não | histórico |
 | `docs/legado-b2b/analise_riscos.md` | Riscos do produto B2B (stack/escopo de escola) — riscos gerais de conteúdo ainda valem | histórico |
-| `docs/legado-b2b/pesquisa_ferramentas.md` | Pesquisa de OCR em nuvem (descartada, hoje é ML Kit on-device) e de LLM (decisão final foi Claude, não registrada lá) | histórico |
+| `docs/legado-b2b/pesquisa_ferramentas.md` | Pesquisa de OCR em nuvem (descartada, hoje é ML Kit on-device) e de LLM (decisão final foi OpenAI, ver `design/notas-implementacao.md`, não registrada lá) | histórico |
 | `design/telas.md` | **Contrato** de conteúdo/comportamento de cada tela — seções marcadas `[REMOVIDO]` descrevem código deletado (entrada por turma, professor web); as telas novas do B2C (cadastro, seletor de perfil, paywall, redação real, Área do Responsável) ainda não têm contrato formal, o código é a referência | parcialmente vigente, ver notas inline |
 | `design/brief-mockup-*.md` | Contrato visual por tela (sistema de marca travado) — Home/Sessão/Resumo/Trilha ainda valem; números de catálogo em `brief-mockup-trilha.md` são do pós-MVP | vigente |
 | `design/imagens/PROMPT-ESTILO.md` | Prompt de geração de imagem por destino — cenas além do MVP são referência pós-MVP | vigente |
 | `design/notas-implementacao.md` | Registro vivo cronológico: feito, adiado, decisões revisadas (a fonte mais granular de "por que isso é assim") | vigente |
 | `backend/README.md`, `app/README.md` | Visão de estrutura de pastas de cada lado do código — comandos completos ficam só aqui no `CLAUDE.md`, para não duplicar | vigente |
+| `docs/legal/README.md` | LGPD/ECA Digital/App Store (Política de Privacidade, Termos, Consentimento Parental, ROPA, retenção, incidente, suboperadores, opt-out de LLM, Privacy Nutrition Labels) — item do checklist §15 do plano B2C | escrito com pesquisa de fonte primária (26/08), **decisão do dono de não contratar advogado** — ver `docs/legal/fontes_pesquisa.md` |
 
 ## ⚠️ Regra das decisões revisadas (obrigatória)
 

@@ -18,10 +18,17 @@ class IdentidadeRepository {
   final TokenStore _tokens;
 
   /// Cadastra a conta do responsável e guarda o token dela.
+  ///
+  /// `aceiteTermos`/`consentimentoLgpd` vêm de duas caixas de marcação
+  /// distintas na tela (LGPD art. 14 §1: o consentimento de dados da criança
+  /// é específico e em destaque, não embutido no aceite genérico dos
+  /// Termos de Uso) — o backend rejeita o cadastro se qualquer um for falso.
   Future<void> cadastrar({
     required String nome,
     required String email,
     required String senha,
+    required bool aceiteTermos,
+    required bool consentimentoLgpd,
   }) async {
     final json = await _api.post(
       '/conta',
@@ -30,8 +37,8 @@ class IdentidadeRepository {
         'nome': nome,
         'email': email,
         'senha': senha,
-        'aceite_termos': true,
-        'consentimento_lgpd': true,
+        'aceite_termos': aceiteTermos,
+        'consentimento_lgpd': consentimentoLgpd,
       },
     );
     await _tokens.save((json as Map<String, dynamic>)['token'] as String);

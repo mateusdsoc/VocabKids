@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,16 +9,21 @@ import '../../core/widgets/app_icons.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/surface_card.dart';
 import 'auth_controller.dart';
+import 'legal_texts.dart';
 import 'widgets/brand_mark.dart';
+import 'widgets/legal_text_screen.dart';
 import 'widgets/passport_background.dart';
 import 'widgets/passport_field.dart';
 import 'widgets/perforation.dart';
 
 /// Cadastro da conta do responsável (B2C, docs/plano_b2c.md Fase 1).
 ///
-/// Consentimento LGPD (R-LG-1): o backend exige `aceite_termos` e
-/// `consentimento_lgpd` explícitos — aqui é uma casinha marcada de propósito,
-/// não pré-marcada, e o cadastro só segue com ela marcada.
+/// Consentimento LGPD (R-LG-1, art. 14 §1): o backend exige `aceite_termos`
+/// e `consentimento_lgpd` como campos distintos — aqui são duas caixas de
+/// marcação SEPARADAS, nenhuma pré-marcada, a de consentimento visualmente
+/// destacada (não embutida no aceite genérico dos termos). O cadastro só
+/// segue com as duas marcadas, e o valor real de cada uma (não um `true`
+/// fixo) é o que vai pro backend — ver `repository.dart`.
 class CadastroScreen extends ConsumerStatefulWidget {
   const CadastroScreen({super.key});
 
@@ -30,7 +36,8 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
   final _email = TextEditingController();
   final _senha = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _aceite = false;
+  bool _aceiteTermos = false;
+  bool _consentimentoLgpd = false;
   bool _tentouSemAceite = false;
 
   @override
@@ -44,12 +51,15 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
   Future<void> _cadastrar() async {
     FocusScope.of(context).unfocus();
     final formOk = _formKey.currentState!.validate();
-    if (!_aceite) setState(() => _tentouSemAceite = true);
-    if (!formOk || !_aceite) return;
+    final aceiteOk = _aceiteTermos && _consentimentoLgpd;
+    if (!aceiteOk) setState(() => _tentouSemAceite = true);
+    if (!formOk || !aceiteOk) return;
     await ref.read(authControllerProvider.notifier).cadastrar(
           nome: _nome.text.trim(),
           email: _email.text.trim(),
           senha: _senha.text,
+          aceiteTermos: _aceiteTermos,
+          consentimentoLgpd: _consentimentoLgpd,
         );
     // Esta tela foi empilhada (Navigator.push) sobre a Entrada — o `_Gate`
     // já trocou o que está por baixo ao mudar o estado, mas só desempilhar
@@ -116,11 +126,17 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
                                 nome: _nome,
                                 email: _email,
                                 senha: _senha,
-                                aceite: _aceite,
-                                erroAceite: _tentouSemAceite && !_aceite,
-                                onAceiteChanged: (v) => setState(() {
-                                  _aceite = v;
-                                  if (v) _tentouSemAceite = false;
+                                aceiteTermos: _aceiteTermos,
+                                consentimentoLgpd: _consentimentoLgpd,
+                                erroAceite: _tentouSemAceite &&
+                                    (!_aceiteTermos || !_consentimentoLgpd),
+                                onAceiteTermosChanged: (v) => setState(() {
+                                  _aceiteTermos = v;
+                                  if (v && _consentimentoLgpd) _tentouSemAceite = false;
+                                }),
+                                onConsentimentoChanged: (v) => setState(() {
+                                  _consentimentoLgpd = v;
+                                  if (v && _aceiteTermos) _tentouSemAceite = false;
                                 }),
                                 onSubmit: _cadastrar,
                               ),
@@ -180,18 +196,22 @@ class _CadastroCard extends StatelessWidget {
     required this.nome,
     required this.email,
     required this.senha,
-    required this.aceite,
+    required this.aceiteTermos,
+    required this.consentimentoLgpd,
     required this.erroAceite,
-    required this.onAceiteChanged,
+    required this.onAceiteTermosChanged,
+    required this.onConsentimentoChanged,
     required this.onSubmit,
   });
 
   final TextEditingController nome;
   final TextEditingController email;
   final TextEditingController senha;
-  final bool aceite;
+  final bool aceiteTermos;
+  final bool consentimentoLgpd;
   final bool erroAceite;
-  final ValueChanged<bool> onAceiteChanged;
+  final ValueChanged<bool> onAceiteTermosChanged;
+  final ValueChanged<bool> onConsentimentoChanged;
   final VoidCallback onSubmit;
 
   @override
@@ -251,10 +271,16 @@ class _CadastroCard extends StatelessWidget {
                 (v == null || v.length < 8) ? 'Mínimo de 8 caracteres' : null,
           ),
           const SizedBox(height: 16),
+          _AceiteTermos(
+            checked: aceiteTermos,
+            erro: erroAceite && !aceiteTermos,
+            onChanged: onAceiteTermosChanged,
+          ),
+          const SizedBox(height: 10),
           _ConsentimentoLgpd(
-            checked: aceite,
-            erro: erroAceite,
-            onChanged: onAceiteChanged,
+            checked: consentimentoLgpd,
+            erro: erroAceite && !consentimentoLgpd,
+            onChanged: onConsentimentoChanged,
           ),
         ],
       ),
@@ -262,10 +288,10 @@ class _CadastroCard extends StatelessWidget {
   }
 }
 
-/// Consentimento parental específico (LGPD art. 14 §1) — texto próprio,
-/// destacado, não embutido num "aceito os termos" genérico.
-class _ConsentimentoLgpd extends StatelessWidget {
-  const _ConsentimentoLgpd({
+/// Aceite genérico dos Termos de Uso — checkbox simples, sem destaque
+/// especial (o destaque fica reservado pro consentimento LGPD abaixo).
+class _AceiteTermos extends StatelessWidget {
+  const _AceiteTermos({
     required this.checked,
     required this.erro,
     required this.onChanged,
@@ -294,17 +320,120 @@ class _ConsentimentoLgpd extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Expanded(
-              child: Text(
-                'Sou responsável legal pela criança que vai usar o app e '
-                'autorizo o tratamento dos dados dela para essa finalidade, '
-                'conforme a Política de Privacidade.',
-                style: AppType.nunito(
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: erro ? c.warn : c.muted),
+              child: RichText(
+                text: TextSpan(
+                  style: AppType.nunito(
+                      size: 12, weight: FontWeight.w700, color: erro ? c.warn : c.muted),
+                  children: [
+                    const TextSpan(text: 'Li e aceito os '),
+                    TextSpan(
+                      text: 'Termos de Uso',
+                      style: const TextStyle(decoration: TextDecoration.underline),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const LegalTextScreen(
+                                  titulo: 'Termos de Uso',
+                                  texto: termosDeUsoResumo,
+                                ),
+                              ),
+                            ),
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Consentimento parental específico (LGPD art. 14 §1) — texto próprio, num
+/// cartão destacado (borda/fundo diferentes), separado do aceite genérico
+/// dos termos acima. Nunca pré-marcado.
+class _ConsentimentoLgpd extends StatelessWidget {
+  const _ConsentimentoLgpd({
+    required this.checked,
+    required this.erro,
+    required this.onChanged,
+  });
+
+  final bool checked;
+  final bool erro;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: erro ? c.warn : c.accentStrong, width: 1.2),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => onChanged(!checked),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: checked,
+                onChanged: (v) => onChanged(v ?? false),
+                activeColor: c.primary,
+                side: BorderSide(color: erro ? c.warn : c.accentStrong, width: 1.4),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('CONSENTIMENTO PARA DADOS DA CRIANÇA',
+                        style: AppType.mono(
+                            size: 9.5,
+                            weight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                            color: c.accentStrong)),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        style: AppType.nunito(
+                            size: 12,
+                            weight: FontWeight.w700,
+                            color: erro ? c.warn : c.ink),
+                        children: [
+                          const TextSpan(
+                            text: 'Sou responsável legal e autorizo o tratamento dos '
+                                'dados da(s) criança(s) que vou cadastrar, conforme a '
+                                'LGPD (art. 14). ',
+                          ),
+                          TextSpan(
+                            text: 'Ver o que isso significa',
+                            style: const TextStyle(decoration: TextDecoration.underline),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => const LegalTextScreen(
+                                        titulo: 'Consentimento de dados',
+                                        texto: consentimentoLgpdTexto,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

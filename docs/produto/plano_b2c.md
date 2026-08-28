@@ -89,7 +89,9 @@ Cálculo direto a partir do repo:
 - Trilha completa = 80 nós × 4.500 XP = **360.000 XP** ([seed_trilha.py](backend/app/seed_trilha.py)).
 - XP médio por questão ≈ 120 ([progressao/xp.py](backend/app/progressao/xp.py)).
 - Logo, a trilha inteira exige ≈ **3.000 questões respondidas**.
-- Banco atual: **37 palavras × 8 questões = 296 questões** → cobre ~8 dos 80 nós.
+- Banco atual: **100 palavras × 8 questões = 800 questões** (26/08, ver §10.1)
+  → cobre a trilha MVP de 16 nós; ainda cobre só ~4 dos 80 nós da trilha
+  completa pós-MVP.
 
 **Uma criança pagante esgota o conteúdo em ~3 semanas e cancela.** Este é o
 risco nº 1 do pivô, maior que qualquer item técnico. Ver seção 10.
@@ -188,7 +190,7 @@ para cobrir infra, LLM e conteúdo. Faça a conta antes de fechar o percentual.
               │   (Neon)    │   │   (worker)    │  │ Server API │
               └─────────────┘   └───────┬───────┘  │ + Notif V2 │
                                         │          └────────────┘
-                                   Claude API
+                                LLM externo (OpenAI)
                               (análise + geração)
 
    OCR: NO DISPOSITIVO (ML Kit) — a foto nunca sai do aparelho.
@@ -511,7 +513,7 @@ envio (app)
       └─ POST /v1/redacoes/{id}/enviar  { texto_extraido, formato }
           └─ enfileira job (procrastinate)
               1. VALIDAR      tamanho vs rubrica; muito curto → devolve gentilmente
-              2. ANALISAR     1 chamada Claude, rubrica da faixa no prompt
+              2. ANALISAR     1 chamada ao LLM (OpenAI), rubrica da faixa no prompt
                               → redacao_analise.anotacoes (JSONB)
               3. EXTRAIR      palavras fracas/superutilizadas → redacao_palavra
               4. ATRIBUIR     buscar_ou_gerar_e_atribuir → entra na trilha
@@ -686,8 +688,16 @@ removido). Migration testada upgrade→downgrade→upgrade sem drift.
 
 ### 10.1 Vocabulário — de 37 para 100 palavras (MVP)
 
-Estado: [seed_vocabulario.py](backend/app/seed_vocabulario.py) tem **37
-palavras** distribuídas nos níveis 1–10 (3–4 por nível).
+> ✅ **Feito (26/08):** [seed_vocabulario.py](backend/app/seed_vocabulario.py)
+> tem as **100 palavras** (10 por nível, 1–10), com definição + 2–3 sinônimos
+> + exemplo + 8 questões cada. Lista de palavras/temas revisada pelo dono
+> antes da geração; as 8 questões por palavra em si (geradas depois, sem o
+> passo de LLM+QA automático do fluxo abaixo — foram escritas seguindo o
+> mesmo formato manual das 37 originais) ainda não passaram pela revisão por
+> amostragem do passo 5 — pendência antes de considerar o R1 mitigado de
+> verdade.
+
+Estado anterior: tinha **37 palavras** distribuídas nos níveis 1–10 (3–4 por nível).
 
 **Meta do MVP: 100 palavras**, distribuídas pelos níveis que a trilha de 16 nós
 efetivamente usa. Verificação de runway: XP_POR_NO = 4.500 × 16 nós =
@@ -715,7 +725,7 @@ questões** (4 níveis × 2 variações). 100 palavras ≈ **800 questões** (MV
 ➕ backend/app/conteudo/gerador.py   (script offline, roda 1x, não em runtime)
    1. Lista de lemas por faixa (curada por humano — a partir de listas de
       frequência do português e de material didático por ano)
-   2. Claude gera definição + exemplo + sinônimos + 8 questões por palavra
+   2. LLM (OpenAI) gera definição + exemplo + sinônimos + 8 questões por palavra
    3. QA automático (a "camada preventiva" de arquitetura.md §552):
       2ª chamada barata — "algum distrator também está correto nesta frase?"
    4. Export para o formato de seed_vocabulario.py
@@ -791,7 +801,7 @@ Não é o aceite genérico dos termos.
 | Termos de Uso | **criar** | Contratante é o responsável, não a criança. |
 | Termo de Consentimento Parental | **criar** | Tela própria, aceite explícito, versionado em `conta.consentimento_versao`. |
 | Registro de Operações (ROPA) | **criar** | Art. 37. Interno. |
-| Lista de suboperadores | **criar** | Apple, Anthropic, Neon, provedor de push. Público. |
+| Lista de suboperadores | **criar** | Apple, OpenAI, Neon, provedor de push. Público. |
 | Política de Retenção e Exclusão | **criar** | Redação 24 meses; conta apagada em ≤ 30 dias. |
 | Encarregado (DPO) | **nomear** | Art. 41. Pode ser você. E-mail de contato público. |
 | Plano de resposta a incidente | **criar** | Art. 48. |
@@ -823,11 +833,20 @@ complica na App Store para público infantil.
 | 5.1.1(i) | Política de privacidade acessível na loja e no app |
 | — | Privacy Nutrition Labels no App Store Connect |
 
-**Decisão D9 em aberto:** entrar na *Kids Category* traz selo de confiança para
-o pai, mas proíbe SDK de terceiros e endurece a review. Listar em **Educação /
-4+** com portão parental é o caminho mais comum no Brasil e não te impede de
-cumprir as mesmas regras. **Precisa de validação jurídica antes de submeter** —
-errar isso custa ciclos de rejeição.
+**Decisão D9 — resolvida (26/08, pesquisa em `docs/legal/politica_privacidade.md`
+§9): Educação / 4+ com portão parental, não Kids Category.** Dois motivos
+concretos, não só preferência: (1) a Kids Category exige declarar o público
+numa das faixas fechadas da Apple (5- , 6–8, 9–11), que não cobre os 7–12
+anos do VocabKids por inteiro — perderia a faixa de 12 anos; (2) a Kids
+Category proíbe qualquer transmissão de dado a terceiro, mesmo
+pseudonimizado — entraria em conflito direto com o envio do texto de
+redação à OpenAI (Seção 7.3), ainda que sem identificador algum. Fora da
+Kids Category, as mesmas práticas de proteção (zero SDK de terceiro, zero
+publicidade) são adotadas por escolha própria, não por exigência formal da
+categoria — o que preserva o "selo de confiança" informal sem o conflito
+técnico. **Decisão feita com pesquisa pública, sem advogado — ver
+`docs/legal/fontes_pesquisa.md`; ainda vale reconfirmar na hora de submeter,
+caso as regras da Apple mudem entre agora e o envio real.**
 
 ### 11.3 Documentação do projeto a adaptar (regra do CLAUDE.md)
 
@@ -892,7 +911,7 @@ podem rodar em paralelo desde o dia 1 e ambos travam o lançamento.
 
 | # | Risco | Impacto | Mitigação |
 |---|---|---|---|
-| R1 | **Conteúdo insuficiente** — 37 palavras hoje; MVP precisa de 100 para a trilha de 16 nós | Alto se ficar abaixo de 100. Churn cedo | Não lançar MVP com menos de 100 palavras revisadas. Ao expandir para 3 países, subir para 600+ antes de reabrir a trilha completa |
+| R1 | **Conteúdo insuficiente** — 100 palavras escritas (26/08), mas ainda sem a revisão por amostragem do §10.1 passo 5 | Alto se lançar sem revisar. Churn cedo | Não lançar MVP sem revisar por amostragem as 63 palavras novas (mínimo 20%, 100% na faixa 7–8). Ao expandir para 3 países, subir para 600+ antes de reabrir a trilha completa |
 | R2 | Influenciadores não vendem sem taxa base | Alto. Sem canal, sem produto | Testar com 3 antes de construir o painel de afiliados. Comissão 35% dos 12 primeiros meses |
 | R3 | Rejeição na App Store por regra de app infantil | Médio. Semanas perdidas | Validar D9 com jurídico antes de submeter |
 | R4 | Correção de redação por IA erra e o pai perde a confiança | Alto | Rubrica conservadora, tom sempre construtivo, nunca nota numérica para a criança |
@@ -900,6 +919,7 @@ podem rodar em paralelo desde o dia 1 e ambos travam o lançamento.
 | R6 | Churn alto (5–10%/mês é o normal do setor) | Alto | Plano anual (D7), Área do Responsável forte, R-AS-5 (progresso preservado) |
 | R7 | Criança de 7 anos não consegue usar sozinha | Médio | Testar com crianças reais no TestFlight antes de lançar. Não confie no design em abstrato |
 | R8 | Perder a opção B2B ao deletar o professor | Baixo | Fase 6: congelar, não deletar |
+| R9 | **ECA Digital (Lei 15.211/2025, vigente desde 17/03/2026)** exige canal de reporte às autoridades pra sinal de risco grave na redação — o VocabKids não tem isso, por decisão do dono (27/08): a operação não tem capacidade de manter esse processo | Alto se um caso real aparecer — risco aceito conscientemente, não mitigado | Nenhuma — ver `docs/legal/eca_digital.md` e `docs/legal/plano_resposta_incidente.md` §8. A mitigação real que resta é R-RD-7 (triagem antes de mostrar a análise à criança), que já existe |
 
 ---
 
@@ -913,17 +933,46 @@ podem rodar em paralelo desde o dia 1 e ambos travam o lançamento.
 - [x] `seed_demo.py` reescrito (conta B2C vitrine com assinatura ativa) e idempotente. `seed.py` preservado intocado (serve só o professor congelado). `seed_temas.py` é Fase 4, não existe ainda.
 
 **Conteúdo**
-- [ ] 100 palavras (MVP) com 8 questões, 20% revisadas por humano (100% na faixa 7–8)
-- [ ] 120 temas de redação
+- [~] 100 palavras (MVP) com 8 questões escritas (26/08) — falta a revisão por
+      amostragem (20% mínimo, 100% na faixa 7–8) antes do lançamento
+- [~] 120 temas de redação completos, com `apoio` (26/08) — falta a mesma
+      revisão por amostragem do vocabulário antes do lançamento
 - [ ] Arte do MVP: nenhuma peça nova (os 4 destinos já estão desenhados)
 - [ ] Copy de paywall, onboarding, push e e-mails
 
-**Legal**
-- [ ] Política de Privacidade, Termos, Termo de Consentimento Parental publicados
-- [ ] ROPA e plano de incidente escritos
-- [ ] DPO nomeado com contato público
-- [ ] Opt-out de treinamento documentado com o provedor de LLM
-- [ ] Privacy Nutrition Labels preenchidos
+**Legal** (ver `docs/legal/README.md` — escrito com pesquisa de fonte
+primária em 26/08 — LGPD art. 14 completo, Enunciado ANPD 1/2023, ECA
+Digital, guidelines da Apple, política da OpenAI — decisão do dono de não
+contratar advogado; ver `docs/legal/fontes_pesquisa.md` pra proveniência)
+- [x] Política de Privacidade, Termos de Uso, Termo de Consentimento
+      Parental — escritos; tela de consentimento implementada e verificada
+      ao vivo (27/08, `cadastro_screen.dart`); falta só preencher
+      CPF/e-mail definitivo (dado seu, não jurídico nem de código)
+- [x] ROPA e plano de incidente — escritos; o canal de reporte às
+      autoridades que o ECA Digital pede (R9) foi descartado por decisão do
+      dono (27/08) — risco aceito, não construído
+- [x] DPO nomeado com contato público — resolvido na Política de Privacidade
+      §11 (o fundador); achado da pesquisa: como pessoa física, nem é
+      exigência formal do art. 41 (Resolução CD/ANPD 2/2022), mas mantido
+      por transparência com as famílias; falta confirmar o e-mail definitivo
+- [~] Opt-out de treinamento documentado com o provedor de LLM — pesquisa
+      confirma que a API da OpenAI já não usa dado pra treino por padrão
+      (achado, não pendência); falta só a checagem de 10min no painel real
+      da conta (`docs/legal/opt_out_llm.md`)
+- [x] Privacy Nutrition Labels — mapeamento de categorias pronto em
+      `docs/legal/privacy_nutrition_labels.md`; preenchimento do formulário
+      real é ação mecânica na hora de submeter, não pendência de conteúdo
+- [x] Decisão D9 (categoria da App Store) resolvida — Educação/4+, ver §11.2
+- [x] ECA Digital (lei nova, não estava no plano original) — análise de
+      conformidade em `docs/legal/eca_digital.md`; ver R9 na tabela de riscos
+
+⚠️ **Nenhum destes documentos foi revisado por advogado** — decisão explícita
+do dono. São o melhor esforço possível a partir de fonte pública, não
+substituem aconselhamento jurídico individualizado. Antes de publicar,
+resta apenas preencher os placeholders que só você tem (CPF, e-mail
+definitivo). A tela de consentimento parental já está implementada em
+código (27/08). O canal de reporte às autoridades (R9) não vai ser
+implementado — risco aceito por decisão do dono, não pendência.
 
 **Docs do projeto** (regra das decisões revisadas)
 - [x] `notas-implementacao.md` com a decisão do pivô datada (24/08)
