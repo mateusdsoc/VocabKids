@@ -56,7 +56,7 @@ echo "OPENAI_API_KEY=sk-..." >> .env                        # obrigatório p/ PO
 uv run alembic upgrade head            # cria as tabelas
 uv run python -m app.seed_vocabulario  # banco base (palavras/questões) — idempotente
 uv run python -m app.seed_trilha       # trilha MVP (2 países/4 destinos/16 nós) + colecionáveis
-uv run python -m app.seed_temas        # catálogo de temas de redação (18 de 120 — ver docs/produto/plano_b2c.md §10.4)
+uv run python -m app.seed_temas        # catálogo de temas de redação (120, completo — ver docs/produto/plano_b2c.md §10.4)
 uv run python -m app.seed_demo         # conta+perfis "vitrine" (com assinatura ativa) p/ demo — reset a cada rodada
 uv run uvicorn app.main:app --reload   # curl localhost:8000/health
 

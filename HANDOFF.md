@@ -6,7 +6,30 @@
 
 ---
 
-## Estado atual (25/08 — Fases 4, 5 e 6 do B2C)
+## Estado atual (31/08 — deploy do backend em produção, em andamento)
+
+**Banco de produção provisionado e semeado.** Neon (projeto `vocabkids-prod`,
+região `us-west-2`), schema criado via `alembic upgrade head` e os 3 seeds de
+conteúdo do MVP rodados: 100 palavras/800 questões, 2 países/4 destinos/16 nós,
+120 temas de redação. Detalhe da escolha (Neon + Vercel, por que não
+Fly/Railway/Render) e da pegadinha de SSL na connection string em
+`design/notas-implementacao.md` § "Deploy do backend em produção".
+
+**API ainda não está no ar** — próximo passo é criar o projeto Vercel linkado
+ao repo (`backend/vercel.json` e `backend/requirements.txt` já commitados) e
+configurar `DATABASE_URL`/`JWT_SECRET` lá. **Pendências explícitas de config**
+que não dá pra automatizar: `OPENAI_API_KEY` (conta OpenAI real) e
+`REVENUECAT_WEBHOOK_SECRET`/API key do RevenueCat — sem eles a análise de
+redação e a assinatura falham com erro claro, o resto da API funciona.
+
+**Risco aceito, registrado:** rate limiting é em memória por processo
+(`app/seguranca/rate_limit.py`); sob Vercel serverless o limite passa a valer
+por instância, não globalmente — aceitável no volume de MVP, mover pra Redis
+quando o tráfego justificar.
+
+---
+
+## Estado anterior (25/08 — Fases 4, 5 e 6 do B2C)
 
 **Professor/B2B deletado, não só congelado** — `docs/produto/plano_b2c.md` §09
 (revisado na hora: o plano original mandava congelar; o dono decidiu deletar
@@ -59,7 +82,7 @@ sessão (sem `ANTHROPIC_API_KEY` no ambiente do agente — validar isso é o
 próximo passo óbvio), sem notificação ao responsável quando cai em revisão
 humana, sem o passo palavra-extraída→vira-conteúdo-de-vocabulário (de
 propósito — precisa da mesma revisão humana que o plano exige pro vocabulário
-base), catálogo de temas com 18 de 120 previstos, e retenção/opt-out
+base), e retenção/opt-out
 contratual do provedor de LLM (R-RD-8/R-RD-9) não endereçados. Revisão do
 dono ainda recomendada antes de qualquer envio real de criança passar pela
 triagem de risco (R-RD-7) — `AnalisadorClaude` nunca rodou contra a API de
@@ -110,9 +133,10 @@ feitas, com verificação visual em navegador e simulador iOS.
 nesta sessão, e a parte mais crítica de acertar (triagem de risco R-RD-7)
 não foi verificada ao vivo.
 
-**Sem código pendente, mas fora do escopo de app/backend:** catálogo de
-temas (18 de 120), retenção/opt-out contratual do provedor de LLM
-(R-RD-8/R-RD-9), fila assíncrona real pro pipeline de análise.
+**Sem código pendente, mas fora do escopo de app/backend:** retenção/opt-out
+contratual do provedor de LLM (R-RD-8/R-RD-9), fila assíncrona real pro
+pipeline de análise (pendência mantida em aberto por decisão do dono,
+31/08/2026 — ver `design/notas-implementacao.md`).
 
 ---
 

@@ -1377,3 +1377,92 @@ agora — não existe conta/chave OpenAI configurada ainda
 (ao contrário do canal de reporte, é um passo real que ainda vai ser
 necessário), só recontextualizado: é ação pra quando a conta existir, não
 pendência ativa hoje.
+
+---
+
+## 📝 Catálogo de temas — confirmado 120/120, docs corrigidos (31/08)
+
+**Achado:** `CLAUDE.md` e `HANDOFF.md` ainda diziam "18 de 120" pro
+catálogo de temas de redação, mas o commit `01571e0` (27/08) já tinha
+completado os 120 (40 por faixa etária) — só o texto desses dois docs
+não foi atualizado junto (o `CLAUDE.md` daquele commit mudou outras
+linhas, essa passou batido). Corrigido nesta sessão, sem gerar conteúdo
+novo: o catálogo já supera a meta de 50 que o dono considerou (ver
+`docs/produto/plano_b2c.md` §10.4); decisão do dono foi manter os 120
+como estão.
+
+**Fila assíncrona pro pipeline de análise de redação:** segue como
+pendência explícita, mantida em aberto por decisão do dono (31/08) —
+hoje a chamada ao LLM (`AnalisadorOpenAI`) é síncrona dentro do request
+de `POST /v1/redacoes/{id}/enviar`. Fica pra quando o volume de envios
+justificar a complexidade extra (worker, estado intermediário, app
+passando a fazer polling em vez de receber o resultado na resposta).
+
+---
+
+## 🚀 Deploy do backend em produção (31/08)
+
+**Contexto:** até aqui o backend só existia local (`uvicorn --reload` +
+Postgres local) — não fazia parte das pendências mapeadas antes desta sessão
+e foi descoberto no meio da conversa sobre prazo até a App Store (não tinha
+`Dockerfile`/config de deploy nenhum no repo).
+
+**Escolha de stack — Neon (Postgres) + Vercel (API), não Fly/Railway/Render:**
+o dono queria custo zero até começar a investir em marketing. Render free
+tier seria o mais "limpo" (grátis de verdade, sem restrição de uso comercial
+nos termos), mas eu não tenho integração automatizada com ele aqui — só com
+Neon e Vercel (MCP já habilitado). O dono topou Vercel mesmo sabendo de duas
+ressalvas levantadas antes de decidir:
+1. O plano Hobby da Vercel é licenciado pra uso **não-comercial** nos termos
+   deles — o VocabKids cobra assinatura via IAP, então tecnicamente é uma
+   zona cinzenta (risco baixo de fiscalização nesse porte, não é zero).
+2. `app/seguranca/rate_limit.py` é em memória **por processo** — sob
+   serverless (múltiplas instâncias) o limite deixa de ser global. Aceitável
+   no volume de agora; o próprio código já previa isso ("se escalar
+   horizontalmente, mover pra Redis").
+
+Migração pra algo pago (Fly/Railway, processo persistente) fica pra quando o
+marketing começar e o cold-start/rate-limit virarem problema de verdade.
+
+**Neon — provisionado e semeado:** projeto `vocabkids-prod` (org
+`org-bold-band-51541407`, região `us-west-2`, Postgres 18), banco `vocabkids`.
+`alembic upgrade head` rodado contra ele (cadeia inteira, sem surpresa) e os 3
+seeds de conteúdo: `seed_vocabulario` (100 palavras/800 questões),
+`seed_trilha` (2 países/4 destinos/16 nós/11 colecionáveis), `seed_temas` (120
+temas). Rodado direto deste ambiente (tem Postgres/uv), sem precisar da API
+no ar primeiro.
+
+**Pegadinha de SSL na connection string:** a connection string que o Neon
+devolve vem com `?channel_binding=require&sslmode=require` — isso quebra o
+`asyncpg` (dialect não reconhece `sslmode` nem `channel_binding` como
+parâmetro de conexão) e, ao contrário, `?ssl=require` quebra o `psycopg`
+("invalid connection option"). Como `Settings.sync_database_url`
+(`app/config.py`) deriva a URL do Alembic trocando só o driver
+(`+asyncpg`→`+psycopg`) a partir da mesma `DATABASE_URL`, os dois lados
+precisam aceitar a mesma query string. Solução: **nenhum parâmetro de SSL na
+URL** — os dois drivers negociam TLS automaticamente com o Neon sem precisar
+declarar nada (testado e confirmado nos dois). `DATABASE_URL` de produção
+guardada só na Vercel (env var), não neste repo.
+
+**Vercel — projeto ainda não criado no momento deste registro.**
+`backend/vercel.json` (builder `@vercel/python` apontando pra `app/main.py`,
+que já expõe `app` no módulo — nada mudou no código pra isso) e
+`backend/requirements.txt` (gerado com `uv export --no-dev --no-hashes`,
+removendo a linha `-e .` que não faz sentido fora do `uv`) foram commitados
+pra permitir deploy puxando direto do GitHub. **Descoberta útil no processo:**
+tentei inicialmente montar um deploy manual (`deploy_to_vercel`, sem git) com
+todo `backend/app/*.py` embutido na chamada — inviável, o manifesto passou de
+220KB e o `Read` não conseguia trazer de volta pro contexto pra eu conseguir
+montar a chamada (risco alto de corromper a transcrição de qualquer forma).
+Percebi então que `origin/main` já estava no mesmo commit desta branch
+(`01571e0`) — ou seja, bastava commitar só os 2 arquivos novos de config e dar
+push, e a Vercel puxa o resto direto do repo. Ficou registrado como lição: pra
+deploy de projeto com muitos arquivos, git-linked > manual file upload por
+MCP, mesmo quando a ferramenta manual existe.
+
+**Env vars de produção:** `JWT_SECRET` novo gerado (não reaproveita o local),
+`DATABASE_URL` do Neon acima. `OPENAI_API_KEY` e
+`REVENUECAT_WEBHOOK_SECRET`/API key do RevenueCat ficam de fora por ora — o
+dono não tem essas contas configuradas ainda; a API sobe normal, só os
+endpoints de redação e o webhook de assinatura falham com erro claro
+("configuração pendente") até serem preenchidos.
